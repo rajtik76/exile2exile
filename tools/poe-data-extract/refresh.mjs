@@ -53,6 +53,12 @@ function step(label, command, args, extraEnv = {}) {
 
 console.log(`Refreshing GGPK-derived data for pinned patch ${patch}`);
 
+// The extractor has its own dependency tree (@poe2-toolkit/*), separate from the
+// app's root node_modules; a fresh clone or a production image built without it
+// must install before any step can run. With the lockfile satisfied this is a
+// fast no-op check.
+step('install extractor dependencies', 'npm', ['install']);
+
 step('extract GGPK tables', 'node', ['extract.mjs']);
 step('build item/gem/rune data + icons', 'node', ['build-data.mjs']);
 step('extract the passive tree', 'npx', [
