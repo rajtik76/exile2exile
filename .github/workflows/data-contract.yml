@@ -79,6 +79,12 @@ jobs:
           tools: composer:v2
           coverage: none
 
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
       - name: Get Composer cache directory
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
@@ -90,8 +96,16 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
+      - name: Install Node Dependencies
+        run: npm ci
+
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      # The Contract suite renders real pages (Inertia views resolve the Vite
+      # manifest), so the assets must exist even though no JS test runs here.
+      - name: Build Assets
+        run: npm run build
 
       # A dispatch names the staged release to validate; a code push validates
       # against whatever production serves right now (its own version stamp).
@@ -228,6 +242,10 @@ jobs:
         env:
           PATCH: ${{ steps.datapatch.outputs.patch }}
         run: npm run refresh:data
+
+      # Same as the validate job: page-rendering Contract tests need the manifest.
+      - name: Build Assets
+        run: npm run build
 
       - name: Copy Environment File
         run: cp .env.example .env
