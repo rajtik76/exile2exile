@@ -1,0 +1,37 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Exile to Exile mark: a chamfered stone tile split into two exiles -
+       tarnished gold and life-blood red, the colours of the wordmark.
+       Kept in sync with the brand in resources/js/components/brand.tsx. -->
+  <defs>
+    <clipPath id="ete-tile">
+      <path d="M16 4 H48 L60 16 V48 L48 60 H16 L4 48 V16 Z"/>
+    </clipPath>
+    <linearGradient id="ete-gold" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#ecd49a"/>
+      <stop offset="0.55" stop-color="#c9a24a"/>
+      <stop offset="1" stop-color="#7d6228"/>
+    </linearGradient>
+    <linearGradient id="ete-blood" x1="0.3" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e26458"/>
+      <stop offset="0.55" stop-color="#bd342a"/>
+      <stop offset="1" stop-color="#6e1714"/>
+    </linearGradient>
+  </defs>
+
+  <!-- two halves: gold exile, blood exile -->
+  <g clip-path="url(#ete-tile)">
+    <rect x="0" y="0" width="32" height="64" fill="url(#ete-gold)"/>
+    <rect x="32" y="0" width="32" height="64" fill="url(#ete-blood)"/>
+    <!-- bevel: lit top, shadowed bottom -->
+    <rect x="0" y="0" width="64" height="9" fill="#fff" fill-opacity="0.16"/>
+    <rect x="0" y="52" width="64" height="12" fill="#000" fill-opacity="0.28"/>
+  </g>
+
+  <!-- the seam where the two meet -->
+  <line x1="32" y1="5" x2="32" y2="59" stroke="#0a0709" stroke-width="2.4"/>
+  <line x1="32" y1="6" x2="32" y2="58" stroke="#1a1410" stroke-width="0.8" stroke-opacity="0.7"/>
+
+  <!-- chiselled chamfered edge -->
+  <path d="M16 4 H48 L60 16 V48 L48 60 H16 L4 48 V16 Z" stroke="#0a0709" stroke-width="2.6"/>
+  <path d="M16 4 H48 L60 16 V48 L48 60 H16 L4 48 V16 Z" stroke="#ecd49a" stroke-opacity="0.45" stroke-width="1"/>
+</svg>

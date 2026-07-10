@@ -1,0 +1,43 @@
+# Coolify/nixpacks build customization.
+#
+# The nixpacks PHP nginx template uses `try_files $uri $uri/ /index.php`.
+# The `$uri/` part makes nginx serve the public/build (Vite) and public/tree
+# (passive-tree assets) directories for the `/build` and `/tree` ROUTES,
+# issuing a 301 (to add a trailing slash) built from nginx's own scheme/port
+# (http://host:8080). That leaks past the Traefik proxy -> mixed-content on
+# HTTPS, and the Laravel routes never get reached.
+#
+# We override the start command to strip `$uri/` from the rendered nginx
+# config before the server boots, so `/build` and `/tree` fall through to
+# index.php (Laravel) while real asset files are still served directly.
+#
+# The same edit also injects cache headers for the static asset trees: the
+# nixpacks template serves them with only ETag/Last-Modified and no Cache-Control,
+# so browsers fall back to heuristic freshness and re-download the big tree atlases
+# (skills.webp is ~1.7 MB) every visit. We add expires 365d, but ONLY for real
+# asset file extensions under /build/ and /tree/:
+#   - /build/*  - Vite hashes the filename, so new content always gets a new URL.
+#   - /tree/*   - served from the version-less /tree/current path, so the filename
+#                 is stable, but the app appends a ?v=<content-hash> that changes
+#                 on a data refresh - the query busts the cache.
+#
+# The cache location is matched by file EXTENSION, not the bare /build/ and /tree/
+# prefixes. A prefix match (`location ~ ^/tree/`) would also swallow the Laravel
+# routes that live under those prefixes - POST /tree/share, /tree/allocation, GET
+# /build/result, /build/compare - and 404 them before PHP. Extension-scoped, those
+# routes (no extension) fall through to `location /` -> index.php.
+#
+# IMPORTANT: keep this a double-quoted single-line TOML string. A previous attempt
+# used a triple-quoted ('''...''') literal, which nixpacks did not parse into a
+# usable start command - the container failed to boot (no nginx) and the deploy
+# took prod down. No backslashes in the value (the dot in the extension group is a
+# plain `.`), so the basic-string escaping rules are satisfied.
+#
+# The same container also runs the Laravel scheduler (schedule:work ticks every
+# minute, firing poe2:watch-patch and the daily prune) and a queue worker (so
+# the dispatched webhook/data-export jobs actually run). Both run in the
+# background in a restart loop (there is no supervisor here, so the loop revives
+# them if they crash or the worker exits on --max-time); nginx stays in the
+# foreground to hold the container open.
+[start]
+cmd = "sed -i 's| $uri/ | |g' /assets/nginx.template.conf && sed -i 's@location / {@location ~* ^/(build|tree)/.+.(webp|png|jpe?g|gif|avif|svg|ico|json|js|mjs|css|woff2?|ttf|map)$ { expires 365d; access_log off; try_files $uri =404; } location / {@' /assets/nginx.template.conf && node /assets/scripts/prestart.mjs /assets/nginx.template.conf /nginx.conf && (while true; do php /app/artisan schedule:work; sleep 1; done & while true; do php /app/artisan queue:work --sleep=3 --max-time=3600 --tries=5; sleep 1; done & php-fpm -y /assets/php-fpm.conf & nginx -c /nginx.conf)"

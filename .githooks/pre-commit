@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#
+# Shared pre-commit gate: the canonical `composer review` (pint, phpstan, rector,
+# eslint, prettier, tsc, vitest, pest), mirroring CI. Runs for everyone.
+#
+# Owner-local checks (author identity + AI-trace scan) are NOT tracked; they live
+# in .git/hooks/pre-commit.local and are invoked below when present, so a fresh
+# clone only ever runs the quality gate.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+#
+set -euo pipefail
+
+# ── Optional local-only checks (owner's machine, fail-fast before the slow gate) ──
+# --git-common-dir points at the real .git (unaffected by core.hooksPath), so the
+# local hook is found in .git/hooks even while this shared hook runs from .githooks.
+local_hook="$(git rev-parse --git-common-dir)/hooks/pre-commit.local"
+if [ -x "$local_hook" ]; then
+  "$local_hook" "$@"
+fi
+
+# ── Quality gate ─────────────────────────────────────────────────────────────
+echo "▶ composer review"
+composer review
+echo "✓ composer review passed"

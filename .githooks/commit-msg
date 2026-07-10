@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# Shared commit-msg hook: no restrictions of its own. The commit-message AI-trace
+# gate is an owner-local check (not tracked); it lives in
+# .git/hooks/commit-msg.local and is invoked below when present, so a fresh clone
+# places no constraints on commit messages.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+#
+set -euo pipefail
+
+# --git-common-dir points at the real .git (unaffected by core.hooksPath).
+local_hook="$(git rev-parse --git-common-dir)/hooks/commit-msg.local"
+if [ -x "$local_hook" ]; then
+  "$local_hook" "$@"
+fi

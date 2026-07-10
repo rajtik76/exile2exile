@@ -1,0 +1,61 @@
+<?php
+
+use App\Models\PatchRelease;
+use App\Services\Poe2PatchServer;
+use App\Support\Poe2PatchStatus;
+use Illuminate\Support\Facades\Cache;
+
+test('recording a poll exposes the player-facing version and check time', function () {
+    $this->freezeTime(function () {
+        // No release row yet, so the version is treated as released now.
+        app(Poe2PatchStatus::class)->record('4.5.3.1.7');
+
+        expect(app(Poe2PatchStatus::class)->current())->toBe([
+            'version' => '0.5.3.7',
+            'checkedAt' => now()->toIso8601String(),
+            'releasedAt' => now()->toIso8601String(),
+        ]);
+    });
+});
+
+test('the release time comes from when the version was first detected', function () {
+    Cache::flush();
+    $release = PatchRelease::create(['version' => '4.5.3.1.7']);
+    $release->forceFill(['created_at' => now()->subDays(3)])->save();
+
+    app(Poe2PatchStatus::class)->record('4.5.3.1.7');
+    $status = app(Poe2PatchStatus::class)->current();
+
+    expect($status['releasedAt'])->toBe($release->fresh()->created_at->toIso8601String())
+        ->and($status['checkedAt'])->toBe(now()->toIso8601String())
+        ->and($status['releasedAt'])->not->toBe($status['checkedAt']);
+});
+
+test('a cold cache falls back to the last recorded release', function () {
+    Cache::flush();
+    $release = PatchRelease::create(['version' => '4.5.3.1.7']);
+
+    expect(app(Poe2PatchStatus::class)->current())->toBe([
+        'version' => '0.5.3.7',
+        'checkedAt' => $release->created_at->toIso8601String(),
+        'releasedAt' => $release->created_at->toIso8601String(),
+    ]);
+});
+
+test('the status is null before any poll or release', function () {
+    Cache::flush();
+
+    expect(app(Poe2PatchStatus::class)->current())->toBeNull();
+});
+
+test('the watcher stamps the poll time even when the version is unchanged', function () {
+    Cache::flush();
+    PatchRelease::create(['version' => '4.5.3.1.7']);
+    test()->mock(Poe2PatchServer::class)
+        ->shouldReceive('currentVersion')
+        ->andReturn('4.5.3.1.7');
+
+    $this->artisan('poe2:watch-patch')->assertSuccessful();
+
+    expect(app(Poe2PatchStatus::class)->current()['version'])->toBe('0.5.3.7');
+});

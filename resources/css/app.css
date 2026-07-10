@@ -1,0 +1,715 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+/* Cinzel - self-hosted (via Bunny Fonts), no external CDN. */
+@font-face {
+    font-family: 'Cinzel';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/cinzel/cinzel-500.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cinzel';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/cinzel/cinzel-600.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cinzel';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/cinzel/cinzel-700.woff2') format('woff2');
+}
+
+/* Fontin by Jos Buivenga (exljbris) - the Path of Exile UI typeface, self-hosted
+   and free for commercial use. Used for the passive-tree node tooltips. */
+@font-face {
+    font-family: 'Fontin';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/fontin/Fontin-Regular.woff') format('woff');
+}
+@font-face {
+    font-family: 'Fontin';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/fontin/Fontin-Italic.woff') format('woff');
+}
+@font-face {
+    font-family: 'Fontin';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/fontin/Fontin-Bold.woff') format('woff');
+}
+@font-face {
+    font-family: 'Fontin SmallCaps';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/fontin/Fontin-SmallCaps.woff') format('woff');
+}
+
+/* Exile to Exile brand faces - self-hosted (via Bunny Fonts), no external CDN.
+   Marcellus SC: inscriptional Roman display. Archivo: UI/labels. Fraunces: body. */
+@font-face {
+    font-family: 'Marcellus SC';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/marcellus-sc/marcellus-sc-latin-400-normal.woff2')
+        format('woff2');
+}
+@font-face {
+    font-family: 'Archivo';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/archivo/archivo-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Archivo';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/archivo/archivo-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Archivo';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/archivo/archivo-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Archivo';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/archivo/archivo-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/fraunces/fraunces-latin-400-normal.woff2')
+        format('woff2');
+}
+@font-face {
+    font-family: 'Fraunces';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/fraunces/fraunces-latin-400-italic.woff2')
+        format('woff2');
+}
+@font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/fraunces/fraunces-latin-500-normal.woff2')
+        format('woff2');
+}
+@font-face {
+    font-family: 'Fraunces';
+    font-style: italic;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/fraunces/fraunces-latin-500-italic.woff2')
+        format('woff2');
+}
+@font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/fraunces/fraunces-latin-600-normal.woff2')
+        format('woff2');
+}
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+
+    /* Exile to Exile public-page faces. */
+    --font-display: 'Marcellus SC', 'Trajan Pro', serif;
+    --font-ui: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'Fraunces', Georgia, serif;
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.87 0 0);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.87 0 0);
+}
+
+.dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.145 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.145 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.985 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.396 0.141 25.723);
+    --destructive-foreground: oklch(0.637 0.237 25.331);
+    --border: oklch(0.269 0 0);
+    --input: oklch(0.269 0 0);
+    --ring: oklch(0.439 0 0);
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.985 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(0.269 0 0);
+    --sidebar-ring: oklch(0.439 0 0);
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    /*
+     * A semi-transparent border colour lets the element's own background bleed
+     * through it (the default background-clip is border-box). At a rounded corner the
+     * antialiased bleed swallows the thin border, so the outline looks like it breaks
+     * at every corner. Clipping the background to the padding box paints the border
+     * over the backdrop instead, keeping the outline crisp the whole way round. A
+     * utility (bg-clip-*) still wins where an element opts into a different clip.
+     */
+    *,
+    ::before,
+    ::after {
+        background-clip: padding-box;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+/* Entrance for the round "show controls" button (passive-tree planner). */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Build planner - reader-first design tokens (the "Slate" design). Every planner
+   surface reads these semantic --pl-* variables instead of hardcoded hex, so the
+   whole page shares one palette, radius, shadow and type scale. Cool neutral,
+   one crisp indigo accent, flat panels, no glow - readability first. Content
+   sizes stay em-based (pl-text-* ladder), so they scale from --pl-font-size. */
+.planner-reading {
+    /* Typography */
+    --pl-font: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --pl-font-head: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --pl-font-size: 16px;
+    --pl-line: 1.6;
+    --pl-body-weight: 450;
+    --pl-heading-weight: 680;
+    --pl-label-weight: 650;
+    --pl-label-tracking: 0.1em;
+    /* Surfaces */
+    --pl-panel: #1b1e26;
+    --pl-panel-2: #171a21;
+    --pl-panel-border: #2c313d;
+    --pl-header-bg: #1e222b;
+    --pl-header-border: #2c313d;
+    --pl-input-bg: #12141a;
+    --pl-input-border: #333a48;
+    --pl-focus: #8098ff;
+    /* Text */
+    --pl-text: #dfe4ee;
+    --pl-text-strong: #f1f4fa;
+    --pl-heading: #f3f6fc;
+    --pl-muted: #9aa3b4;
+    --pl-faint: #6f7889;
+    /* Accent + danger */
+    --pl-accent: #8098ff;
+    --pl-accent-lit: #a7b7ff;
+    --pl-accent-soft: rgba(128, 152, 255, 0.16);
+    --pl-danger: #f0736a;
+    --pl-danger-lit: #ff9d95;
+    --pl-danger-soft: rgba(240, 115, 106, 0.15);
+    /* Structure */
+    --pl-divider: #2c313d;
+    --pl-radius: 10px;
+    --pl-radius-lg: 14px;
+    --pl-accent-bar: 0px;
+    --pl-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.8);
+    --pl-ring: rgba(128, 152, 255, 0.4);
+
+    font-family: var(--pl-font);
+    font-size: var(--pl-font-size);
+    font-weight: var(--pl-body-weight);
+    line-height: var(--pl-line);
+    color: var(--pl-text);
+}
+
+/* On phones the reading font size shrinks, and because the whole planner type scale
+   (pl-text-* ladder) and the shared control paddings are em-based, every button,
+   picker, toggle and label scales down with it in one step. Desktop is untouched. */
+@media (max-width: 640px) {
+    .planner-reading {
+        --pl-font-size: 14px;
+    }
+}
+
+@media (max-width: 400px) {
+    .planner-reading {
+        --pl-font-size: 13px;
+    }
+}
+
+/* Form controls don't inherit fonts by default - pull them onto the reading font. */
+.planner-reading input,
+.planner-reading textarea,
+.planner-reading select,
+.planner-reading button {
+    font-family: inherit;
+}
+
+/* The embedded passive tree is a shared component with its own typography, so reset
+   the reading font on its subtree back to the brand UI face (its own font-* classes
+   then apply per element). */
+.planner-tree-frame {
+    font-family: var(--font-ui);
+}
+
+/* Plus Jakarta Sans - the build-planner reading face, self-hosted (via Bunny Fonts),
+   no external CDN. Reader-first legibility, chosen over the brand display fonts on
+   the planner pages only. Latin + latin-ext (Czech) subsets, weights 400-700. */
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-400-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-ext-400-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-500-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-ext-500-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-600-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-ext-600-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-700-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-ext-700-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Lexend - the item/gem tooltip face, self-hosted (via Bunny Fonts), no external
+   CDN. Legibility-tuned (designed to reduce reading effort), chosen for the
+   in-tooltip stat text on both the planner and /compare. Latin + latin-ext
+   (Czech) subsets, weights 400-700. */
+@font-face {
+    font-family: 'Lexend';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/lexend/lexend-latin-400-normal.woff2') format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Lexend';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/lexend/lexend-latin-ext-400-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Lexend';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/lexend/lexend-latin-500-normal.woff2') format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Lexend';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/lexend/lexend-latin-ext-500-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Lexend';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/lexend/lexend-latin-600-normal.woff2') format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Lexend';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../fonts/lexend/lexend-latin-ext-600-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Lexend';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/lexend/lexend-latin-700-normal.woff2') format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Lexend';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/lexend/lexend-latin-ext-700-normal.woff2')
+        format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Rendered Markdown in the build planner (descriptions / notes). Spacing only -
+   the reading font/size come from the .planner-reading wrapper. */
+.planner-md > :first-child {
+    margin-top: 0;
+}
+.planner-md > :last-child {
+    margin-bottom: 0;
+}
+.planner-md p {
+    margin: 0.5em 0;
+    line-height: 1.6;
+}
+.planner-md h1,
+.planner-md h2,
+.planner-md h3 {
+    margin: 0.8em 0 0.4em;
+    font-weight: 600;
+    color: #e6ecf6;
+}
+.planner-md h1 {
+    font-size: 1.3em;
+}
+.planner-md h2 {
+    font-size: 1.15em;
+}
+.planner-md h3 {
+    font-size: 1.02em;
+}
+.planner-md ul,
+.planner-md ol {
+    margin: 0.5em 0;
+    padding-left: 1.4em;
+}
+.planner-md ul {
+    list-style: disc;
+}
+.planner-md ol {
+    list-style: decimal;
+}
+.planner-md li {
+    margin: 0.2em 0;
+}
+.planner-md a {
+    color: #ecd49a;
+}
+.planner-md strong {
+    font-weight: 600;
+    color: #e6ecf6;
+}
+.planner-md em {
+    font-style: italic;
+}
+.planner-md code {
+    border-radius: 3px;
+    background: #15141b;
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+}
+.planner-md blockquote {
+    margin: 0.5em 0;
+    border-left: 2px solid rgba(201, 162, 74, 0.4);
+    padding-left: 0.8em;
+    color: #a7acb8;
+}
+.planner-md hr {
+    margin: 0.9em 0;
+    border: 0;
+    border-top: 1px solid rgba(201, 162, 74, 0.15);
+}
+
+/* Build-planner typography scale. One em-based ladder (relative to the reading
+   font size on .planner-reading) so every planner surface shares the same sizes
+   instead of ad-hoc text-[x.yem] values. */
+.pl-text-2xs {
+    font-size: 0.68em;
+}
+.pl-text-xs {
+    font-size: 0.78em;
+}
+.pl-text-sm {
+    font-size: 0.9em;
+}
+.pl-text-base {
+    font-size: 1em;
+}
+.pl-text-lg {
+    font-size: 1.2em;
+}
+.pl-text-xl {
+    font-size: 1.55em;
+}
+.pl-text-2xl {
+    font-size: 1.9em;
+}
+
+/* Landing gem carousel: the autoplay progress ring sweeps a stroked circle over
+   one dwell interval (--dwell), and each swapped-in tool panel fades up. Both
+   pause / vanish under reduced-motion - see welcome.tsx. */
+@keyframes ete-carousel-ring {
+    from {
+        stroke-dashoffset: var(--ring-len);
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes ete-carousel-fade {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* The landing carousel's backdrop wash fades in each time the active gem
+   changes, tinting the panel faintly toward that gem's tone. */
+@keyframes ete-carousel-tint {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
