@@ -167,7 +167,7 @@ jobs:
         run: php artisan key:generate
 
       - name: Contract tests (real data)
-        run: php artisan test --testsuite=Contract
+        run: php artisan test --parallel --testsuite=Contract
 
       # The swap on the server is atomic and idempotent; production never serves
       # a release that did not pass the suite above.
@@ -254,4 +254,4 @@ jobs:
         run: php artisan key:generate
 
       - name: Contract tests (real data)
-        run: php artisan test --testsuite=Contract
+        run: php artisan test --parallel --testsuite=Contract
