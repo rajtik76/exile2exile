@@ -23,6 +23,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Game-data releases (staged extraction + validated activation)
+    |--------------------------------------------------------------------------
+    |
+    | A new patch is extracted into releases/<version> under this root while the
+    | app keeps serving the live release through the `current` symlink. CI
+    | downloads the staged release as a tarball, runs the Contract suite on it,
+    | and on green calls the activation endpoint (bearer-token protected), which
+    | swaps `current` atomically. Red tests mean no swap - the app stays on the
+    | last validated release.
+    |
+    */
+
+    'data' => [
+        'releases_root' => env('POE_DATA_RELEASES_ROOT') ?: storage_path('game-data'),
+
+        // Shared secret for POST /api/data/activate; empty disables the endpoint.
+        'activate_token' => env('POE_DATA_ACTIVATE_TOKEN', ''),
+
+        // Rollback targets kept alongside the live release when pruning.
+        'keep_releases' => (int) env('POE_DATA_KEEP_RELEASES', 2),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Economy data (poe2scout)
     |--------------------------------------------------------------------------
     |

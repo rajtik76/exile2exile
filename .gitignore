@@ -14,6 +14,7 @@
 /resources/poe2/ggpk
 /storage/*.key
 /storage/pail
+/storage/game-data
 /resources/js/actions
 /resources/js/routes
 /resources/js/wayfinder

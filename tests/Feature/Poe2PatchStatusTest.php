@@ -4,6 +4,7 @@ use App\Models\PatchRelease;
 use App\Services\Poe2PatchServer;
 use App\Support\Poe2PatchStatus;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 
 test('recording a poll exposes the player-facing version and check time', function () {
     $this->freezeTime(function () {
@@ -49,6 +50,9 @@ test('the status is null before any poll or release', function () {
 });
 
 test('the watcher stamps the poll time even when the version is unchanged', function () {
+    // A known-but-not-live version would nudge a StageGameData dispatch, which the
+    // sync queue would run for real; this test only cares about the poll stamp.
+    Queue::fake();
     Cache::flush();
     PatchRelease::create(['version' => '4.5.3.1.7']);
     test()->mock(Poe2PatchServer::class)

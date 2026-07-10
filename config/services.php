@@ -42,4 +42,19 @@ return [
         'patch_webhook' => env('DISCORD_PATCH_WEBHOOK', ''),
     ],
 
+    /*
+     * GitHub Actions dispatch for the data-contract workflow. When the watcher
+     * stages a new patch it asks CI to validate the staged release; a green run
+     * calls back to activate it. Token: a fine-grained PAT scoped to this repo
+     * with Actions read/write only. Leave the token empty to disable (e.g.
+     * locally - the staged release can still be validated and activated by
+     * dispatching the workflow by hand).
+     */
+    'github' => [
+        'token' => env('GITHUB_DISPATCH_TOKEN', ''),
+        'repository' => env('GITHUB_REPOSITORY', ''),
+        'workflow' => env('GITHUB_DATA_WORKFLOW', 'data-contract.yml'),
+        'ref' => env('GITHUB_DISPATCH_REF', 'main'),
+    ],
+
 ];

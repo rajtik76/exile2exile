@@ -2,24 +2,39 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\RegenerateGameData;
 use App\Jobs\SendDiscordPatchNotification;
 use App\Jobs\SendPatchWebhook;
+use App\Jobs\StageGameData;
 use App\Models\PatchRelease;
 use App\Models\PatchSubscriber;
+use App\Services\GameDataReleases;
 use App\Services\Poe2PatchServer;
 use App\Support\Poe2PatchStatus;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 #[Signature('poe2:watch-patch')]
 #[Description('Detect a new Path of Exile 2 patch and notify webhook subscribers')]
 class WatchPoe2Patch extends Command
 {
-    public function handle(Poe2PatchServer $patchServer, Poe2PatchStatus $status): int
+    /** Minimum time between validation nudges for a patch that is not live yet. */
+    private const int RETRY_INTERVAL_HOURS = 6;
+
+    public function handle(Poe2PatchServer $patchServer, Poe2PatchStatus $status, GameDataReleases $releases): int
     {
-        $version = $patchServer->currentVersion();
+        // A transient GGG patch-server outage (timeout, refused, unparseable reply)
+        // must not fail the scheduled run: skip this tick and try again next time.
+        try {
+            $version = $patchServer->currentVersion();
+        } catch (\RuntimeException $e) {
+            Log::info('poe2:watch-patch skipped: patch server unreachable', ['error' => $e->getMessage()]);
+            $this->warn("Patch server unreachable, skipping: {$e->getMessage()}");
+
+            return self::SUCCESS;
+        }
 
         // Stamp the poll time on every run - the nav shows "last checked" even
         // when the version has not moved.
@@ -30,6 +45,7 @@ class WatchPoe2Patch extends Command
         $release = PatchRelease::query()->createOrFirst(['version' => $version]);
 
         if (! $release->wasRecentlyCreated) {
+            $this->nudgeStalledValidation($version, $releases);
             $this->info("No new patch (current: {$version}).");
 
             return self::SUCCESS;
@@ -37,8 +53,12 @@ class WatchPoe2Patch extends Command
 
         $this->info("New patch detected: {$version}");
 
-        // Rebuild our GGPK-derived art in place from the fresh CDN.
-        RegenerateGameData::dispatch($version);
+        // Stage the new data next to the live release and ask CI to validate it;
+        // the swap happens only after the Contract suite goes green (the workflow
+        // calls the activation endpoint). Seed the retry key so the next ticks do
+        // not re-dispatch while the extraction is still running.
+        Cache::put($this->retryKey($version), now()->toIso8601String(), now()->addHours(self::RETRY_INTERVAL_HOURS));
+        StageGameData::dispatch($version);
 
         // Announce the patch on Discord.
         SendDiscordPatchNotification::dispatch($version);
@@ -59,5 +79,29 @@ class WatchPoe2Patch extends Command
         $this->info("Queued {$queued} webhook notifications.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * A known patch that never went live needs a nudge: the staging job may have
+     * died, the CI dispatch may have been lost, or a red run was fixed after the
+     * fact. Re-dispatch at most once per interval; staging is idempotent, so an
+     * already staged release only re-triggers the CI validation. Once the patch
+     * is activated (or GGG moves on to a newer version) this stops firing.
+     */
+    private function nudgeStalledValidation(string $version, GameDataReleases $releases): void
+    {
+        if ($releases->currentVersion() === $version) {
+            return;
+        }
+
+        if (Cache::add($this->retryKey($version), now()->toIso8601String(), now()->addHours(self::RETRY_INTERVAL_HOURS))) {
+            $this->warn("Patch {$version} is not live yet - re-dispatching staging + validation.");
+            StageGameData::dispatch($version);
+        }
+    }
+
+    private function retryKey(string $version): string
+    {
+        return "poe2:stage-retry:{$version}";
     }
 }

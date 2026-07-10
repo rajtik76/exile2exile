@@ -11,7 +11,7 @@
 // Usage: node build-data.mjs   (after `npm run extract`)
 
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createCdnSource, buildStatIndex } from '@poe2-toolkit/ggpk';
@@ -23,7 +23,9 @@ import { extractMods } from '@poe2-toolkit/mod-extractor';
 import { buildModCatalogue, buildBaseImplicits } from './mod-catalogue.mjs';
 
 const TOOLS = fileURLToPath(new URL('./', import.meta.url));
-const ROOT = fileURLToPath(new URL('../../', import.meta.url));
+// DATA_OUT roots the output tree somewhere else (a staging release dir) while
+// keeping the repo-relative layout inside it; unset, outputs land in the repo.
+const ROOT = process.env.DATA_OUT ? resolve(process.env.DATA_OUT) : fileURLToPath(new URL('../../', import.meta.url));
 const TABLES_DIR = join(TOOLS, 'tables/English');
 const CACHE_DIR = join(TOOLS, '.cache');
 const GGPK_OUT = join(ROOT, 'resources/poe2/ggpk');

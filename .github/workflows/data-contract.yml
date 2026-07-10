@@ -1,0 +1,239 @@
+name: data-contract
+
+# Guards the app <-> game-data contract. CI does not extract from the GGPK here
+# (except the manual extract mode): the data comes from the app's own server, so
+# the suite tests exactly the bytes production serves - or is about to serve.
+#
+# Three ways in:
+#   push to main         - download the CURRENT release (what production serves
+#                          right now) and run the Contract suite against it.
+#   dispatch w/ version  - sent by the app's patch watcher for a freshly staged
+#                          release: download that release, verify its checksum,
+#                          run the suite, and on green call the activation
+#                          endpoint so production swaps to it atomically.
+#   dispatch mode=extract - full GGPK extraction (the config.json pin, or the
+#                          version input); for changes to the extractor itself.
+#                          Never activates anything.
+#
+# Repo settings this needs:
+#   vars.DATA_BASE_URL           - the app's base URL, e.g. https://exile2exile.example
+#   secrets.DATA_ACTIVATE_TOKEN  - shared secret for POST /api/data/activate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'config/**'
+      - 'database/**'
+      - 'routes/**'
+      - 'tests/Contract/**'
+      - 'tools/poe-data-extract/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpunit.xml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Staged release to validate and (on green) activate, e.g. 4.5.5.0'
+        required: false
+        default: ''
+      sha256:
+        description: 'Expected sha256 of the release tarball'
+        required: false
+        default: ''
+      mode:
+        description: 'validate = download from the app, extract = full GGPK extraction'
+        type: choice
+        options:
+          - validate
+          - extract
+        default: validate
+
+permissions:
+  contents: read
+
+# One run per staged version (a re-dispatch supersedes the last), one per ref
+# for code pushes.
+concurrency:
+  group: data-contract-${{ inputs.version || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event_name == 'push' || inputs.mode != 'extract'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      # A dispatch names the staged release to validate; a code push validates
+      # against whatever production serves right now (its own version stamp).
+      - name: Resolve release version
+        id: release
+        env:
+          BASE_URL: ${{ vars.DATA_BASE_URL }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_SHA256: ${{ inputs.sha256 }}
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "::error::vars.DATA_BASE_URL is not configured."
+            exit 1
+          fi
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
+            CACHE_SUFFIX="$INPUT_SHA256"
+          else
+            STAMP=$(curl -fsSL --retry 3 "$BASE_URL/tree/current/version.json")
+            VERSION=$(echo "$STAMP" | jq -r '.patch // empty')
+            CACHE_SUFFIX=$(echo "$STAMP" | jq -r '.v // empty')
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not resolve a release version (no input, no live stamp)."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "cache-key=game-data-$VERSION-$CACHE_SUFFIX" >> "$GITHUB_OUTPUT"
+          echo "Validating release $VERSION"
+
+      # Repeat runs against the same release hit the Actions cache instead of
+      # re-downloading the tarball from the app.
+      - name: Cache release tarball
+        id: tarball-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data.tar.gz
+          key: ${{ steps.release.outputs.cache-key }}
+
+      - name: Download release tarball
+        if: steps.tarball-cache.outputs.cache-hit != 'true'
+        env:
+          BASE_URL: ${{ vars.DATA_BASE_URL }}
+        run: curl -fsSL --retry 3 -o data.tar.gz "$BASE_URL/api/data/releases/${{ steps.release.outputs.version }}.tar.gz"
+
+      # Proves CI got exactly the artifact the watcher staged - even if another
+      # patch landed in between.
+      - name: Verify tarball checksum
+        if: inputs.sha256 != ''
+        run: echo "${{ inputs.sha256 }}  data.tar.gz" | sha256sum -c
+
+      - name: Unpack release into the checkout
+        run: tar -xzf data.tar.gz
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Contract tests (real data)
+        run: php artisan test --testsuite=Contract
+
+      # The swap on the server is atomic and idempotent; production never serves
+      # a release that did not pass the suite above.
+      - name: Activate the validated release
+        if: inputs.version != ''
+        env:
+          BASE_URL: ${{ vars.DATA_BASE_URL }}
+        run: |
+          curl -fsS --retry 3 -X POST "$BASE_URL/api/data/activate" \
+            -H "Authorization: Bearer ${{ secrets.DATA_ACTIVATE_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -d '{"version":"${{ steps.release.outputs.version }}"}'
+
+  # Manual-only: exercises the extractor pipeline end to end against the GGPK
+  # patch CDN. Use it for pull requests that change tools/poe-data-extract. It
+  # never activates anything on the server.
+  extract:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'extract'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Read data patch pin
+        id: datapatch
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            echo "patch=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
+          else
+            echo "patch=$(node -p "require('./tools/poe-data-extract/config.json').patch")" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cache GGPK bundles
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tools/poe-data-extract/.cache
+          key: ggpk-${{ steps.datapatch.outputs.patch }}
+
+      - name: Install extractor dependencies
+        working-directory: tools/poe-data-extract
+        run: npm install
+
+      # Full extract (icons + webp): the Contract suite checks that referenced
+      # icons exist on disk, so JSON-only is not enough here.
+      - name: Extract GGPK data
+        env:
+          PATCH: ${{ steps.datapatch.outputs.patch }}
+        run: npm run refresh:data
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Contract tests (real data)
+        run: php artisan test --testsuite=Contract

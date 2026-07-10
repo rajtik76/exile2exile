@@ -9,6 +9,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const toolDir = fileURLToPath(new URL('./', import.meta.url));
@@ -28,6 +29,16 @@ const patch = config.patch;
 
 if (!patch) {
     throw new Error('tools/poe-data-extract/config.json has no patch pin');
+}
+
+// Optional staging root: with DATA_OUT set, build-data and publish write the
+// whole output tree (public/..., resources/...) under it instead of the repo
+// root, so a release can be staged next to the live data and swapped in
+// atomically. Resolve it here - the steps below run with the tool dir as cwd,
+// which would silently reroot a relative path.
+if (process.env.DATA_OUT) {
+    process.env.DATA_OUT = resolve(process.env.DATA_OUT);
+    console.log(`Staging output under ${process.env.DATA_OUT}`);
 }
 
 /** Run a step from the extractor directory, inheriting stdio, failing loud on error. */

@@ -7,12 +7,17 @@
 // Usage: node tree/publish.mjs   (after the extractor wrote out/tree/)
 
 import { mkdirSync, copyFileSync, readdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
 
 const OUT = new URL('../out/tree/', import.meta.url);
-const PUBLIC = new URL('../../../public/tree/current/', import.meta.url);
+// DATA_OUT roots the published tree in a staging release dir (same repo-relative
+// layout inside it); unset, it publishes into the repo's public/ as before.
+const PUBLIC = process.env.DATA_OUT
+  ? pathToFileURL(resolve(process.env.DATA_OUT, 'public/tree/current') + '/')
+  : new URL('../../../public/tree/current/', import.meta.url);
 const ASSETS = new URL('assets/', PUBLIC);
 const CENTRE = new URL('assets/centre/', PUBLIC);
 mkdirSync(fileURLToPath(ASSETS), { recursive: true });
