@@ -13,12 +13,32 @@ vi.mock('@/lib/assetVersion', () => ({
     withAssetVersion: (url: string) => url,
 }));
 
-import { centreSprites, resolveClassId } from '@/lib/classCatalog';
+import {
+    centreSprites,
+    resolveAscendancyName,
+    resolveClassId,
+} from '@/lib/classCatalog';
 
 const tree = {
     classes: [
         { id: 0, name: 'Witch' },
         { id: 1, name: 'Ranger' },
+        {
+            id: 2,
+            name: 'Mercenary',
+            ascendancies: [
+                {
+                    id: 'Tactician',
+                    name: 'Tactician',
+                    internalId: 'Mercenary1',
+                },
+                {
+                    id: 'Witchhunter',
+                    name: 'Witchhunter',
+                    internalId: 'Mercenary2',
+                },
+            ],
+        },
     ],
 } as unknown as TreeData;
 
@@ -32,6 +52,31 @@ describe('resolveClassId', () => {
         expect(resolveClassId(tree, null)).toBeNull();
         expect(resolveClassId(tree, '')).toBeNull();
         expect(resolveClassId(tree, 'Templar')).toBeNull();
+    });
+});
+
+describe('resolveAscendancyName', () => {
+    it('resolves the display-name key the class gallery stores', () => {
+        expect(resolveAscendancyName(tree, 'Mercenary', 'Witchhunter')).toBe(
+            'Witchhunter',
+        );
+    });
+
+    it('resolves the GGG internal id the PoB import stores', () => {
+        expect(resolveAscendancyName(tree, 'Mercenary', 'Mercenary2')).toBe(
+            'Witchhunter',
+        );
+        expect(resolveAscendancyName(tree, 'mercenary', 'Mercenary1')).toBe(
+            'Tactician',
+        );
+    });
+
+    it('returns null for a missing class, ascendancy or key', () => {
+        expect(resolveAscendancyName(tree, null, 'Witchhunter')).toBeNull();
+        expect(resolveAscendancyName(tree, 'Mercenary', null)).toBeNull();
+        expect(resolveAscendancyName(tree, 'Templar', 'Templar1')).toBeNull();
+        expect(resolveAscendancyName(tree, 'Mercenary', 'Nope')).toBeNull();
+        expect(resolveAscendancyName(tree, 'Witch', 'Witch1')).toBeNull();
     });
 });
 

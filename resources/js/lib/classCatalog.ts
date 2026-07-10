@@ -41,6 +41,36 @@ export function resolveClassId(
 }
 
 /**
+ * Resolve a build's stored ascendancy key to its display name within a class, or
+ * null when the class or ascendancy is unknown to the tree.
+ *
+ * Two key formats reach the frontend: the class gallery stores the normalised
+ * tree's `id` (the display name, e.g. "Witchhunter"), while the PoB import
+ * stores GGG's internal id (e.g. "Mercenary2"). Both must resolve, so this
+ * matches either - the one place that owns that rule.
+ */
+export function resolveAscendancyName(
+    data: TreeData,
+    className: string | null | undefined,
+    ascendId: string | null | undefined,
+): string | null {
+    if (!className || !ascendId) {
+        return null;
+    }
+
+    const lower = className.toLowerCase();
+    const ascendancies =
+        data.classes.find((cls) => cls.name.toLowerCase() === lower)
+            ?.ascendancies ?? [];
+
+    return (
+        ascendancies.find(
+            (asc) => asc.id === ascendId || asc.internalId === ascendId,
+        )?.name ?? null
+    );
+}
+
+/**
  * Centre artwork (class portrait + ring) for a class id + ascendancy, sized by
  * the renderer to the hub radii. Undefined when the class is unknown.
  *

@@ -18,6 +18,7 @@ import { TextInput } from '@/components/planner/ui/Field';
 import { Modal } from '@/components/planner/ui/Overlay';
 import { Panel } from '@/components/planner/ui/Panel';
 import { Eyebrow } from '@/components/planner/ui/Text';
+import { resolveAscendancyName } from '@/lib/classCatalog';
 import { xsrfToken } from '@/lib/csrf';
 import { loadGemsView, saveGemsView } from '@/lib/gemsView';
 import type { GemsView } from '@/lib/gemsView';
@@ -343,13 +344,9 @@ export default function PlannerEdit({
     // build only stores its id), and the portrait is the game's own centre art.
     const build = data.build as PlanBuild;
     const { data: treeData } = useTreeData();
-    const selectedClass =
-        treeData?.classes.find(
-            (cls) => cls.name.toLowerCase() === build.className?.toLowerCase(),
-        ) ?? null;
-    const selectedAscName =
-        selectedClass?.ascendancies.find((asc) => asc.id === build.ascendId)
-            ?.name ?? null;
+    const selectedAscName = treeData
+        ? resolveAscendancyName(treeData, build.className, build.ascendId)
+        : null;
     const portrait = build.className
         ? classPortrait(build.className, selectedAscName)
         : null;

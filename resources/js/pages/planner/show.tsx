@@ -16,6 +16,7 @@ import RichText from '@/components/planner/RichText';
 import TreeNotablePriority from '@/components/planner/TreeNotablePriority';
 import { Panel } from '@/components/planner/ui/Panel';
 import { Eyebrow, Heading } from '@/components/planner/ui/Text';
+import { resolveAscendancyName } from '@/lib/classCatalog';
 import { loadGemsView, saveGemsView } from '@/lib/gemsView';
 import type { GemsView } from '@/lib/gemsView';
 import type { ModMap } from '@/lib/modLines';
@@ -83,13 +84,9 @@ export default function PlannerShow({
     // resolved from the live tree (the build stores only ids), exactly as the editor.
     const build = plan.build as PlanBuild;
     const { data: treeData } = useTreeData();
-    const selectedClass =
-        treeData?.classes.find(
-            (cls) => cls.name.toLowerCase() === build.className?.toLowerCase(),
-        ) ?? null;
-    const selectedAscName =
-        selectedClass?.ascendancies.find((asc) => asc.id === build.ascendId)
-            ?.name ?? null;
+    const selectedAscName = treeData
+        ? resolveAscendancyName(treeData, build.className, build.ascendId)
+        : null;
     const portrait = build.className
         ? classPortrait(build.className, selectedAscName)
         : null;

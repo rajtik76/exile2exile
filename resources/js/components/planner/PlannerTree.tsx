@@ -1,7 +1,7 @@
 import type { BuildAllocation } from '@poe2-toolkit/tree-core';
 import { memo, useMemo } from 'react';
 import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
-import { resolveClassId } from '@/lib/classCatalog';
+import { resolveAscendancyName, resolveClassId } from '@/lib/classCatalog';
 import { useTreeData } from '@/lib/useTreeData';
 import type { PlanBuild, PlanTreeAllocation } from '@/types/planner';
 
@@ -32,6 +32,16 @@ function PlannerTree({
         [data, build.className],
     );
 
+    // The renderer keys ascendancy nodes by display name; the build may store the
+    // GGG internal id instead (PoB imports), so resolve before handing it over.
+    const ascendancy = useMemo(
+        () =>
+            data
+                ? resolveAscendancyName(data, build.className, build.ascendId)
+                : null,
+        [data, build.className, build.ascendId],
+    );
+
     // Memoised for a stable reference across unrelated edits (typing the title or a
     // notes field re-renders this component). PassiveTreeView rebuilds the whole tree
     // scene whenever this object's identity changes, so a fresh object per render would
@@ -39,14 +49,14 @@ function PlannerTree({
     const buildAllocation = useMemo<BuildAllocation>(
         () => ({
             classId: classId ?? 0,
-            ascendId: build.ascendId ?? undefined,
+            ascendId: ascendancy ?? undefined,
             allocated: allocation.allocated,
             attributeChoices: allocation.attributeChoices,
             weaponSets: allocation.weaponSets,
             jewels: allocation.jewels as BuildAllocation['jewels'],
             treeVersion: allocation.treeVersion ?? undefined,
         }),
-        [classId, build.ascendId, allocation],
+        [classId, ascendancy, allocation],
     );
 
     if (!data) {
@@ -82,7 +92,7 @@ function PlannerTree({
             <PassiveTreeView
                 editable={editable}
                 classId={classId}
-                ascendancy={build.ascendId}
+                ascendancy={ascendancy}
                 allocation={buildAllocation}
                 showSearch
                 showPointsCounter
