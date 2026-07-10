@@ -6,6 +6,7 @@ namespace App\Build;
 
 use App\Pob\Reference\LeagueReference;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Builds slim name/kind and class-override lookups from the bundled tree data
@@ -125,11 +126,13 @@ final class CachedTreeIndex implements TreeIndex
      */
     private function readJson(string $path): array
     {
-        if (! is_file($path)) {
+        $disk = Storage::disk('game-data');
+
+        if (! $disk->exists($path)) {
             return [];
         }
 
-        $decoded = json_decode((string) file_get_contents($path), true);
+        $decoded = json_decode((string) $disk->get($path), true);
 
         return is_array($decoded) ? $decoded : [];
     }

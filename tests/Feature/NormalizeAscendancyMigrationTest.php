@@ -4,6 +4,23 @@ use App\Models\SharedBuild;
 use App\Support\BuildHash;
 
 /**
+ * The migration maps an internal ascendancy id to its display name through the tree's
+ * class table ({@see CachedTreeIndex}). Seed just that lookup onto the mocked `game-data`
+ * disk - the two classes and ascendancies the tests touch - so the rewrite logic is proven
+ * without the real multi-MB tree export.
+ */
+beforeEach(function () {
+    fakeGameData([
+        'public/tree/current/data.json' => [
+            'classes' => [
+                ['name' => 'Monk', 'ascendancies' => [['id' => 'Monk1', 'name' => 'Martial Artist']]],
+                ['name' => 'Witch', 'ascendancies' => [['id' => 'Witch2', 'name' => 'Blood Mage']]],
+            ],
+        ],
+    ]);
+});
+
+/**
  * The data migration that rewrites legacy internal-id ascendancies to names.
  * Required directly so up() can be re-run against rows seeded by the test (the
  * migration itself ran on an empty table under RefreshDatabase).

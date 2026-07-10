@@ -10,6 +10,25 @@ use App\Filter\Economy\EconomyFilterBuilder;
 use App\Filter\Economy\PriceTierPolicy;
 use App\Filter\StyleTheme;
 use App\Pob\IconResolver;
+use Illuminate\Support\Facades\Storage;
+
+/**
+ * Seed just the GGPK base types the economy blocks may name onto the mocked `game-data`
+ * disk. The builder gates every emitted `BaseType` through {@see IconResolver::knowsBaseType},
+ * so only names present here can leak into a filter - which is exactly what the guard tests
+ * below assert. Deliberately absent: poe2scout labels like "Precursor Tablet" that are not
+ * real bases.
+ */
+beforeEach(function () {
+    $bases = [
+        'Mirror of Kalandra', 'Divine Orb', 'Exalted Orb', 'Chance Shard', 'Scrap Shard',
+        'Silk Robe', 'Sapphire', 'Verisium Cuffs',
+    ];
+
+    fakeGameData([
+        'resources/poe2/ggpk/items.json' => array_fill_keys($bases, ['rarity' => 'normal']),
+    ]);
+});
 
 /** A trivial theme: the economy tests assert block structure, not styling. */
 function stubStyleTheme(): StyleTheme
@@ -105,15 +124,14 @@ test('a unique base is valued at its dearest unique and gated to Rarity Unique',
 });
 
 /**
- * Independent oracle: raw GGPK base-type names read straight from the data file, not
+ * Independent oracle: raw GGPK base-type names read straight from the seeded data file, not
  * through {@see IconResolver}, so the guard below isn't just checking the gate against itself.
  *
  * @return array<string, int>
  */
 function knownGgpkBaseTypes(): array
 {
-    $path = dirname(__DIR__, 2).'/resources/poe2/ggpk/items.json';
-    $items = json_decode((string) file_get_contents($path), true);
+    $items = json_decode((string) Storage::disk('game-data')->get('resources/poe2/ggpk/items.json'), true);
 
     return array_flip(array_keys(is_array($items) ? $items : []));
 }

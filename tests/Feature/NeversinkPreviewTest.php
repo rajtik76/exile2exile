@@ -6,9 +6,6 @@ use App\Filter\Neversink\NeversinkFilterRepository;
 use App\Filter\Neversink\NeversinkPreviewBuilder;
 use App\Filter\Neversink\NeversinkStrictness;
 use App\Filter\Neversink\NeversinkStyle;
-use Tests\TestCase;
-
-uses(TestCase::class);
 
 /**
  * @param  list<array{name: string, hidden: bool, fontSize: int, text: array{int, int, int}, border: array{int, int, int}|null, background: array{int, int, int}|null, beam: string|null}>  $labels

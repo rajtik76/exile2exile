@@ -14,6 +14,11 @@
         <testsuite name="Browser">
             <directory>tests/Browser</directory>
         </testsuite>
+        <!-- Runs against real extracted game data (not mocked); CI downloads the
+             served or staged release for it (see data-contract.yml). -->
+        <testsuite name="Contract">
+            <directory>tests/Contract</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

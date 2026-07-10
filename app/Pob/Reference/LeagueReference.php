@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Pob\Reference;
 
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Builds slim node/gem id sets from the bundled game data and caches them. Only
@@ -84,11 +85,13 @@ final class LeagueReference implements BuildReference
      */
     private function readJson(string $path): array
     {
-        if (! is_file($path)) {
+        $disk = Storage::disk('game-data');
+
+        if (! $disk->exists($path)) {
             return [];
         }
 
-        $decoded = json_decode((string) file_get_contents($path), true);
+        $decoded = json_decode((string) $disk->get($path), true);
 
         return is_array($decoded) ? $decoded : [];
     }

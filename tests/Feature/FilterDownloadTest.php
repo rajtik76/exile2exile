@@ -4,6 +4,20 @@ declare(strict_types=1);
 
 use App\Models\EconomyPrice;
 
+/**
+ * The economy overlay only names a base the GGPK knows ({@see IconResolver::knowsBaseType}),
+ * so seed those bases onto the mocked `game-data` disk. The NeverSink base body is a vendored
+ * MIT asset (not GGPK) and is present unchanged.
+ */
+beforeEach(function () {
+    fakeGameData([
+        'resources/poe2/ggpk/items.json' => array_fill_keys(
+            ['Divine Orb', 'Mirror of Kalandra', 'Chance Shard'],
+            ['rarity' => 'normal'],
+        ),
+    ]);
+});
+
 test('it downloads a filter built on the NeverSink base for the default league', function () {
     EconomyPrice::factory()->create([
         'league' => 'Runes of Aldur', 'name' => 'Divine Orb', 'base_type' => 'Divine Orb',

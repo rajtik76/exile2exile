@@ -6,6 +6,7 @@ namespace App\Pob;
 
 use Closure;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Resolves canonical build identifiers (gem ids, item base types) to icon URLs.
@@ -1119,7 +1120,7 @@ final class IconResolver
             return null;
         }
 
-        return is_file($this->projectRoot().'/public/icons/poe2/'.$relative)
+        return Storage::disk('game-data')->exists('public/icons/poe2/'.$relative)
             ? self::ICON_WEB_BASE.'/'.$relative
             : null;
     }
@@ -1140,23 +1141,14 @@ final class IconResolver
      */
     private function loadJson(string $relative): array
     {
-        $path = $this->projectRoot().'/'.$relative;
+        $disk = Storage::disk('game-data');
 
-        if (! is_file($path)) {
+        if (! $disk->exists($relative)) {
             return [];
         }
 
-        $decoded = json_decode((string) file_get_contents($path), true);
+        $decoded = json_decode((string) $disk->get($relative), true);
 
         return is_array($decoded) ? $decoded : [];
-    }
-
-    /**
-     * Project root, resolved without the Laravel container so the resolver works
-     * in plain unit tests too (app/Pob/IconResolver.php -> two levels up).
-     */
-    private function projectRoot(): string
-    {
-        return dirname(__DIR__, 2);
     }
 }

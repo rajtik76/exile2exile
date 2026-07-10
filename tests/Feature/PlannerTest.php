@@ -5,6 +5,34 @@ use App\Support\Planner\PlanSchema;
 use Inertia\Testing\AssertableInertia;
 
 /**
+ * Seed the handful of catalogue entries the planner tests lean on onto the mocked
+ * `game-data` disk: a two-handed weapon and an off-hand base (for the weapon-conflict
+ * rule) and one gem (for inline reference resolution). Everything else is pure request
+ * logic that needs no game data.
+ */
+beforeEach(function () {
+    fakeGameData(
+        files: [
+            'resources/poe2/ggpk/items.json' => [
+                'Crude Bow' => ['rarity' => 'normal', 'twoHanded' => true, 'itemClass' => 'Bow'],
+                'Iron Focus' => ['rarity' => 'normal', 'itemClass' => 'Focus'],
+                'Bramblejack' => ['rarity' => 'unique', 'category' => 'Body Armour'],
+            ],
+            'resources/poe2/ggpk/gems.json' => [
+                'SkillGemIceNova' => ['name' => 'Ice Nova', 'icon' => 'gems/ice-nova.dds', 'color' => 'b', 'kind' => 'active'],
+            ],
+            // Two affixes the item-modifier validation tests reference, each with a tier
+            // range wide enough to accept the values those tests roll.
+            'resources/poe2/ggpk/mods.json' => [
+                ['id' => 'IncreasedLife1', 'name' => 'Hale', 'domain' => 'Item', 'group' => 'IncreasedLife', 'type' => 'prefix', 'tier' => 1, 'level' => 1, 'stats' => ['+# to maximum Life'], 'rolls' => [['stat' => 'life', 'min' => 5, 'max' => 25]], 'families' => ['IncreasedLife'], 'spawnWeights' => [['tag' => 'default', 'weight' => 1000]]],
+                ['id' => 'FireResist1', 'name' => 'of the Kiln', 'domain' => 'Item', 'group' => 'FireResistance', 'type' => 'suffix', 'tier' => 1, 'level' => 1, 'stats' => ['+#% to Fire Resistance'], 'rolls' => [['stat' => 'fire_resist', 'min' => 5, 'max' => 10]], 'families' => ['FireResist'], 'spawnWeights' => [['tag' => 'default', 'weight' => 1000]]],
+            ],
+        ],
+        icons: ['gems/ice-nova.png'],
+    );
+});
+
+/**
  * A valid store/update payload: the six base tabs verbatim plus whatever overrides
  * a test needs. Sections are optional - the server fills empty ones.
  */

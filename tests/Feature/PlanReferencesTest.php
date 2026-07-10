@@ -4,6 +4,30 @@ use App\Pob\IconResolver;
 use App\Support\Planner\PlanReferences;
 
 /**
+ * PlanReferences finds `{{type:id|Name}}` tokens in a plan's texts (and its slot/gem
+ * structures) and resolves the known ones through {@see IconResolver}. These tests drive
+ * that logic against a small arbitrary catalogue on the mocked `game-data` disk - one gem
+ * and one unique whose icons are seeded present - so nothing depends on the real extract.
+ */
+beforeEach(function () {
+    fakeGameData(
+        files: [
+            'resources/poe2/ggpk/gems.json' => [
+                'SkillGemIceNova' => ['name' => 'Ice Nova', 'icon' => 'gems/ice-nova.dds', 'color' => 'b', 'kind' => 'active'],
+            ],
+            'resources/poe2/ggpk/items.json' => [
+                'Bramblejack' => ['icon' => 'uniques/bramblejack.dds', 'rarity' => 'unique', 'category' => 'Body Armour', 'flavourText' => ['A thorny hide.']],
+                'Rune of Reach' => ['icon' => 'runes/reach.dds', 'rarity' => 'normal', 'itemClass' => 'Ring'],
+            ],
+            'resources/poe2/ggpk/runes.json' => [
+                'Rune of Reach' => ['levelRequirement' => 1, 'effects' => ['+# to range']],
+            ],
+        ],
+        icons: ['gems/ice-nova.png', 'uniques/bramblejack.png', 'runes/reach.png'],
+    );
+});
+
+/**
  * A plan blob whose texts carry a gem token (description), a rune token (a section's
  * notes) and an unknown gem token that must not resolve.
  */

@@ -21,6 +21,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -70,8 +71,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(BuildReference::class, fn ($app): BuildReference => new LeagueReference(
             $app->make(Cache::class),
             config()->string('poe.data_version'),
-            public_path('tree/current/data.json'),
-            resource_path('poe2/ggpk/gems.json'),
+            'public/tree/current/data.json',
+            'resources/poe2/ggpk/gems.json',
         ));
 
         // Slim name/kind and class-override lookups for the current league, so a
@@ -80,7 +81,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(TreeIndex::class, fn ($app): TreeIndex => new CachedTreeIndex(
             $app->make(Cache::class),
             config()->string('poe.data_version'),
-            public_path('tree/current/data.json'),
+            'public/tree/current/data.json',
         ));
 
         // Ordered: a pobb.in link is recognised before the raw-code fallback,
@@ -111,19 +112,19 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function treeAssetVersion(): string
     {
-        $stamp = public_path('tree/current/version.json');
+        $disk = Storage::disk('game-data');
 
-        if (is_file($stamp)) {
-            $decoded = json_decode((string) file_get_contents($stamp), true);
+        if ($disk->exists('public/tree/current/version.json')) {
+            $decoded = json_decode((string) $disk->get('public/tree/current/version.json'), true);
 
             if (is_array($decoded) && isset($decoded['v'])) {
                 return (string) $decoded['v'];
             }
         }
 
-        $data = public_path('tree/current/data.json');
-
-        return is_file($data) ? substr((string) md5_file($data), 0, 12) : 'dev';
+        return $disk->exists('public/tree/current/data.json')
+            ? substr(md5((string) $disk->get('public/tree/current/data.json')), 0, 12)
+            : 'dev';
     }
 
     /**

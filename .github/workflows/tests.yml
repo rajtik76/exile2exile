@@ -75,7 +75,7 @@ jobs:
         run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Composer packages
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -87,26 +87,10 @@ jobs:
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-      # Game data is not committed; extract the JSON the app and tests read straight
-      # from the GGPK, pinned to config.json. Icons and webp are skipped (server reads
-      # neither), so this is a small, fast build. Everything below boots the app, so it
-      # must run first.
-      - name: Read data patch pin
-        id: datapatch
-        run: echo "patch=$(node -p "require('./tools/poe-data-extract/config.json').patch")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache GGPK bundles
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: tools/poe-data-extract/.cache
-          key: ggpk-${{ steps.datapatch.outputs.patch }}
-
-      - name: Install extractor dependencies
-        working-directory: tools/poe-data-extract
-        run: npm install
-
-      - name: Extract GGPK JSON data
-        run: npm run refresh:data:json
+      # No game-data extract here: the Unit/Feature suites mock the `game-data` disk, so
+      # this workflow never touches real data. The app <-> data contract is guarded by
+      # the Contract suite in data-contract.yml, which runs against the release the
+      # server serves (or a freshly staged one on a new patch).
 
       - name: Copy Environment File
         run: cp .env.example .env

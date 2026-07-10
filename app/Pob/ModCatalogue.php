@@ -6,6 +6,7 @@ namespace App\Pob;
 
 use Closure;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * The GGPK equipment-mod catalogue: every explicit affix (prefix/suffix) an item can
@@ -299,13 +300,13 @@ final class ModCatalogue
     private function all(): array
     {
         return $this->mods ??= $this->remembered('mods', function (): array {
-            $path = dirname(__DIR__, 2).'/resources/poe2/ggpk/mods.json';
+            $disk = Storage::disk('game-data');
 
-            if (! is_file($path)) {
+            if (! $disk->exists('resources/poe2/ggpk/mods.json')) {
                 return [];
             }
 
-            $decoded = json_decode((string) file_get_contents($path), true);
+            $decoded = json_decode((string) $disk->get('resources/poe2/ggpk/mods.json'), true);
 
             if (! is_array($decoded)) {
                 return [];

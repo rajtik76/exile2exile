@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Pob;
 
+use Illuminate\Support\Facades\Storage;
+
 /**
  * Per-level skill gem requirements, derived from GGPK data into
  * resources/poe2/ggpk/gem_requirements.json (see tools/poe-data-extract).
@@ -40,13 +42,14 @@ final class GemRequirements
             return $this->data;
         }
 
-        $path = dirname(__DIR__, 2).'/resources/poe2/ggpk/gem_requirements.json';
+        $disk = Storage::disk('game-data');
+        $path = 'resources/poe2/ggpk/gem_requirements.json';
 
-        if (! is_file($path)) {
+        if (! $disk->exists($path)) {
             return $this->data = [];
         }
 
-        $decoded = json_decode((string) file_get_contents($path), true);
+        $decoded = json_decode((string) $disk->get($path), true);
 
         return $this->data = is_array($decoded) ? $decoded : [];
     }

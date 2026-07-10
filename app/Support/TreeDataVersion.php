@@ -9,6 +9,9 @@ namespace App\Support;
  * ({@see public/tree/current/version.json}, written by the extraction CI from the
  * version the app passed it): the data is its own single source of truth, not the
  * extractor config.
+ *
+ * Reads the file directly (not the `game-data` disk) because {@see stamp} runs at
+ * config-load time from config/poe.php, before the Storage facade has a root.
  */
 class TreeDataVersion
 {

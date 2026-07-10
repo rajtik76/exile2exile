@@ -8,6 +8,7 @@ use App\Pob\Data\BuildSnapshot;
 use App\Pob\Data\EquippedItem;
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -802,10 +803,10 @@ final class PobPlanMapper
         }
 
         $index = [];
-        $path = dirname(__DIR__, 3).'/public/tree/current/data.json';
+        $disk = Storage::disk('game-data');
 
-        if (is_file($path)) {
-            $data = json_decode((string) file_get_contents($path), true);
+        if ($disk->exists('public/tree/current/data.json')) {
+            $data = json_decode((string) $disk->get('public/tree/current/data.json'), true);
 
             foreach ((is_array($data) ? $data['classes'] ?? [] : []) as $class) {
                 $className = (string) ($class['name'] ?? '');

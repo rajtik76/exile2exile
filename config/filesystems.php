@@ -45,6 +45,16 @@ return [
             'report' => false,
         ],
 
+        // GGPK-derived game data (passive tree, item/gem/rune JSON + icon files),
+        // read from the project tree in production and faked in tests. The single
+        // seam so nothing reads these files with raw file_get_contents/is_file.
+        'game-data' => [
+            'driver' => 'local',
+            'root' => base_path(),
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

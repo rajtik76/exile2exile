@@ -6,6 +6,23 @@ use App\Models\BuildPlan;
 use App\Models\EconomyPrice;
 use App\Support\Planner\PlanSchema;
 
+/**
+ * The build overlay names the affix "Athlete's" (from IncreasedLife9) and gates its bases
+ * through {@see IconResolver::knowsBaseType}; the economy layer names Divine Orb. Seed just
+ * those onto the mocked `game-data` disk - the NeverSink base body is a vendored MIT asset.
+ */
+beforeEach(function () {
+    fakeGameData([
+        'resources/poe2/ggpk/mods.json' => [
+            ['id' => 'IncreasedLife9', 'name' => "Athlete's", 'domain' => 'Item', 'group' => 'IncreasedLife', 'type' => 'prefix', 'tier' => 1, 'level' => 1, 'stats' => ['+# to maximum Life'], 'rolls' => [['stat' => 'life', 'min' => 0, 'max' => 200]], 'families' => ['IncreasedLife'], 'spawnWeights' => [['tag' => 'default', 'weight' => 1000]]],
+        ],
+        'resources/poe2/ggpk/items.json' => array_fill_keys(
+            ['Amethyst Ring', 'Divine Orb'],
+            ['rarity' => 'normal'],
+        ),
+    ]);
+});
+
 function seedBuild(): BuildPlan
 {
     return BuildPlan::create([

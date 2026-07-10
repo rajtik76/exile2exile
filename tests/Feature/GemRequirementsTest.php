@@ -17,6 +17,11 @@ it('returns the requirement for a known gem and level, null otherwise', function
         ->and($reqs->at('UnknownGem', 1))->toBeNull();
 });
 
-it('lazily loads the vendored dataset when none is injected', function () {
-    expect((new GemRequirements)->at('definitely-not-a-gem', 1))->toBeNull();
+it('lazily loads the dataset from the game-data disk when none is injected', function () {
+    fakeGameData(['resources/poe2/ggpk/gem_requirements.json' => [
+        'SkillGemX' => ['name' => 'X', 'levels' => [1 => ['requiredLevel' => 1, 'str' => 0, 'dex' => 0, 'int' => 5]]],
+    ]]);
+
+    expect((new GemRequirements)->at('SkillGemX', 1))->toBe(['requiredLevel' => 1, 'str' => 0, 'dex' => 0, 'int' => 5])
+        ->and((new GemRequirements)->at('definitely-not-a-gem', 1))->toBeNull();
 });

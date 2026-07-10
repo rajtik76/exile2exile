@@ -7,10 +7,26 @@ use App\Filter\Actions;
 use App\Filter\Build\BuildFilterBuilder;
 use App\Filter\StyleTheme;
 use App\Support\Planner\PlanSchema;
-use Tests\TestCase;
 
-// Needs the container (ModCatalogue reads the GGPK mod data) but no database.
-uses(TestCase::class);
+/**
+ * The build overlay's LOGIC: from a plan it emits a wanted-affix block (keyed on each
+ * mod's display name) and a base-upgrade block (keyed on the bases the build wears), and
+ * it drops any base the GGPK doesn't know so the game never rejects the whole filter.
+ *
+ * Driven against a tiny arbitrary catalogue on the mocked `game-data` disk - one affix
+ * whose name is "Athlete's", one known base "Amethyst Ring", and no "Precursor Tablet" -
+ * so the gate and emission are tested, not the real reverse-matcher.
+ */
+beforeEach(function () {
+    fakeGameData([
+        'resources/poe2/ggpk/mods.json' => [
+            ['id' => 'IncreasedLife9', 'name' => "Athlete's", 'domain' => 'Item', 'group' => 'IncreasedLife', 'type' => 'prefix', 'tier' => 1, 'level' => 1, 'stats' => ['+# to maximum Life'], 'rolls' => [['stat' => 'life', 'min' => 0, 'max' => 200]], 'families' => ['IncreasedLife'], 'spawnWeights' => [['tag' => 'default', 'weight' => 1000]]],
+        ],
+        // "Amethyst Ring" is a real base the overlay may name; "Precursor Tablet" is absent
+        // on purpose, so the known-base gate must drop it.
+        'resources/poe2/ggpk/items.json' => ['Amethyst Ring' => ['rarity' => 'normal']],
+    ]);
+});
 
 /**
  * @param  array<string, mixed>  $slots
