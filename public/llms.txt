@@ -1,0 +1,22 @@
+# Exile to Exile
+
+> Free, fan-made Path of Exile 2 tools - one player to another. Plan the passive skill tree, compare builds side by side, and subscribe to a patch-release webhook. Every piece of game data is sourced from Grinding Gear Games' official GGPK / patch server, never third-party scrapes.
+
+Exile to Exile is an unofficial community project. It is not affiliated with, endorsed by, or sponsored by Grinding Gear Games. "Path of Exile 2" and all game content are trademarks of Grinding Gear Games, used here for identification only.
+
+## Tools
+
+- [Passive tree planner](https://poe.rajtik.com/tree): plan a Path of Exile 2 passive skill tree - click to allocate, switch class and ascendancy, search nodes, and import a Path of Building 2 code.
+- [Build compare](https://poe.rajtik.com/build): import a Path of Building 2 build and compare it side by side against another - gear, gems and the passive tree, with in-game-style tooltips.
+
+## Developers
+
+- [PoE2 patch webhook](https://poe.rajtik.com/patch-webhook): subscribe a URL and receive an HMAC-signed POST the moment a new Path of Exile 2 client version is detected on GGG's patch server (polled every five minutes). No account, no polling on your side.
+- [@poe2-toolkit on GitHub](https://github.com/rajtik76/poe2-toolkit): the open-source packages that power the tree - GGPK extraction, a headless geometry engine, and a WebGL renderer.
+
+## About
+
+- [Changelog](https://poe.rajtik.com/changelog): notable changes, newest first.
+- [Credits and licenses](https://poe.rajtik.com/credits)
+- [Privacy policy](https://poe.rajtik.com/privacy)
+- [Terms of service](https://poe.rajtik.com/terms)

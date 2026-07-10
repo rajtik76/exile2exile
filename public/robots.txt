@@ -1,0 +1,8 @@
+# Exile to Exile - free Path of Exile 2 tools
+# https://poe.rajtik.com
+
+User-agent: *
+Allow: /
+# Session-specific result view and the dev-only render harness aren't worth indexing.
+Disallow: /build/result
+Disallow: /test/

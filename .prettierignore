@@ -1,0 +1,6 @@
+resources/js/components/ui/*
+resources/views/mail/*
+
+# Vendored / generated PoE2 data (RePoE fork datasets + fetched passive tree) -
+# not hand-authored source, so it is not Prettier's to format.
+resources/poe2/**

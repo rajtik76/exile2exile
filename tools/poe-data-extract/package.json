@@ -1,0 +1,20 @@
+{
+  "name": "poe-data-extract",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Decodes PoE2 GGPK tables via pathofexile-dat, then builds the app's item/gem/rune mapping data and icons through the @poe2-toolkit extractors. GGPK only.",
+  "type": "module",
+  "scripts": {
+    "extract": "node extract.mjs",
+    "build-data": "node build-data.mjs"
+  },
+  "dependencies": {
+    "@poe2-toolkit/gem-extractor": "^0.5.0",
+    "@poe2-toolkit/ggpk": "^0.4.0",
+    "@poe2-toolkit/item-extractor": "^0.10.0",
+    "@poe2-toolkit/mod-extractor": "^0.1.1",
+    "@poe2-toolkit/rune-extractor": "^0.4.0",
+    "pathofexile-dat": "^15.1.0",
+    "sharp": "^0.35.2"
+  }
+}

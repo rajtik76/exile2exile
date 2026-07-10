@@ -1,0 +1,2281 @@
+{
+  "Lesser Desert Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Adds 4 to 6 Fire Damage",
+      "Wand or Staff: Gain 6% of Damage as Extra Fire Damage",
+      "Armour: +10% to Fire Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/FireRuneTier1.dds"
+  },
+  "Desert Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Adds 7 to 11 Fire Damage",
+      "Wand or Staff: Gain 8% of Damage as Extra Fire Damage",
+      "Armour: +14% to Fire Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/FireRune.dds"
+  },
+  "Greater Desert Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Adds 13 to 16 Fire Damage",
+      "Wand or Staff: Gain 10% of Damage as Extra Fire Damage",
+      "Armour: +18% to Fire Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/FireRuneTier2.dds"
+  },
+  "Perfect Desert Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Adds 17 to 20 Fire Damage",
+      "Wand or Staff: Gain 12% of Damage as Extra Fire Damage",
+      "Armour: +22% to Fire Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneFire.dds"
+  },
+  "Lesser Glacial Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Adds 3 to 5 Cold Damage",
+      "Wand or Staff: Gain 6% of Damage as Extra Cold Damage",
+      "Armour: +10% to Cold Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/ColdRuneTier1.dds"
+  },
+  "Glacial Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Adds 6 to 10 Cold Damage",
+      "Wand or Staff: Gain 8% of Damage as Extra Cold Damage",
+      "Armour: +14% to Cold Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/ColdRune.dds"
+  },
+  "Greater Glacial Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Adds 9 to 15 Cold Damage",
+      "Wand or Staff: Gain 10% of Damage as Extra Cold Damage",
+      "Armour: +18% to Cold Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/ColdRuneTier2.dds"
+  },
+  "Perfect Glacial Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Adds 16 to 20 Cold Damage",
+      "Wand or Staff: Gain 12% of Damage as Extra Cold Damage",
+      "Armour: +22% to Cold Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneCold.dds"
+  },
+  "Lesser Storm Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Adds 1 to 10 Lightning Damage",
+      "Wand or Staff: Gain 6% of Damage as Extra Lightning Damage",
+      "Armour: +10% to Lightning Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LightningRuneTier1.dds"
+  },
+  "Storm Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Adds 1 to 20 Lightning Damage",
+      "Wand or Staff: Gain 8% of Damage as Extra Lightning Damage",
+      "Armour: +14% to Lightning Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LightningRune.dds"
+  },
+  "Greater Storm Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Adds 1 to 30 Lightning Damage",
+      "Wand or Staff: Gain 10% of Damage as Extra Lightning Damage",
+      "Armour: +18% to Lightning Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LightningRuneTier2.dds"
+  },
+  "Perfect Storm Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Adds 1 to 40 Lightning Damage",
+      "Wand or Staff: Gain 12% of Damage as Extra Lightning Damage",
+      "Armour: +22% to Lightning Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneLightning.dds"
+  },
+  "Lesser Iron Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: 14% increased Physical Damage",
+      "Wand or Staff: 20% increased Spell Damage",
+      "Armour: 14% increased Armour, Evasion and Energy Shield"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/EnhanceRuneTier1.dds"
+  },
+  "Iron Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: 16% increased Physical Damage",
+      "Wand or Staff: 25% increased Spell Damage",
+      "Armour: 16% increased Armour, Evasion and Energy Shield"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/EnhanceRune.dds"
+  },
+  "Greater Iron Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: 18% increased Physical Damage",
+      "Wand or Staff: 30% increased Spell Damage",
+      "Armour: 18% increased Armour, Evasion and Energy Shield"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/EnhanceRuneTier2.dds"
+  },
+  "Perfect Iron Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: 20% increased Physical Damage",
+      "Wand or Staff: 35% increased Spell Damage",
+      "Armour: 20% increased Armour, Evasion and Energy Shield"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneEnhance.dds"
+  },
+  "Lesser Body Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Leeches 3% of Physical Damage as Life",
+      "Wand or Staff: +30 to maximum Energy Shield",
+      "Armour: +30 to maximum Life"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LifeRuneTier1.dds"
+  },
+  "Body Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Leeches 4% of Physical Damage as Life",
+      "Wand or Staff: +40 to maximum Energy Shield",
+      "Armour: +45 to maximum Life"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LifeRune.dds"
+  },
+  "Greater Body Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Leeches 5% of Physical Damage as Life",
+      "Wand or Staff: +50 to maximum Energy Shield",
+      "Armour: +60 to maximum Life"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LifeRuneTier2.dds"
+  },
+  "Perfect Body Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Leeches 6% of Physical Damage as Life",
+      "Wand or Staff: +60 to maximum Energy Shield",
+      "Armour: +75 to maximum Life"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneLife.dds"
+  },
+  "Lesser Mind Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Leeches 2% of Physical Damage as Mana",
+      "Wand or Staff: +45 to maximum Mana",
+      "Armour: +20 to maximum Mana"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/ManaRuneTier1.dds"
+  },
+  "Mind Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Leeches 3% of Physical Damage as Mana",
+      "Wand or Staff: +60 to maximum Mana",
+      "Armour: +30 to maximum Mana"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/ManaRune.dds"
+  },
+  "Greater Mind Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Leeches 4% of Physical Damage as Mana",
+      "Wand or Staff: +75 to maximum Mana",
+      "Armour: +40 to maximum Mana"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/ManaRuneTier2.dds"
+  },
+  "Perfect Mind Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Leeches 5% of Physical Damage as Mana",
+      "Wand or Staff: +90 to maximum Mana",
+      "Armour: +50 to maximum Mana"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneMana.dds"
+  },
+  "Lesser Rebirth Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Gain 15 Life per enemy killed",
+      "Wand or Staff: 6% increased Energy Shield Recharge Rate",
+      "Armour: Regenerate 21% of maximum Life per second"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LifeRecoveryRuneTier1.dds"
+  },
+  "Rebirth Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Gain 25 Life per enemy killed",
+      "Wand or Staff: 8% increased Energy Shield Recharge Rate",
+      "Armour: Regenerate 24% of maximum Life per second"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LifeRecoveryRune.dds"
+  },
+  "Greater Rebirth Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Gain 35 Life per enemy killed",
+      "Wand or Staff: 10% increased Energy Shield Recharge Rate",
+      "Armour: Regenerate 27% of maximum Life per second"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LifeRecoveryRuneTier2.dds"
+  },
+  "Perfect Rebirth Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Gain 45 Life per enemy killed",
+      "Wand or Staff: 12% increased Energy Shield Recharge Rate",
+      "Armour: Regenerate 30% of maximum Life per second"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneLifeRecovery.dds"
+  },
+  "Lesser Inspiration Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Gain 10 Mana per enemy killed",
+      "Wand or Staff: 20% increased Mana Regeneration Rate",
+      "Armour: 12% increased Mana Regeneration Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/ManaRecoveryRuneTier1.dds"
+  },
+  "Inspiration Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Gain 20 Mana per enemy killed",
+      "Wand or Staff: 25% increased Mana Regeneration Rate",
+      "Armour: 15% increased Mana Regeneration Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/ManaRecoveryRune.dds"
+  },
+  "Greater Inspiration Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Gain 30 Mana per enemy killed",
+      "Wand or Staff: 30% increased Mana Regeneration Rate",
+      "Armour: 18% increased Mana Regeneration Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/ManaRecoveryRuneTier2.dds"
+  },
+  "Perfect Inspiration Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Gain 40 Mana per enemy killed",
+      "Wand or Staff: 35% increased Mana Regeneration Rate",
+      "Armour: 21% increased Mana Regeneration Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneManaRecovery.dds"
+  },
+  "Lesser Stone Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Causes 20% increased Stun Buildup",
+      "Wand or Staff: Gain additional Stun Threshold equal to 10% of maximum Energy Shield",
+      "Armour: +50 to Stun Threshold"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/StunRuneTier1.dds"
+  },
+  "Stone Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Causes 30% increased Stun Buildup",
+      "Wand or Staff: Gain additional Stun Threshold equal to 12% of maximum Energy Shield",
+      "Armour: +75 to Stun Threshold"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/StunRune.dds"
+  },
+  "Greater Stone Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Causes 40% increased Stun Buildup",
+      "Wand or Staff: Gain additional Stun Threshold equal to 14% of maximum Energy Shield",
+      "Armour: +100 to Stun Threshold"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/StunRuneTier2.dds"
+  },
+  "Perfect Stone Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Causes 50% increased Stun Buildup",
+      "Wand or Staff: Gain additional Stun Threshold equal to 16% of maximum Energy Shield",
+      "Armour: +125 to Stun Threshold"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneStun.dds"
+  },
+  "Lesser Vision Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: +60 to Accuracy Rating",
+      "Wand or Staff: 16% increased Critical Hit Chance for Spells",
+      "Armour: 8% increased Life and Mana Recovery from Flasks"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/AccuracyRuneTier1.dds"
+  },
+  "Vision Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: +90 to Accuracy Rating",
+      "Wand or Staff: 20% increased Critical Hit Chance for Spells",
+      "Armour: 12% increased Life and Mana Recovery from Flasks"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/AccuracyRune.dds"
+  },
+  "Greater Vision Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: +120 to Accuracy Rating",
+      "Wand or Staff: 24% increased Critical Hit Chance for Spells",
+      "Armour: 16% increased Life and Mana Recovery from Flasks"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/AccuracyRuneTier2.dds"
+  },
+  "Perfect Vision Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: +150 to Accuracy Rating",
+      "Wand or Staff: 28% increased Critical Hit Chance for Spells",
+      "Armour: 20% increased Life and Mana Recovery from Flasks"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneAccuracy.dds"
+  },
+  "Soul Core of Tacati": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: 15% chance to Poison on Hit with this weapon",
+      "Armour: +11% to Chaos Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreChaos.dds"
+  },
+  "Soul Core of Opiloti": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: 15% chance to cause Bleeding on Hit",
+      "20% increased Charm Charges gained"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCorePhysical.dds"
+  },
+  "Soul Core of Jiquani": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Recover 2% of maximum Life on Kill",
+      "3% increased maximum Life"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreLife.dds"
+  },
+  "Soul Core of Zalatl": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Recover 2% of maximum Mana on Kill",
+      "3% increased maximum Mana"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreMana.dds"
+  },
+  "Soul Core of Citaqualotl": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: 30% increased Elemental Damage with Attacks",
+      "Armour: +5% to all Elemental Resistances"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreElementalResist.dds"
+  },
+  "Soul Core of Puhuarte": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: 30% increased Flammability Magnitude",
+      "+1% to Maximum Fire Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreFire.dds"
+  },
+  "Soul Core of Tzamoto": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: 30% increased Freeze Buildup",
+      "+1% to Maximum Cold Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreCold.dds"
+  },
+  "Soul Core of Xopec": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: 30% increased chance to Shock",
+      "+1% to Maximum Lightning Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreLightning.dds"
+  },
+  "Soul Core of Azcapa": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: +15 to Spirit",
+      "10% increased Quantity of Gold Dropped by Slain Enemies"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreWealthRarity.dds"
+  },
+  "Soul Core of Topotante": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Attacks with this Weapon Penetrate 15% Elemental Resistances",
+      "25% increased Elemental Ailment Threshold"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreTriElement.dds"
+  },
+  "Soul Core of Quipolatl": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: 5% increased Attack Speed",
+      "15% reduced Slowing Potency of Debuffs on You"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreSpeed.dds"
+  },
+  "Soul Core of Ticaba": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: +5% to Critical Damage Bonus",
+      "Hits against you have 20% reduced Critical Damage Bonus",
+      "Shields and Bucklers: Hits against you have 20% reduced Critical Damage Bonus"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreCrit.dds"
+  },
+  "Soul Core of Atmohua": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Convert 20% of Requirements to Strength",
+      "Armour: Convert 20% of Requirements to Strength"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreStrength.dds"
+  },
+  "Soul Core of Cholotl": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Convert 20% of Requirements to Dexterity",
+      "Armour: Convert 20% of Requirements to Dexterity"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreDex.dds"
+  },
+  "Soul Core of Zantipi": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Convert 20% of Requirements to Intelligence",
+      "Armour: Convert 20% of Requirements to Intelligence"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/GreaterSoulCoreint.dds"
+  },
+  "Greater Rune of Leadership": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Minions gain 10% of their Physical Damage as Extra Lightning Damage",
+      "Armour: Minions take 10% of Physical Damage as Lightning Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LightningRuneSpecial1.dds"
+  },
+  "Greater Rune of Tithing": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Meta Skills gain 10% increased Energy",
+      "Armour: 1 to 100 Lightning Thorns damage"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LightningRuneSpecial2.dds"
+  },
+  "Greater Rune of Alacrity": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: 8% increased Skill Speed",
+      "Armour: Debuffs on you expire 8% faster"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LightningRuneSpecial3.dds"
+  },
+  "Greater Rune of Nobility": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Attacks with this Weapon have 10% chance to inflict Exposure",
+      "Armour: 10% reduced effect of Shock on you"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/LightningRuneSpecial4.dds"
+  },
+  "Lesser Robust Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "All Equipment: +6 to Strength"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/StrengthRuneTier1.dds"
+  },
+  "Robust Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "All Equipment: +9 to Strength"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/StrengthRune.dds"
+  },
+  "Greater Robust Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "All Equipment: +12 to Strength"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/StrengthRuneTier3.dds"
+  },
+  "Perfect Robust Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "All Equipment: +15 to Strength"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneStrength.dds"
+  },
+  "Lesser Adept Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "All Equipment: +6 to Dexterity"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/DexRuneTier1.dds"
+  },
+  "Adept Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "All Equipment: +9 to Dexterity"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/DexRune.dds"
+  },
+  "Greater Adept Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "All Equipment: +12 to Dexterity"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/DexRuneTier3.dds"
+  },
+  "Perfect Adept Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "All Equipment: +15 to Dexterity"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneDexterity.dds"
+  },
+  "Lesser Resolve Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "All Equipment: +6 to Intelligence"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/IntRuneTier1.dds"
+  },
+  "Resolve Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "All Equipment: +9 to Intelligence"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/IntRune.dds"
+  },
+  "Greater Resolve Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "All Equipment: +12 to Intelligence"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/IntRuneTier3.dds"
+  },
+  "Perfect Resolve Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "All Equipment: +15 to Intelligence"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PerfectRuneIntelligence.dds"
+  },
+  "Lesser Tempered Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Martial Weapon: Adds 3 to 4 Physical Damage",
+      "Armour: 6 to 9 Physical Thorns damage"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PhyDmgRuneTier1.dds"
+  },
+  "Tempered Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Adds 6 to 9 Physical Damage",
+      "Armour: 14 to 21 Physical Thorns damage"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PhyDmgRune.dds"
+  },
+  "Greater Tempered Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Adds 9 to 12 Physical Damage",
+      "Armour: 31 to 52 Physical Thorns damage"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/PhyDmgRuneTier3.dds"
+  },
+  "Snake Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "8% increased Curse Magnitudes",
+      "Allies in your Presence have 10% increased Attack Speed"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableSnake.dds"
+  },
+  "Primate Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "Minions have 15% increased maximum Life",
+      "Allies in your Presence deal 40% increased Damage"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableMonkey.dds"
+  },
+  "Owl Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "12% increased Cooldown Recovery Rate",
+      "Allies in your Presence have 10% increased Cast Speed"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableOwl.dds"
+  },
+  "Cat Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "25% increased Accuracy Rating",
+      "Allies in your Presence have 14% increased Critical Hit Chance"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableCat.dds"
+  },
+  "Wolf Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "15% increased Magnitude of Bleeding you inflict",
+      "Allies in your Presence have 20% increased Critical Damage Bonus"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableWolf.dds"
+  },
+  "Stag Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "Projectiles have 15% chance to Fork",
+      "Allies in your Presence deal 1 to 40 added Attack Lightning Damage"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableStag.dds"
+  },
+  "Boar Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "Gain 1 Rage on Melee Hit",
+      "Allies in your Presence Regenerate 0% of your Maximum Life per second"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableBoar.dds"
+  },
+  "Bear Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "10% increased Area of Effect",
+      "Allies in your Presence deal 12 to 18 added Attack Physical Damage"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableBear.dds"
+  },
+  "Ox Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "Shields and Bucklers: 15% increased Block chance",
+      "Allies in your Presence have +12% to all Elemental Resistances"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableOx.dds"
+  },
+  "Rabbit Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "12% increased Rarity of Items found",
+      "15% increased Spirit"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableRabbit.dds"
+  },
+  "Fox Idol": {
+    "levelRequirement": null,
+    "effects": [
+      "Idols socketed in this item gain the benefits of their Bonded modifiers",
+      "50% increased Presence Area of Effect"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableFox.dds"
+  },
+  "Hedgewitch Assandra's Rune of Wisdom": {
+    "levelRequirement": 50,
+    "effects": [
+      "Wand or Staff: +1 to Level of all Spell Skills"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune1.dds"
+  },
+  "Saqawal's Rune of the Sky": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Gain 5% of Damage as Extra Damage of all Elements",
+      "Wand or Staff: Gain 5% of Damage as Extra Damage of all Elements"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune2.dds"
+  },
+  "Fenumus' Rune of Agony": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Gain 13% of Damage as Extra Chaos Damage",
+      "Wand or Staff: Gain 13% of Damage as Extra Chaos Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune3.dds"
+  },
+  "Farrul's Rune of Grace": {
+    "levelRequirement": 50,
+    "effects": [
+      "8% increased Deflection Rating while moving"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune4.dds"
+  },
+  "Farrul's Rune of the Chase": {
+    "levelRequirement": 50,
+    "effects": [
+      "5% increased Movement Speed"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune5.dds"
+  },
+  "Craiceann's Rune of Warding": {
+    "levelRequirement": 50,
+    "effects": [
+      "50% reduced effect of Curses on you"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune6.dds"
+  },
+  "Saqawal's Rune of Memory": {
+    "levelRequirement": 50,
+    "effects": [
+      "2% increased Experience gain"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune7.dds"
+  },
+  "Saqawal's Rune of Erosion": {
+    "levelRequirement": 50,
+    "effects": [
+      "25% increased Exposure Effect"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune8.dds"
+  },
+  "Farrul's Rune of the Hunt": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: 50% increased Attack Damage against Rare or Unique Enemies"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune9.dds"
+  },
+  "Craiceann's Rune of Recovery": {
+    "levelRequirement": 50,
+    "effects": [
+      "30% increased Energy Shield Recharge Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune10.dds"
+  },
+  "Courtesan Mannan's Rune of Cruelty": {
+    "levelRequirement": 50,
+    "effects": [
+      "20% increased Magnitude of Damaging Ailments you inflict"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune11.dds"
+  },
+  "Thane Grannell's Rune of Mastery": {
+    "levelRequirement": 50,
+    "effects": [
+      "30% increased Magnitude of Non-Damaging Ailments you inflict"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune12.dds"
+  },
+  "Fenumus' Rune of Spinning": {
+    "levelRequirement": 50,
+    "effects": [
+      "8% increased Cast Speed"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune13.dds"
+  },
+  "Countess Seske's Rune of Archery": {
+    "levelRequirement": 50,
+    "effects": [
+      "Bow Attacks fire an additional Arrow"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune14.dds"
+  },
+  "Thane Girt's Rune of Wildness": {
+    "levelRequirement": 50,
+    "effects": [
+      "Wand or Staff: 25% chance for Spell Skills to fire 2 additional Projectiles"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune15.dds"
+  },
+  "Fenumus' Rune of Draining": {
+    "levelRequirement": 50,
+    "effects": [
+      "20% increased Withered Magnitude"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune16.dds"
+  },
+  "Thane Myrk's Rune of Summer": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Adds 23 to 34 Fire Damage to Attacks against Ignited Enemies"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune17.dds"
+  },
+  "Lady Hestra's Rune of Winter": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Adds 19 to 28 Cold Damage against Chilled Enemies"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune18.dds"
+  },
+  "Thane Leld's Rune of Spring": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Adds 1 to 60 Lightning Damage against Shocked Enemies"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune19.dds"
+  },
+  "The Greatwolf's Rune of Claws": {
+    "levelRequirement": 50,
+    "effects": [
+      "Adds 5 to 12 Physical Damage to Attacks"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune20.dds"
+  },
+  "The Greatwolf's Rune of Willpower": {
+    "levelRequirement": 50,
+    "effects": [
+      "15% of Damage is taken from Mana before Life"
+    ],
+    "icon": "Art/2DItems/Currency/Runes/NewRune21.dds"
+  },
+  "Idol of Sirrius": {
+    "levelRequirement": 50,
+    "effects": [
+      "8% increased Attack Speed",
+      "Allies in your Presence have 8% increased Movement Speed"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableWolfSpecial.dds"
+  },
+  "Idol of Thruldana": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Targets can be affected by +1 of your Poisons at the same time",
+      "Martial Weapon: 25% reduced Poison Duration",
+      "Allies in your Presence deal 13 to 27 added Attack Chaos Damage"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableSnakeSpecial.dds"
+  },
+  "Idol of Grold": {
+    "levelRequirement": 50,
+    "effects": [
+      "50% increased total Power counted by Warcries",
+      "15% increased Damage per each different Companion in your Presence"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableBearSpecial.dds"
+  },
+  "Idol of Eeshta": {
+    "levelRequirement": 50,
+    "effects": [
+      "15% increased Cost Efficiency",
+      "15% increased Mana Recovery rate while your Companion is in your Presence"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableOwlSpecial.dds"
+  },
+  "Idol of Egrin": {
+    "levelRequirement": 50,
+    "effects": [
+      "Enemies you Curse take 6% increased Damage",
+      "20% increased Curse Duration"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableCatSpecial.dds"
+  },
+  "Idol of Maxarius": {
+    "levelRequirement": 50,
+    "effects": [
+      "+1 Charm Slot",
+      "Flasks gain 12 charges per Second"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableStagSpecial.dds"
+  },
+  "Idol of Ralakesh": {
+    "levelRequirement": 50,
+    "effects": [
+      "8% increased Reservation Efficiency of Minion Skills",
+      "40% increased Armour, Evasion and Energy Shield while your Companion is in your Presence"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableMonkeySpecial.dds"
+  },
+  "Idol of Greust": {
+    "levelRequirement": 50,
+    "effects": [
+      "Shields: +25% of Armour also applies to Elemental Damage",
+      "Gain Deflection Rating equal to 20% of Evasion Rating",
+      "Companions deal 10% more Damage for each different type of dead Companion you have"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/IdolofGreust.dds"
+  },
+  "Idol of Yeena": {
+    "levelRequirement": 50,
+    "effects": [
+      "30% increased Skill Effect Duration with Plant Skills",
+      "Plants have a 25% chance to immediately Overgrow when they enter your Presence for the first time"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/IdolofYeena.dds"
+  },
+  "Idol of Eramir": {
+    "levelRequirement": 50,
+    "effects": [
+      "Skills have 10% chance to not remove Charges but still count as consuming them",
+      "Allies in your Presence share Charges with you"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/IdolofEramir.dds"
+  },
+  "Idol of Oak": {
+    "levelRequirement": 50,
+    "effects": [
+      "15% chance when you gain an Endurance Charge to gain an additional Endurance Charge",
+      "If you would gain an Endurance Charge, Allies in your Presence gain that Charge instead"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/IdolofOak.dds"
+  },
+  "Idol of Alira": {
+    "levelRequirement": 50,
+    "effects": [
+      "15% chance when you gain a Power Charge to gain an additional Power Charge",
+      "If you would gain a Power Charge, Allies in your Presence gain that Charge instead"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/IdoloAlira.dds"
+  },
+  "Idol of Kraityn": {
+    "levelRequirement": 50,
+    "effects": [
+      "15% chance when you gain a Frenzy Charge to gain an additional Frenzy Charge",
+      "If you would gain a Frenzy Charge, Allies in your Presence gain that Charge instead"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/IdoloKraityn.dds"
+  },
+  "Idol of Silk": {
+    "levelRequirement": 50,
+    "effects": [
+      "Shields: 15% increased Block chance while your Companion is in your Presence",
+      "Companions in your Presence gain 1 Rage on hit"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/IdolofSilk.dds"
+  },
+  "Idol of the Sycophant": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon, Wand or Staff: Gain 20% of Damage as Extra Damage of a random Element",
+      "Martial Weapon, Wand or Staff: -20% to all Elemental Resistances",
+      "Companions in your Presence Gain 20% of Damage as Extra Damage of a random Element",
+      "Companions in your Presence have -20% to all Elemental Resistances"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/RitualCorruptedIdol1.dds"
+  },
+  "Idol of the Martyr": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon, Wand or Staff: Meta Skills gain 40% increased Energy",
+      "Martial Weapon, Wand or Staff: 25% reduced Spirit",
+      "Aura Skills have 25% increased Magnitudes",
+      "40% reduced Presence Area of Effect"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/RitualCorruptedIdol2.dds"
+  },
+  "Idol of the Pharisee": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon, Wand or Staff: Gain 2% of Damage as Extra Physical Damage per ten percent missing Mana",
+      "Martial Weapon, Wand or Staff: 30% reduced maximum Mana",
+      "Minions deal 60% increased Damage with Command Skills",
+      "30% reduced Mana Cost Efficiency of Command Skills"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/RitualCorruptedIdol3.dds"
+  },
+  "Panther Idol": {
+    "levelRequirement": 50,
+    "effects": [
+      "+10% of Armour also applies to Chaos Damage",
+      "Minions have +20% to Chaos Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketablePanther.dds"
+  },
+  "Hawk Idol": {
+    "levelRequirement": 50,
+    "effects": [
+      "10% increased Deflection Rating",
+      "Companions have 12% increased Attack Speed"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableHawk.dds"
+  },
+  "Stoat Idol": {
+    "levelRequirement": 50,
+    "effects": [
+      "5% of Damage taken bypasses Energy Shield",
+      "Companions have 25% increased maximum Life"
+    ],
+    "icon": "Art/2DItems/Currency/TormentedSpiritSocketables/AzmeriSocketableStoat.dds"
+  },
+  "Hayoxi's Soul Core of Heatproofing": {
+    "levelRequirement": 50,
+    "effects": [
+      "+40% of Armour also applies to Cold Damage"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreIce.dds"
+  },
+  "Zalatl's Soul Core of Insulation": {
+    "levelRequirement": 50,
+    "effects": [
+      "+40% of Armour also applies to Lightning Damage"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreLightning.dds"
+  },
+  "Topotante's Soul Core of Dampening": {
+    "levelRequirement": 50,
+    "effects": [
+      "+40% of Armour also applies to Fire Damage"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreFire.dds"
+  },
+  "Atmohua's Soul Core of Retreat": {
+    "levelRequirement": 50,
+    "effects": [
+      "Gain additional Stun Threshold equal to 15% of maximum Energy Shield",
+      "Gain additional Ailment Threshold equal to 15% of maximum Energy Shield",
+      "Gain additional Stun Threshold equal to 15% of maximum Energy Shield",
+      "Gain additional Ailment Threshold equal to 15% of maximum Energy Shield"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreEnergyShield.dds"
+  },
+  "Quipolatl's Soul Core of Flow": {
+    "levelRequirement": 50,
+    "effects": [
+      "8% increased Skill Effect Duration",
+      "8% increased Cooldown Recovery Rate"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreTimeCooldown.dds"
+  },
+  "Tzamoto's Soul Core of Ferocity": {
+    "levelRequirement": 50,
+    "effects": [
+      "+4 to Maximum Rage"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreRage.dds"
+  },
+  "Uromoti's Soul Core of Attenuation": {
+    "levelRequirement": 50,
+    "effects": [
+      "15% increased Curse Duration",
+      "15% increased Poison Duration"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreCurses2.dds"
+  },
+  "Opiloti's Soul Core of Assault": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: 50% chance when you gain a Frenzy Charge to gain an additional Frenzy Charge",
+      "Wand or Staff: 50% chance when you gain a Frenzy Charge to gain an additional Frenzy Charge"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreFrenzyCharge.dds"
+  },
+  "Guatelitzi's Soul Core of Endurance": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: 50% chance when you gain an Endurance Charge to gain an additional Endurance Charge",
+      "Wand or Staff: 50% chance when you gain an Endurance Charge to gain an additional Endurance Charge"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreEnduranceCharge.dds"
+  },
+  "Xopec's Soul Core of Power": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: 50% chance when you gain a Power Charge to gain an additional Power Charge",
+      "Wand or Staff: 50% chance when you gain a Power Charge to gain an additional Power Charge"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCorePowerCharge.dds"
+  },
+  "Estazunti's Soul Core of Convalescence": {
+    "levelRequirement": 50,
+    "effects": [
+      "12% increased speed of Recoup Effects",
+      "8% of Damage taken Recouped as Life"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreTimeSlow.dds"
+  },
+  "Tacati's Soul Core of Affliction": {
+    "levelRequirement": 50,
+    "effects": [
+      "Enemies you Curse have -5% to Chaos Resistance"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreChaos1.dds"
+  },
+  "Cholotl's Soul Core of War": {
+    "levelRequirement": 50,
+    "effects": [
+      "20% increased Projectile Speed"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreProjectile.dds"
+  },
+  "Citaqualotl's Soul Core of Foulness": {
+    "levelRequirement": 50,
+    "effects": [
+      "Martial Weapon: Adds 19 to 29 Chaos damage"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreChaos2.dds"
+  },
+  "Xipocado's Soul Core of Dominion": {
+    "levelRequirement": 50,
+    "effects": [
+      "Wand or Staff: Minions deal 40% increased Damage with Command Skills",
+      "Minions deal 40% increased Damage with Command Skills"
+    ],
+    "icon": "Art/2DItems/Currency/SoulCores/NewSoulCoreMinion.dds"
+  },
+  "Amanamu's Gaze": {
+    "levelRequirement": 60,
+    "effects": [
+      "Remove a Damaging Ailment when you use a Command Skill",
+      "+2 to Armour per 1 Spirit",
+      "1% increased Movement Speed per 15 Spirit, up to a maximum of 40%\\nOther Modifiers to Movement Speed except for Sprinting do not apply"
+    ],
+    "icon": "Art/2DItems/Currency/AbyssalEyeSocketables/AmanamusGaze.dds"
+  },
+  "Tecrod's Gaze": {
+    "levelRequirement": 60,
+    "effects": [
+      "Regenerate 90% of maximum Life per second",
+      "25% increased Life Cost Efficiency",
+      "10% increased Movement Speed when on Low Life"
+    ],
+    "icon": "Art/2DItems/Currency/AbyssalEyeSocketables/TecrodsGaze.dds"
+  },
+  "Kurgal's Gaze": {
+    "levelRequirement": 60,
+    "effects": [
+      "Increases and Reductions to Life Regeneration Rate also apply to Mana Regeneration Rate",
+      "40% increased effect of Arcane Surge on you",
+      "15% increased Mana Cost Efficiency if you haven't Dodge Rolled Recently"
+    ],
+    "icon": "Art/2DItems/Currency/AbyssalEyeSocketables/KurgalsGaze.dds"
+  },
+  "Ulaman's Gaze": {
+    "levelRequirement": 60,
+    "effects": [
+      "+1 to Accuracy Rating per 1 Item Evasion Rating on Equipped Helmet",
+      "Critical Hit chance is Lucky against Parried enemies",
+      "Prevent +3% of Damage from Deflected Hits"
+    ],
+    "icon": "Art/2DItems/Currency/AbyssalEyeSocketables/UlamansGaze.dds"
+  },
+  "Guatelitzi's Thesis": {
+    "levelRequirement": 60,
+    "effects": [
+      "Gain Armour equal to 35% of Life Lost from Hits in the past 8 seconds",
+      "10% of Physical Damage prevented Recouped as Life",
+      "Lose 300% of maximum Life per second while Sprinting",
+      "25% increased Movement Speed while Sprinting"
+    ],
+    "icon": "Art/2DItems/Currency/PerfectSoulCores/SoulCoreBlood.dds"
+  },
+  "Citaqualotl's Thesis": {
+    "levelRequirement": 60,
+    "effects": [
+      "You Recoup 50% of Damage taken by your Offerings as Life",
+      "One of your Persistent Minions revives when an Offering expires",
+      "Sacrifice 10% of maximum Life to gain that much Guard when you Dodge Roll"
+    ],
+    "icon": "Art/2DItems/Currency/PerfectSoulCores/SoulCoreSacrifice.dds"
+  },
+  "Jiquani's Thesis": {
+    "levelRequirement": 60,
+    "effects": [
+      "+1 to maximum Mana per 2 Item Energy Shield on Equipped Helmet",
+      "Energy Shield Recharge starts after spending a total of\\n 2000 Mana, no more than once every 2 seconds",
+      "Increases and Reductions to Movement Speed also\\n apply to Energy Shield Recharge Rate"
+    ],
+    "icon": "Art/2DItems/Currency/PerfectSoulCores/SoulCoreSoul.dds"
+  },
+  "Quipolatl's Thesis": {
+    "levelRequirement": 60,
+    "effects": [
+      "A random Skill that requires Glory generates 50% of its maximum Glory when your Marks Activate",
+      "Your Energy Shield Recharge starts when your Minions are Reformed",
+      "+75% of Armour also applies to Chaos Damage while on full Energy Shield"
+    ],
+    "icon": "Art/2DItems/Currency/PerfectSoulCores/SoulCoreScience.dds"
+  },
+  "Emergent Vigour": {
+    "levelRequirement": 60,
+    "effects": [
+      "+1 to maximum Life per 8 Armour on Equipped Helmet",
+      "Gain Maximum Energy Shield equal to 50% of total\\nStrength Requirements of Equipped Armour Items",
+      "Hits against you have no Critical Damage Bonus while on Consecrated Ground"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/ExpeditionReligionAncientAugment.dds"
+  },
+  "Emergent Possibility": {
+    "levelRequirement": 60,
+    "effects": [
+      "15% of Chaos Damage from Hits taken as a Damage of a random Element",
+      "Gain 1% of Damage as Extra Damage of a random Element per\\nRune Socketed in Equipped Items",
+      "50% increased Runic Ward Regeneration Rate while Sprinting"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/ExpeditionScienceAncientAugment.dds"
+  },
+  "Emergent Protection": {
+    "levelRequirement": 60,
+    "effects": [
+      "Gain 1 Endurance Charge on reaching Low Life, only once every 2 seconds",
+      "Banners also grant 1% of Life Regenerated per second to affected targets",
+      "When you stop Sprinting, gain Guard equal to 4% of maximum Life per second spent Sprinting, up to a maximum of 20%, for 4 seconds"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/ExpeditionValorAncientAugment.dds"
+  },
+  "Emergent Instinct": {
+    "levelRequirement": 60,
+    "effects": [
+      "Targets that are Blinded, Maimed, and Bleeding cannot Evade your Hits",
+      "Regenerate 3% of maximum Life per Second if you have used a Command Skill Recently",
+      "Thorns Damage is Lucky against targets with Fully Broken Armour"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/ExpeditionWarAncientAugment.dds"
+  },
+  "Carved Cunning": {
+    "levelRequirement": 60,
+    "effects": [
+      "Enemies which are on Full Life cannot Evade your Hits",
+      "Prevent +5% of Damage from Deflected Hits if you've\\nDeflected no Hits Recently",
+      "Gain Onslaught for 4 seconds when your Marks Activate"
+    ],
+    "icon": "Art/2DItems/Currency/Ritual/RitualAmbushPredators.dds"
+  },
+  "Carved Majesty": {
+    "levelRequirement": 60,
+    "effects": [
+      "+3 to Spirit per Idol socketed in your Equipment",
+      "Companions gain Onslaught for 4 seconds on Hitting your Marked targets",
+      "1% increased Movement Speed while Sprinting per Persistent Minion"
+    ],
+    "icon": "Art/2DItems/Currency/Ritual/RitualMajesticBeasts.dds"
+  },
+  "Carved Mischief": {
+    "levelRequirement": 60,
+    "effects": [
+      "Gain Guard equal to 10% of maximum Life for 4 seconds on taking Savage Hit",
+      "+5% to maximum Block chance if you've Blocked with a raised Shield Recently",
+      "200% increased Stun Threshold if you've been Stunned Recently"
+    ],
+    "icon": "Art/2DItems/Currency/Ritual/RitualMischievousCreatures.dds"
+  },
+  "Carved Tenacity": {
+    "levelRequirement": 60,
+    "effects": [
+      "Enemies have no Critical Damage Bonus for 4 seconds after you Blind them",
+      "Enemies you Critically Hit get 100% reduced Life Regeneration Rate for 4 seconds",
+      "Your speed is Unaffected by Slows while Sprinting"
+    ],
+    "icon": "Art/2DItems/Currency/Ritual/RitualTenaciousBeasts.dds"
+  },
+  "Raven-Touched Shard": {
+    "levelRequirement": 60,
+    "effects": [
+      "Raven-Touched"
+    ],
+    "icon": "Art/2DItems/Currency/Delirium/DeliriumEndgameSocketable.dds"
+  },
+  "Masterwork Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "All Equipment: Upgrades a socketed Rune"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/UpgradeRune.dds"
+  },
+  "Lesser Ward Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Armour: +15 to maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/AddedWardLesser.dds"
+  },
+  "Ward Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Armour: +20 to maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/AddedWardNormal.dds"
+  },
+  "Greater Ward Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Armour: +25 to maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/AddedWardGreater.dds"
+  },
+  "Perfect Ward Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Armour: +30 to maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/AddedWardPerfect.dds"
+  },
+  "Lesser Charging Rune": {
+    "levelRequirement": null,
+    "effects": [
+      "Armour: 8% increased Runic Ward Regeneration Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/WardRegenerationLesser.dds"
+  },
+  "Charging Rune": {
+    "levelRequirement": 15,
+    "effects": [
+      "Armour: 12% increased Runic Ward Regeneration Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/WardRegenerationNormal.dds"
+  },
+  "Greater Charging Rune": {
+    "levelRequirement": 30,
+    "effects": [
+      "Armour: 16% increased Runic Ward Regeneration Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/WardRegenerationGreater.dds"
+  },
+  "Perfect Charging Rune": {
+    "levelRequirement": 50,
+    "effects": [
+      "Armour: 20% increased Runic Ward Regeneration Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/WardRegenerationPerfect.dds"
+  },
+  "Warding Rune of Reinforcement": {
+    "levelRequirement": 15,
+    "effects": [
+      "Armour: 20% increased Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard1.dds"
+  },
+  "Warding Rune of Protection": {
+    "levelRequirement": 15,
+    "effects": [
+      "Armour: Every 4 seconds, gain Guard equal to 20% of maximum Runic Ward for 2 seconds"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard2.dds"
+  },
+  "Warding Rune of Disintegration": {
+    "levelRequirement": 15,
+    "effects": [
+      "Martial Weapon: Attacks Break Armour equal to 15% of maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard3.dds"
+  },
+  "Warding Rune of Desperation": {
+    "levelRequirement": 15,
+    "effects": [
+      "Wand or Staff: Spell damage Penetrates 25% of enemy Elemental Resistances while on Low Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard4.dds"
+  },
+  "Warding Rune of Symbiosis": {
+    "levelRequirement": 30,
+    "effects": [
+      "1% increased Energy Shield Recharge Rate per 30 maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard8.dds"
+  },
+  "Warding Rune of Courage": {
+    "levelRequirement": 15,
+    "effects": [
+      "25% increased Armour and Evasion Rating while on Low Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard9.dds"
+  },
+  "Warding Rune of Stability": {
+    "levelRequirement": 30,
+    "effects": [
+      "Shields and Bucklers: +4 to Stun Threshold per 10 maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard10.dds"
+  },
+  "Warding Rune of Glancing": {
+    "levelRequirement": 30,
+    "effects": [
+      "+3 to Deflection Rating per 10 maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard13.dds"
+  },
+  "Warding Rune of Heart": {
+    "levelRequirement": 30,
+    "effects": [
+      "Gain 5% of maximum Life as Extra maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard14.dds"
+  },
+  "Warding Rune of Nourishment": {
+    "levelRequirement": 15,
+    "effects": [
+      "Armour: 15% Life Recovery from Flasks also applies to Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard15.dds"
+  },
+  "Warding Rune of Annihilation": {
+    "levelRequirement": 30,
+    "effects": [
+      "Martial Weapon: Attacks spend 5% of your maximum Runic Ward if possible to gain that much added Physical damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard16.dds"
+  },
+  "Warding Rune of Armature": {
+    "levelRequirement": 45,
+    "effects": [
+      "Martial Weapon: Gain maximum Runic Ward equal to 15% of this Weapon's maximum damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard18.dds"
+  },
+  "Warding Rune of Obsession": {
+    "levelRequirement": 45,
+    "effects": [
+      "All damage taken bypasses Runic Ward",
+      "Runic Ward Regeneration Rate is doubled"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard19.dds"
+  },
+  "Warding Rune of Equinox": {
+    "levelRequirement": 45,
+    "effects": [
+      "Caster Weapon: Mana Recovery from Regeneration is also applied to Runic Ward",
+      "Caster Weapon: 40% less Mana Regeneration Rate"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard20.dds"
+  },
+  "Warding Rune of Salvaging": {
+    "levelRequirement": 30,
+    "effects": [
+      "Recover 3% of maximum Runic Ward when one of your Reviving Minions is Killed"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard21.dds"
+  },
+  "Warding Rune of Bodyguards": {
+    "levelRequirement": 45,
+    "effects": [
+      "Minions in your Presence have Onslaught while you are on Low Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard23.dds"
+  },
+  "Warding Rune of Hollowing": {
+    "levelRequirement": 45,
+    "effects": [
+      "Caster Weapon: 15% less maximum Life",
+      "Caster Weapon: Gain 15% of maximum Life as Extra maximum Runic Ward"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/RunicWard24.dds"
+  },
+  "Passion of Aldur": {
+    "levelRequirement": null,
+    "effects": [
+      "Weapon: Transforms all Cold and Lightning modifiers on the item into equivalent Fire modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/ElementalConversionRuneFire.dds"
+  },
+  "Breath of Aldur": {
+    "levelRequirement": null,
+    "effects": [
+      "Weapon: When socketed, transforms all Fire and Lightning modifiers to equivalent Cold modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/ElementalConversionRuneCold.dds"
+  },
+  "Ire of Aldur": {
+    "levelRequirement": null,
+    "effects": [
+      "Weapon: Transforms all Fire and Cold modifiers on the item into equivalent Lightning modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/ElementalConversionRuneLightning.dds"
+  },
+  "Betrayal of Aldur": {
+    "levelRequirement": null,
+    "effects": [
+      "Weapon: Transforms all Fire, Cold and Lightning modifiers on the item into equivalent Chaos modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/ElementalConversionRuneChaos.dds"
+  },
+  "Ancient Rune of Splinters": {
+    "levelRequirement": 30,
+    "effects": [
+      "+50% Surpassing chance to fire an additional Arrow"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune1.dds"
+  },
+  "Ancient Rune of Dueling": {
+    "levelRequirement": 30,
+    "effects": [
+      "30% increased Parried Debuff Magnitude"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune2.dds"
+  },
+  "Ancient Rune of the Titan": {
+    "levelRequirement": 30,
+    "effects": [
+      "10% chance for Slam Skills you use yourself to cause an additional Aftershock"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune3.dds"
+  },
+  "Ancient Rune of Shattering": {
+    "levelRequirement": 30,
+    "effects": [
+      "40% increased effect of Fully Broken Armour"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune4.dds"
+  },
+  "Ancient Rune of Prowess": {
+    "levelRequirement": 30,
+    "effects": [
+      "30% chance when you gain a Charge to gain an additional Charge"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune5.dds"
+  },
+  "Ancient Rune of Control": {
+    "levelRequirement": 30,
+    "effects": [
+      "50% increased Immobilisation buildup"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune6.dds"
+  },
+  "Ancient Rune of Discovery": {
+    "levelRequirement": 30,
+    "effects": [
+      "30% chance to create an additional Remnant"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune7.dds"
+  },
+  "Ancient Rune of Decay": {
+    "levelRequirement": 30,
+    "effects": [
+      "25% increased Withered Magnitude"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune8.dds"
+  },
+  "Ancient Rune of Witchcraft": {
+    "levelRequirement": 30,
+    "effects": [
+      "40% increased Area of Effect of Curses"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune9.dds"
+  },
+  "Ancient Rune of the Horde": {
+    "levelRequirement": 30,
+    "effects": [
+      "Minions have 8% increased Attack and Cast Speed"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune10.dds"
+  },
+  "Ancient Rune of Animosity": {
+    "levelRequirement": 30,
+    "effects": [
+      "Gain 2 Druidic Prowess when you Heavy Stun a Rare or Unique Enemy"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune11.dds"
+  },
+  "Ancient Rune of Detonation": {
+    "levelRequirement": 30,
+    "effects": [
+      "Grenades have 10% chance to activate a second time"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune12.dds"
+  },
+  "Ancient Rune of Retaliation": {
+    "levelRequirement": 30,
+    "effects": [
+      "Shields: 8% increased Attack Speed if you have Blocked Recently"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EndgameRune13.dds"
+  },
+  "Rune of Vitality": {
+    "levelRequirement": 15,
+    "effects": [
+      "Weapon: +80 to maximum Life",
+      "Shields and Bucklers: Recover 15 Life when you Block"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune1.dds"
+  },
+  "Rune of the Hunt": {
+    "levelRequirement": 15,
+    "effects": [
+      "8% increased Movement Speed while Sprinting",
+      "Companions deal 30% increased Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune2.dds"
+  },
+  "Rune of Acrobatics": {
+    "levelRequirement": 15,
+    "effects": [
+      "Weapon: Flasks gain 12 charges per Second",
+      "+3 metres to Dodge Roll distance"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune3.dds"
+  },
+  "Rune of Culmination": {
+    "levelRequirement": 15,
+    "effects": [
+      "50% chance to build an additional Combo on Hit",
+      "One Hand Mace or Quarterstaff: Rolls only the minimum or maximum Damage value for Physical Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune4.dds"
+  },
+  "Rune of Renown": {
+    "levelRequirement": 15,
+    "effects": [
+      "50% increased Glory generation",
+      "Caster Weapon: Archon recovery period expires 30% faster"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune5.dds"
+  },
+  "Rune of Accumulation": {
+    "levelRequirement": 15,
+    "effects": [
+      "Gain 3 Life per Enemy Hit with Attacks",
+      "Gain 1 Mana per Enemy Hit with Attacks",
+      "Crossbow, Bow or Spear: On Hitting an enemy, gains maximum added Cold damage equal to the enemy's Power for 20 seconds, up to a total of 32"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune6.dds"
+  },
+  "Rune of Foundations": {
+    "levelRequirement": 15,
+    "effects": [
+      "+30 to Armour",
+      "+30 to Evasion Rating",
+      "+10 to maximum Energy Shield"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune7.dds"
+  },
+  "Rune of the Prism": {
+    "levelRequirement": 15,
+    "effects": [
+      "+20% to all Elemental Resistances",
+      "-10% to all Maximum Elemental Resistances"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune8.dds"
+  },
+  "Rune of the Blossom": {
+    "levelRequirement": 15,
+    "effects": [
+      "+50 to Spirit",
+      "-1 to Spirit per 2 Levels"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune9.dds"
+  },
+  "Rune of Consistency": {
+    "levelRequirement": 15,
+    "effects": [
+      "200% increased Critical Hit Chance",
+      "You have no Critical Damage Bonus",
+      "Caster Weapon: 50% increased Spell Damage while your Companion is in your Presence"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune10.dds"
+  },
+  "Rune of Reach": {
+    "levelRequirement": 15,
+    "effects": [
+      "Remnants you create have 15% increased effect",
+      "Wand or Staff: Remnants can be collected from 50% further away",
+      "Wand or Staff: Remnants you create have 25% reduced effect"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune11.dds"
+  },
+  "Rune of Vital Flame": {
+    "levelRequirement": 15,
+    "effects": [
+      "One Hand Mace, Two Hand Mace or Talisman: Adds 13 to 16 Fire Damage",
+      "One Hand Mace, Two Hand Mace or Talisman: 15% of Skill Mana Costs Converted to Life Costs"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune12.dds"
+  },
+  "Rune of Confrontation": {
+    "levelRequirement": 15,
+    "effects": [
+      "Quarterstaff or Spear: Gain 4 Rage on Melee Hit",
+      "Quarterstaff or Spear: -10 to Maximum Rage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune13.dds"
+  },
+  "[DNT-Unused] Rune of Wild Ferocity": {
+    "levelRequirement": 15,
+    "effects": [],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune14.dds"
+  },
+  "[DNT-Unused] Rune of Partnership": {
+    "levelRequirement": 15,
+    "effects": [],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune15.dds"
+  },
+  "[DNT-Unused] Rune of Reverberation": {
+    "levelRequirement": 15,
+    "effects": [],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune16.dds"
+  },
+  "[DNT-Unused] Rune of Vital Flame": {
+    "levelRequirement": 15,
+    "effects": [],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune17.dds"
+  },
+  "[DNT-Unused] Rune of Confrontation": {
+    "levelRequirement": 15,
+    "effects": [],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune18.dds"
+  },
+  "[DNT-Unused] Rune of Chance": {
+    "levelRequirement": 15,
+    "effects": [],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune19.dds"
+  },
+  "[DNT-Unused] Rune of Confidence": {
+    "levelRequirement": 15,
+    "effects": [],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune12.dds"
+  },
+  "[DNT-Unused] Rune of Duplication": {
+    "levelRequirement": 15,
+    "effects": [],
+    "icon": "Art/2DItems/Currency/Expedition2/EarlyMythicRune16.dds"
+  },
+  "Serle's Triumph": {
+    "levelRequirement": null,
+    "effects": [
+      "All Equipment: +1 Suffix Modifier allowed"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRune2.dds"
+  },
+  "Cadigan's Epiphany": {
+    "levelRequirement": null,
+    "effects": [
+      "Destroys all Augment Sockets on the item to create a Jewel Socket"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRune3.dds"
+  },
+  "Astrid's Creativity": {
+    "levelRequirement": null,
+    "effects": [
+      "All Equipment: Can have 1 additional Crafted Modifier"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRune1.dds"
+  },
+  "Uhtred's Sidereus": {
+    "levelRequirement": null,
+    "effects": [
+      "Can roll Chronomancy modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneTime.dds"
+  },
+  "Kolr's Hunt": {
+    "levelRequirement": null,
+    "effects": [
+      "Can roll Marksman modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneDex.dds"
+  },
+  "Vorana's Carnage": {
+    "levelRequirement": null,
+    "effects": [
+      "Can roll Berserking modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRunePhysical.dds"
+  },
+  "Thrud's Might": {
+    "levelRequirement": null,
+    "effects": [
+      "Weapon: Can roll Destruction modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneFire.dds"
+  },
+  "Medved's Tending": {
+    "levelRequirement": null,
+    "effects": [
+      "Can roll Soul modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneCold.dds"
+  },
+  "Katla's Gloom": {
+    "levelRequirement": null,
+    "effects": [
+      "Can roll Decay modifiers"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneChaos.dds"
+  },
+  "Aldur's Legacy": {
+    "levelRequirement": null,
+    "effects": [
+      "All Equipment: When socketed into a Unique Kalguuran or Ezomyte item, destroys the item to create a Rune imbued with that item's power"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUnique.dds"
+  },
+  "Legacy of Bramblejack": {
+    "levelRequirement": 65,
+    "effects": [
+      "250% of Melee Physical Damage taken reflected to Attacker"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Blackbraid": {
+    "levelRequirement": 65,
+    "effects": [
+      "+50% of Armour also applies to Elemental Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Edyrns Tusks": {
+    "levelRequirement": 65,
+    "effects": [
+      "50% chance to inflict Bleeding on Hit",
+      "50% reduced Slowing Potency of Debuffs on You"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Kingsguard": {
+    "levelRequirement": 65,
+    "effects": [
+      "Recover 5% of maximum Life for each Endurance Charge consumed"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Bristleboar": {
+    "levelRequirement": 65,
+    "effects": [
+      "Gain 5 Rage when Hit by an Enemy",
+      "Gain 10 Rage when Critically Hit by an Enemy"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Foxshade": {
+    "levelRequirement": 65,
+    "effects": [
+      "10% increased Movement Speed when on Full Life",
+      "100% increased Evasion Rating when on Full Life"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Ashrend": {
+    "levelRequirement": 65,
+    "effects": [
+      "Cannot be Ignited",
+      "-10 Physical Damage taken from Attack Hits"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Briskwrap": {
+    "levelRequirement": 65,
+    "effects": [
+      "Gain Deflection Rating equal to 30% of Evasion Rating"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of The Unleashed": {
+    "levelRequirement": 65,
+    "effects": [
+      "25% of Damage taken from Hits bypasses Energy Shield if Energy Shield is below half"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Horns of Bynden": {
+    "levelRequirement": 65,
+    "effects": [
+      "Every Rage also grants 1% increased Armour",
+      "Gain 1 Rage on Melee Hit"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Wings of Caelyn": {
+    "levelRequirement": 65,
+    "effects": [
+      "Every Rage also grants 1% increased Stun Threshold",
+      "Gain 1 Rage on Melee Hit"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Ezomyte Peak": {
+    "levelRequirement": 65,
+    "effects": [
+      "15% increased Area of Effect",
+      "Unwavering Stance"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Deidbell": {
+    "levelRequirement": 65,
+    "effects": [
+      "Warcries Explode Corpses dealing 10% of their Life as Physical Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Elevore": {
+    "levelRequirement": 65,
+    "effects": [
+      "Charms gain 60 charge per Second",
+      "+1 Charm Slot"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Starkonja's Head": {
+    "levelRequirement": 65,
+    "effects": [
+      "5% of Damage from Hits is taken from your Damageable Companion's Life before you",
+      "100% increased Global Evasion Rating when on Low Life"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Crown of Thorns": {
+    "levelRequirement": 65,
+    "effects": [
+      "Pain Attunement"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Greymake": {
+    "levelRequirement": 65,
+    "effects": [
+      "+50 to all Attributes"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Erian's Cobble": {
+    "levelRequirement": 65,
+    "effects": [
+      "+30 to Accuracy Rating",
+      "+10 to maximum Life",
+      "+10 to maximum Mana",
+      "10% increased Rarity of Items found",
+      "10% increased Critical Hit Chance",
+      "+5 to all Attributes",
+      "+5% to all Elemental Resistances",
+      "2 Life Regeneration per second"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of The Smiling Knight": {
+    "levelRequirement": 65,
+    "effects": [
+      "Aggravate Bleeding on targets you Critically Hit with Attacks"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of The Vile Knight": {
+    "levelRequirement": 65,
+    "effects": [
+      "Deal 4% increased Damage with Hits to Rare or Unique Enemies for each second they've ever been in your Presence, up to a maximum of 200%"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Northpaw": {
+    "levelRequirement": 65,
+    "effects": [
+      "Base Critical Hit Chance for Attacks with Weapons is 7%"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Candlemaker": {
+    "levelRequirement": 65,
+    "effects": [
+      "Flammability Magnitude is doubled",
+      "40% increased Fire Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Deathblow": {
+    "levelRequirement": 65,
+    "effects": [
+      "Culling Strike"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Legionstride": {
+    "levelRequirement": 65,
+    "effects": [
+      "+10% to Block chance"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Trampletoe": {
+    "levelRequirement": 65,
+    "effects": [
+      "Deal 10% of Overkill damage to enemies within 2 metres of the enemy killed"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Briarpatch": {
+    "levelRequirement": 65,
+    "effects": [
+      "+15% to Thorns Critical Hit Chance"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Bushwhack": {
+    "levelRequirement": 65,
+    "effects": [
+      "Physical Damage is Pinning"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Wanderlust": {
+    "levelRequirement": 65,
+    "effects": [
+      "Your speed is unaffected by Slows"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of The Knight-errant": {
+    "levelRequirement": 65,
+    "effects": [
+      "Iron Reflexes"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Obern's Bastion": {
+    "levelRequirement": 65,
+    "effects": [
+      "200% increased Stun Recovery"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Dionadair": {
+    "levelRequirement": 65,
+    "effects": [
+      "Shields: Double Stun Threshold while Shield is Raised"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Wulfsbane": {
+    "levelRequirement": 65,
+    "effects": [
+      "Shields: Intimidate Enemies on Block for 8 seconds"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Chernobog's Pillar": {
+    "levelRequirement": 65,
+    "effects": [
+      "Shields: Gain 1% of damage as Fire damage per 2% Chance to Block"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Alkem Eira": {
+    "levelRequirement": 65,
+    "effects": [
+      "Shields: 30% of damage Blocked is Recouped as Mana"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Oaksworn": {
+    "levelRequirement": 65,
+    "effects": [
+      "Shields: 50% increased Life Regeneration rate"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Dunkelhalt": {
+    "levelRequirement": 65,
+    "effects": [
+      "50% increased Parried Debuff Magnitude"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Rondel de Ezo": {
+    "levelRequirement": 65,
+    "effects": [
+      "Curse Enemies with Enfeeble on Block"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Brynhand's Mark": {
+    "levelRequirement": 65,
+    "effects": [
+      "Causes Double Stun Buildup"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Trenchtimbre": {
+    "levelRequirement": 65,
+    "effects": [
+      "Increases and Reductions to Minion Attack Speed also affect you"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Mjölner": {
+    "levelRequirement": 65,
+    "effects": [
+      "+200 Intelligence Requirement",
+      "+3 to Level of all Lightning Skills"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Twisted Empyrean": {
+    "levelRequirement": 65,
+    "effects": [
+      "Attacks with this Weapon have Added Cold Damage equal to 6% to 10% of maximum Mana"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Hoghunt": {
+    "levelRequirement": 65,
+    "effects": [
+      "+5% to Critical Hit Chance",
+      "Maim on Critical Hit"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Hrimnor's Hymn": {
+    "levelRequirement": 65,
+    "effects": [
+      "25% chance for Slam Skills you use yourself to cause an additional Aftershock"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Brain Rattler": {
+    "levelRequirement": 65,
+    "effects": [
+      "All damage with this Weapon causes Electrocution buildup"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Lifesprig": {
+    "levelRequirement": 65,
+    "effects": [
+      "+2 to Level of all Spell Skills"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Duality": {
+    "levelRequirement": 65,
+    "effects": [
+      "Gain 250 Guard for 0.5 seconds per Combo expended when using Skills"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Tyranny's Grip": {
+    "levelRequirement": 65,
+    "effects": [
+      "Strikes deal Splash Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of The Sentry": {
+    "levelRequirement": 65,
+    "effects": [
+      "100% increased Flammability Magnitude",
+      "Adds 23 to 34 Fire damage to Attacks"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Adonia's Ego": {
+    "levelRequirement": 65,
+    "effects": [
+      "+1 to Maximum Power Charges"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Cursecarver": {
+    "levelRequirement": 65,
+    "effects": [
+      "+3 to Level of all Curse Skills"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Dusk Vigil": {
+    "levelRequirement": 65,
+    "effects": [
+      "Gain 30% of Physical Damage as Extra Fire Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of The Blood Thorn": {
+    "levelRequirement": 65,
+    "effects": [
+      "Causes Bleeding on Hit",
+      "Adds 4 to 8 Physical Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Quill Rain": {
+    "levelRequirement": 65,
+    "effects": [
+      "50% increased Attack Speed",
+      "20% less Attack Damage"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Ironbound": {
+    "levelRequirement": 65,
+    "effects": [
+      "Hits with this weapon have 1 to 3 Added Physical Damage per 1% Block Chance"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Amor Mandragora": {
+    "levelRequirement": 65,
+    "effects": [
+      "Gain 1 Druidic Prowess for every 20 total Rage spent"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Spiteful Floret": {
+    "levelRequirement": 65,
+    "effects": [
+      "Every 5 Rage also grants 5% of Damage taken Recouped as Life"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Svalinn": {
+    "levelRequirement": 65,
+    "effects": [
+      "Shields: Chance to Block Damage is Lucky",
+      "Shields: You take 20% of damage from Blocked Hits"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Keeper of the Arc": {
+    "levelRequirement": 65,
+    "effects": [
+      "Alternating every 5 seconds:\\nTake 20% less Damage from Hits\\nTake 20% less Damage over time"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Olrovasara": {
+    "levelRequirement": 65,
+    "effects": [
+      "On Hitting an enemy, gains maximum added Lightning damage equal to\\nthe enemy's Power for 20 seconds, up to a total of 120"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of A Worthy Foe": {
+    "levelRequirement": 65,
+    "effects": [
+      "Shields: Off-hand Hits inflict Runefather's Challenge"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Serle's Grit": {
+    "levelRequirement": 65,
+    "effects": [
+      "Maximum Quality is 40%"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Runeseeker's Call": {
+    "levelRequirement": 65,
+    "effects": [
+      "75% increased effect of Socketed Runes"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  },
+  "Legacy of Facebreaker": {
+    "levelRequirement": 65,
+    "effects": [
+      "+1 to Armour per Strength"
+    ],
+    "icon": "Art/2DItems/Currency/Expedition2/GameWarpRuneUniqueFragment.dds"
+  }
+}
