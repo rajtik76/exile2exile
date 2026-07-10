@@ -49,6 +49,64 @@ straight from the official GGPK / patch server by
 scrapes. Market prices come from [poe2scout](https://poe2scout.com). The loot
 filter builds on [NeverSink's filter](https://github.com/NeverSinkDev/NeverSink-Filter).
 
+### From patch to production
+
+Game data is not committed to this repository. It ships through a
+build-once-promote pipeline: the release that goes live is byte for byte the
+one that passed CI.
+
+```mermaid
+sequenceDiagram
+    participant GGG as GGG patch server
+    participant App as Production app
+    participant CI as GitHub Actions
+
+    App->>GGG: poll current version (every 5 min)
+    Note over App: new patch detected -> Discord + webhooks
+    App->>App: extract into releases/version (live data untouched)
+    App->>App: pack tarball + sha256
+    App->>CI: dispatch data-contract.yml (version, sha256)
+    CI->>App: download the release tarball
+    CI->>CI: verify checksum, run the Contract suite on it
+    alt tests green
+        CI->>App: POST /api/data/activate
+        App->>App: atomic symlink swap - release is live
+    else tests red
+        Note over App: no swap - app stays on the last validated release
+    end
+```
+
+How it holds together:
+
+- The app serves data through a single `current` symlink
+  (`storage/game-data/current -> releases/<version>`). Activation is one atomic
+  `rename`, so a request never sees a half-switched release. Old releases stay
+  on disk as instant rollback targets (`POST /api/data/activate` with an older
+  staged version swaps back without re-extracting).
+- The Contract suite ([`tests/Contract`](tests/Contract)) guards the app <->
+  data contract against the real extract: tree structure, icons on disk, PoB
+  import, seeded plans. Ordinary pushes to `main` run it too, against the
+  release production currently serves (downloaded from the app, never
+  re-extracted), so a code change that breaks the contract cannot land green.
+- CI never touches the GGPK: it validates the exact artifact the server staged.
+  A manual `workflow_dispatch` of
+  [`data-contract.yml`](.github/workflows/data-contract.yml) with
+  `mode=extract` runs the full GGPK extraction instead - use it for changes to
+  the extractor itself.
+- Every failure mode ends in "no swap": red tests, a missing tarball or an
+  unreachable server leave production on the last validated release. The
+  watcher re-dispatches a stalled validation at most once per six hours.
+
+The moving parts: the `poe2:watch-patch` command (detection + notifications),
+the `StageGameData` and `TriggerContractRun` jobs, the `GameDataReleases`
+service (release store, atomic swap, pruning), the token-gated
+`POST /api/data/activate` endpoint, and the `poe2:link-game-data` /
+`poe2:pack-release` commands for deploy wiring and tarball repair. Deployment
+needs `GITHUB_DISPATCH_TOKEN`, `GITHUB_REPOSITORY` and `POE_DATA_ACTIVATE_TOKEN`
+in the app environment, plus the `DATA_BASE_URL` variable and
+`DATA_ACTIVATE_TOKEN` secret on the GitHub side (see
+[`.env.example`](.env.example)).
+
 ## Local development
 
 Requires PHP 8.4, Composer and Node 22.
@@ -59,10 +117,13 @@ npm install
 cp .env.example .env
 php artisan key:generate
 php artisan migrate
-composer run dev   # Vite + PHP server + queue worker, together
+npm run refresh:data   # extract game data from the GGPK patch CDN (~10 min, ~GBs cached)
+composer run dev       # Vite + PHP server + queue worker, together
 ```
 
-Then open the URL the dev command prints.
+Then open the URL the dev command prints. The data extraction is needed once
+per patch; it writes the passive tree, icons and item/gem data the app serves
+(see "Game data" above).
 
 ## Development notes
 
