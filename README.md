@@ -39,6 +39,8 @@ On the roadmap:
 - **Tests:** Pest 4
 - Built on Laravel's React starter kit.
 
+A map of the codebase lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
 ## Game data
 
 All PoE2 game data - passive tree, gems, items, mods and icons - is extracted

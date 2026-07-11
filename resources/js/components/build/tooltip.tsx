@@ -5,8 +5,8 @@ import { withAssetVersion } from '@/lib/assetVersion';
 import type { ReferenceSprite } from '@/lib/planReferences';
 
 /**
- * Shared tooltip system. Per docs/DESIGN.md every tooltip in the project (item,
- * gem, rune, passive-tree node, …) is composed from these same blocks and tokens
+ * Shared tooltip system. Every tooltip in the project (item, gem, rune,
+ * passive-tree node, ...) is composed from these same blocks and tokens
  * - never hand-roll a new tooltip or bespoke styles, just assemble these.
  */
 
