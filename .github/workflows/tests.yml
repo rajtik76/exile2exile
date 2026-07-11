@@ -101,7 +101,22 @@ jobs:
       - name: Build Assets
         run: npm run build
 
-      - name: Run Type Analysis
+      - name: Lint (eslint)
+        run: npm run lint:check
+
+      - name: Formatting (prettier)
+        run: npm run format:check
+
+      - name: TypeScript Types
+        run: npm run types:check
+
+      - name: Code Style (pint)
+        run: composer lint:check
+
+      - name: Refactoring Rules (rector)
+        run: vendor/bin/rector process --dry-run
+
+      - name: Static Analysis (phpstan)
         run: composer types:check
 
       - name: JS Tests

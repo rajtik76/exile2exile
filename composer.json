@@ -67,31 +67,45 @@
         "lint:check": [
             "pint --parallel --test"
         ],
-        "ci:check": [
+        "checks": [
             "Composer\\Config::disableProcessTimeout",
             "npm run lint:check",
             "npm run format:check",
             "npm run types:check",
             "npm run test:js",
             "rector process --dry-run",
-            "@test"
+            "@lint:check",
+            "@types:check"
+        ],
+        "ci:check": [
+            "Composer\\Config::disableProcessTimeout",
+            "@checks",
+            "@test:exclude-contract"
         ],
         "types:check": [
             "phpstan analyse"
         ],
+        "cache:clear": [
+            "@php artisan optimize:clear --ansi"
+        ],
         "test": [
-            "@php artisan config:clear --ansi",
-            "@lint:check",
-            "@types:check",
+            "@cache:clear",
             "@php ./vendor/bin/pest --parallel --order-by=random"
         ],
-        "test:snapshots:exclude": [
-            "@php artisan config:clear --ansi",
-            "@lint:check",
-            "@types:check",
+        "test:exclude-contract": [
+            "@cache:clear",
+            "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Unit,Feature,Browser"
+        ],
+        "test:contract": [
+            "@cache:clear",
+            "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Contract"
+        ],
+        "test:exclude-snapshots": [
+            "@cache:clear",
             "@php ./vendor/bin/pest --parallel --testsuite=Unit,Feature"
         ],
-        "test:snapshots:update": [
+        "test:update-snapshots": [
+            "@cache:clear",
             "@php ./vendor/bin/pest --parallel --update-snapshots --testsuite=Browser"
         ],
         "test:js": [
@@ -99,16 +113,12 @@
         ],
         "review": [
             "Composer\\Config::disableProcessTimeout",
-            "npm run lint:check",
-            "npm run format:check",
-            "npm run types:check",
-            "npm run test:js",
-            "rector process --dry-run",
-            "@test:snapshots:exclude"
+            "@checks",
+            "@test:exclude-snapshots"
         ],
         "review:full": [
             "@ci:check",
-            "@test"
+            "@test:contract"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
