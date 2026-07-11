@@ -68,6 +68,10 @@ function arbitraryMods(): array
         // A Kalguuran genesis-tree mod: its only positive weight is a genesis tag, and
         // the belt zero ahead of it keeps it off belts (GGG first-match semantics).
         ['id' => 'GenesisSpellDamage1', 'name' => 'Runic', 'domain' => 'Item', 'group' => 'GenesisSpellDamage', 'type' => 'prefix', 'tier' => 1, 'level' => 1, 'stats' => ['#% increased Spell Damage'], 'rolls' => [['stat' => 'spell_damage', 'min' => 26, 'max' => 29]], 'families' => ['GenesisSpellDamage'], 'spawnWeights' => [['tag' => 'belt', 'weight' => 0], ['tag' => 'genesis_tree_caster', 'weight' => 1], ['tag' => 'default', 'weight' => 0]]],
+
+        // A boss-influence mod (BerserkInfluence-style): its only positive weight is an
+        // influence tag no base carries.
+        ['id' => 'InfluenceMaxRage1', 'name' => 'Berserker\'s', 'domain' => 'Item', 'group' => 'InfluenceMaxRage', 'type' => 'prefix', 'tier' => 1, 'level' => 1, 'stats' => ['+# to Maximum Rage'], 'rolls' => [['stat' => 'max_rage', 'min' => 10, 'max' => 15]], 'families' => ['InfluenceMaxRage'], 'spawnWeights' => [['tag' => 'berserking', 'weight' => 1], ['tag' => 'default', 'weight' => 0]]],
     ];
 }
 
@@ -264,6 +268,18 @@ test('a genesis-tree mod is legal on any base its weights do not zero', function
 
     expect($forRing->firstWhere('group', 'GenesisSpellDamage')['tiers'][0]['genesis'])->toBeTrue()
         ->and($forRing->firstWhere('group', 'FireResistance')['tiers'][0]['genesis'])->toBeFalse();
+});
+
+test('a boss-influence mod is legal on any base and flagged in search', function () {
+    // The influence tag counts as always carried: influence puts the mod on ordinary
+    // rares, so validation accepts it and search flags it apart from natural affixes.
+    expect($this->catalogue->modErrors('rare', [['modId' => 'InfluenceMaxRage1', 'values' => [12]]], 'Item', ['ring', 'default']))
+        ->toBe([]);
+
+    $groups = collect($this->catalogue->search('Item', ['ring', 'default'], ''));
+
+    expect($groups->firstWhere('group', 'InfluenceMaxRage')['tiers'][0]['influence'])->toBeTrue()
+        ->and($groups->firstWhere('group', 'FireResistance')['tiers'][0]['influence'])->toBeFalse();
 });
 
 test('resolve returns a mod tier line and null for the unknown', function () {

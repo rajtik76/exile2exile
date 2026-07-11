@@ -464,7 +464,8 @@ final class PobPlanMapper
     /**
      * Whether any of a line's values tops the corresponding roll of every pure affix of
      * its template - the mark of a summed (aggregate) render. A template with no pure
-     * candidates is never treated as a sum.
+     * candidate at all also qualifies: its wording exists only inside hybrids (e.g.
+     * "increased Light Radius"), so an unmatched line of it can only be a hybrid's part.
      *
      * @param  list<array{statCount: int, template: string, rolls: list<array{stat: string, min: int, max: int}>}>  $candidates
      * @param  list<int|float>  $values
@@ -484,7 +485,7 @@ final class PobPlanMapper
         }
 
         if ($ceilings === []) {
-            return false;
+            return true;
         }
 
         return array_any($values, static fn (int|float $value, int $index): bool => $value > ($ceilings[$index] ?? 0));
@@ -637,11 +638,13 @@ final class PobPlanMapper
             $companionRoll = $hybrid['rolls'][$companionIndex];
             $companionTotal = $aggregates[$companionTemplate];
 
-            // Pick the hybrid's own rolls so both summed lines split into real pure tiers.
+            // Pick the hybrid's own rolls so both summed lines split into real pure
+            // tiers. Either side of the line may also be the hybrid's part alone: a
+            // hybrid-only wording (light radius) has no pure primary to add.
             for ($primary = $primaryRoll['min']; $primary <= $primaryRoll['max']; $primary++) {
-                $purePrimary = $this->pureTier($candidates, $template, $total - $primary);
+                $purePrimary = $primary === $total ? null : $this->pureTier($candidates, $template, $total - $primary);
 
-                if ($purePrimary === null) {
+                if ($primary !== $total && $purePrimary === null) {
                     continue;
                 }
 
@@ -657,9 +660,12 @@ final class PobPlanMapper
                     }
 
                     $additions = [
-                        ['modId' => $purePrimary, 'values' => [$total - $primary], 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $purePrimary)],
                         ['modId' => $hybrid['id'], 'values' => $this->orderedValues($hybrid, $primaryIndex, $primary, $companion), 'type' => $hybrid['type'], 'families' => $hybrid['families']],
                     ];
+
+                    if ($purePrimary !== null) {
+                        $additions[] = ['modId' => $purePrimary, 'values' => [$total - $primary], 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $purePrimary)];
+                    }
 
                     if ($pureCompanion !== null) {
                         $additions[] = ['modId' => $pureCompanion, 'values' => [$companionTotal - $companion], 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $pureCompanion)];
@@ -839,7 +845,7 @@ final class PobPlanMapper
                     'statTemplates' => $statTemplates,
                     'rolls' => $tier['rolls'],
                     'families' => $tier['families'],
-                    'crafted' => $tier['desecrated'] || $tier['essence'] || $tier['genesis'],
+                    'crafted' => $tier['desecrated'] || $tier['essence'] || $tier['genesis'] || $tier['influence'],
                     'ladder' => $tier['ladder'],
                 ];
             }

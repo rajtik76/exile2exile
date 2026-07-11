@@ -18,6 +18,8 @@ interface ModTier {
     essence: boolean;
     /** Reaches the base only through the Kalguuran genesis tree, never naturally. */
     genesis: boolean;
+    /** Reaches the base only through boss influence, never naturally. */
+    influence: boolean;
 }
 
 /** An affix group: one wording, its prefix/suffix type and its tier ladder. */
@@ -46,6 +48,7 @@ const CRAFT_BADGES = [
     ['desecrated', 'Desecrated', '#b48fff'],
     ['essence', 'Essence', '#6fd3c7'],
     ['genesis', 'Genesis', '#9fd36f'],
+    ['influence', 'Influence', '#e09a70'],
 ] as const;
 
 /** Turn a picked tier into the resolved mod stored + rendered on the item. */

@@ -26,20 +26,29 @@ final class ModCatalogue
     private const array MODS_PER_TYPE = ['normal' => 0, 'magic' => 1, 'rare' => 3];
 
     /**
-     * The spawn-weight tag carried by desecrated ("Soul Influence") affixes. They never
-     * roll naturally - their default weight is zero - but the Well of Souls puts them on
-     * ordinary rares, so a base accepts them as if it carried the tag itself. A mod that
-     * zeroes a base's own tag ahead of this one stays excluded (the zero matches first).
+     * Spawn-weight tags carried by desecrated affixes ("Soul Influence" mods and the
+     * breach-desecration mods of the desecrated mod domain). They never roll naturally -
+     * their default weight is zero - but the Well of Souls puts them on ordinary rares,
+     * so a base accepts the tags as if it carried them itself. A mod that zeroes a
+     * base's own tag ahead of them stays excluded (the zero matches first).
      */
-    private const string DESECRATED_TAG = 'soul';
+    private const array DESECRATED_TAGS = ['soul', 'breach_desecration'];
 
     /**
      * The spawn-weight tag prefix of Kalguuran genesis-tree affixes (`genesis_tree_caster`,
-     * `genesis_tree_minion`, …). Same craft-only pattern as {@see DESECRATED_TAG}: the
+     * `genesis_tree_minion`, …). Same craft-only pattern as {@see DESECRATED_TAGS}: the
      * genesis tree puts them on ordinary rares, so a base accepts the tags as its own,
      * and an earlier zero on one of the base's tags still excludes the mod.
      */
     private const string GENESIS_TAG_PREFIX = 'genesis_tree_';
+
+    /**
+     * Spawn-weight tags of boss-influence affix families (BerserkInfluence,
+     * MarksmanInfluence, DestructionInfluence, DecayInfluence, TimeInfluence). Same
+     * craft-only pattern again: influence puts them on ordinary rares, no base carries
+     * the tags itself.
+     */
+    private const array INFLUENCE_TAGS = ['berserking', 'marksman', 'destruction', 'decay', 'chronomancy'];
 
     /**
      * @var list<array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>, desecrated?: bool, essence?: bool, itemClasses?: list<string>}>|null
@@ -82,14 +91,15 @@ final class ModCatalogue
      * matches first. When the query is empty every compatible group is returned.
      *
      * Tiers that only reach the base through desecration (the Well of Souls) are flagged
-     * `desecrated`, tiers only an essence can put there `essence`, and tiers only the
-     * Kalguuran genesis tree can put there `genesis`, so callers can rank or badge them
-     * apart from naturally rolling affixes.
+     * `desecrated`, tiers only an essence can put there `essence`, tiers only the
+     * Kalguuran genesis tree can put there `genesis`, and tiers only boss influence can
+     * put there `influence`, so callers can rank or badge them apart from naturally
+     * rolling affixes.
      *
      * @param  ?string  $modDomain  the base's mod domain; null = match none
      * @param  list<string>  $baseTags  the base's mod-matching tags; empty = match none
      * @param  ?string  $itemClass  the base's GGPK item class, gating essence-only mods; null = lenient
-     * @return list<array{group: string, type: string, label: string, tiers: list<array{id: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, desecrated: bool, essence: bool, genesis: bool, ladder: bool}>}>
+     * @return list<array{group: string, type: string, label: string, tiers: list<array{id: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, desecrated: bool, essence: bool, genesis: bool, influence: bool, ladder: bool}>}>
      */
     public function search(?string $modDomain, array $baseTags, string $query, int $limit = 60, ?string $itemClass = null): array
     {
@@ -143,6 +153,7 @@ final class ModCatalogue
                         && ($this->matchingWeight($mod, $baseTags)['weight'] ?? 0) <= 0),
                 'essence' => ($mod['essence'] ?? false) === true,
                 'genesis' => $this->isGenesisOnly($mod, $baseTags),
+                'influence' => $this->isInfluenceOnly($mod, $baseTags),
                 // Reached only through the ladder fallback: callers preferring a
                 // directly gated variant (e.g. the import's reverse-match) rank these last.
                 'ladder' => ($mod['essence'] ?? false) !== true
@@ -321,8 +332,9 @@ final class ModCatalogue
     {
         foreach ($mod['spawnWeights'] as $weight) {
             if ($weight['tag'] === 'default'
-                || $weight['tag'] === self::DESECRATED_TAG
+                || in_array($weight['tag'], self::DESECRATED_TAGS, true)
                 || str_starts_with($weight['tag'], self::GENESIS_TAG_PREFIX)
+                || in_array($weight['tag'], self::INFLUENCE_TAGS, true)
                 || in_array($weight['tag'], $baseTags, true)) {
                 return $weight;
             }
@@ -354,7 +366,19 @@ final class ModCatalogue
     private function isDesecratedOnly(array $mod, array $baseTags): bool
     {
         return ($mod['desecrated'] ?? false) === true
-            || ($this->matchingWeight($mod, $baseTags)['tag'] ?? null) === self::DESECRATED_TAG;
+            || in_array($this->matchingWeight($mod, $baseTags)['tag'] ?? '', self::DESECRATED_TAGS, true);
+    }
+
+    /**
+     * Whether the mod reaches this base only through boss influence - the weight that
+     * lets it in is an influence tag's, not one of the base's own tags.
+     *
+     * @param  array{spawnWeights: list<array{tag: string, weight: int}>}  $mod
+     * @param  list<string>  $baseTags
+     */
+    private function isInfluenceOnly(array $mod, array $baseTags): bool
+    {
+        return in_array($this->matchingWeight($mod, $baseTags)['tag'] ?? '', self::INFLUENCE_TAGS, true);
     }
 
     /**
