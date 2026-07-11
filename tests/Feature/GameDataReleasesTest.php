@@ -188,6 +188,25 @@ test('an unknown release tarball 404s', function () {
     $this->get('/api/data/releases/4.5.5.0.tar.gz')->assertNotFound();
 });
 
+test('the checksum sidecar serves the stored sha256 as plain text', function () {
+    fakeGameDataRoot();
+    fakeGameDataRelease('4.5.5.0');
+    File::put(app(GameDataReleases::class)->checksumPath('4.5.5.0'), "abc123\n");
+
+    // CI keys its tarball cache on this, so a re-extraction of the same patch
+    // busts the cache (the version.json `v` stamp only moves with tree data).
+    $this->get('/api/data/releases/4.5.5.0.tar.gz.sha256')
+        ->assertOk()
+        ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
+        ->assertContent('abc123');
+});
+
+test('an unknown release checksum 404s', function () {
+    fakeGameDataRoot();
+
+    $this->get('/api/data/releases/4.5.5.0.tar.gz.sha256')->assertNotFound();
+});
+
 /*
  * Operator tooling.
  */

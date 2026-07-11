@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Route;
 // shared bearer token.
 Route::get('data/releases/{version}.tar.gz', [GameDataReleaseController::class, 'download'])
     ->where('version', '[0-9]+(?:\.[0-9]+)*');
+Route::get('data/releases/{version}.tar.gz.sha256', [GameDataReleaseController::class, 'checksum'])
+    ->where('version', '[0-9]+(?:\.[0-9]+)*');
 Route::post('data/activate', [GameDataReleaseController::class, 'activate'])
     ->middleware('throttle:10,1');
 

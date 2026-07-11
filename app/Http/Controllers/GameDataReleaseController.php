@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\GameDataReleases;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -27,6 +28,22 @@ class GameDataReleaseController extends Controller
         abort_unless(is_file($releases->tarballPath($version)), 404);
 
         return response()->download($releases->tarballPath($version));
+    }
+
+    /**
+     * The release tarball's sha256, as plain text. CI keys its tarball cache on
+     * this, so a re-extraction of the SAME patch (an extractor change) busts the
+     * cache - the version.json `v` stamp only moves with the tree data.
+     */
+    public function checksum(GameDataReleases $releases, string $version): Response
+    {
+        abort_unless(GameDataReleases::isValidVersion($version), 404);
+
+        $checksum = $releases->checksum($version);
+
+        abort_if($checksum === null, 404);
+
+        return response($checksum, 200, ['Content-Type' => 'text/plain']);
     }
 
     public function activate(Request $request, GameDataReleases $releases): JsonResponse

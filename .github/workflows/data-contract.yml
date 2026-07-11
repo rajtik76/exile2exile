@@ -126,7 +126,11 @@ jobs:
           else
             STAMP=$(curl -fsSL --retry 3 "$BASE_URL/tree/current/version.json")
             VERSION=$(echo "$STAMP" | jq -r '.patch // empty')
-            CACHE_SUFFIX=$(echo "$STAMP" | jq -r '.v // empty')
+            # Key the tarball cache on the tarball's own checksum: the version.json
+            # `v` stamp only moves with the tree data, so a re-extraction of the same
+            # patch (an extractor change) would otherwise keep serving a stale cache.
+            CACHE_SUFFIX=$(curl -fsSL --retry 3 "$BASE_URL/api/data/releases/$VERSION.tar.gz.sha256" \
+              || echo "$STAMP" | jq -r '.v // empty')
           fi
           if [ -z "$VERSION" ]; then
             echo "::error::Could not resolve a release version (no input, no live stamp)."
