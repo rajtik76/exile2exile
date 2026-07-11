@@ -1,37 +1,9 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Exile to Exile mark: a chamfered stone tile split into two exiles -
-       tarnished gold and life-blood red, the colours of the wordmark.
-       Kept in sync with the brand in resources/js/components/brand.tsx. -->
-  <defs>
-    <clipPath id="ete-tile">
-      <path d="M16 4 H48 L60 16 V48 L48 60 H16 L4 48 V16 Z"/>
-    </clipPath>
-    <linearGradient id="ete-gold" x1="0" y1="0" x2="0.7" y2="1">
-      <stop offset="0" stop-color="#ecd49a"/>
-      <stop offset="0.55" stop-color="#c9a24a"/>
-      <stop offset="1" stop-color="#7d6228"/>
-    </linearGradient>
-    <linearGradient id="ete-blood" x1="0.3" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#e26458"/>
-      <stop offset="0.55" stop-color="#bd342a"/>
-      <stop offset="1" stop-color="#6e1714"/>
-    </linearGradient>
-  </defs>
-
-  <!-- two halves: gold exile, blood exile -->
-  <g clip-path="url(#ete-tile)">
-    <rect x="0" y="0" width="32" height="64" fill="url(#ete-gold)"/>
-    <rect x="32" y="0" width="32" height="64" fill="url(#ete-blood)"/>
-    <!-- bevel: lit top, shadowed bottom -->
-    <rect x="0" y="0" width="64" height="9" fill="#fff" fill-opacity="0.16"/>
-    <rect x="0" y="52" width="64" height="12" fill="#000" fill-opacity="0.28"/>
-  </g>
-
-  <!-- the seam where the two meet -->
-  <line x1="32" y1="5" x2="32" y2="59" stroke="#0a0709" stroke-width="2.4"/>
-  <line x1="32" y1="6" x2="32" y2="58" stroke="#1a1410" stroke-width="0.8" stroke-opacity="0.7"/>
-
-  <!-- chiselled chamfered edge -->
-  <path d="M16 4 H48 L60 16 V48 L48 60 H16 L4 48 V16 Z" stroke="#0a0709" stroke-width="2.6"/>
-  <path d="M16 4 H48 L60 16 V48 L48 60 H16 L4 48 V16 Z" stroke="#ecd49a" stroke-opacity="0.45" stroke-width="1"/>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Exile to Exile logo on the chamfered void tile: works on any
+       background, used as the favicon and on light grounds (README).
+       Colours match the wordmark in resources/js/components/brand.tsx. -->
+  <path d="M16 4 H48 L60 16 V48 L48 60 H16 L4 48 V16 Z" fill="#08080b"/>
+  <g transform="translate(9.00 12.11) scale(0.02452)"><g transform="translate(-61.1 1531.9)"><path transform="scale(1 -1)" fill="#ecd49a" d="M143 1434Q268 1434 391.5 1435.0Q515 1436 618.0 1437.5Q721 1439 794.0 1442.0Q867 1445 893 1450L844 1317Q811 1326 767 1333Q729 1339 674.5 1344.5Q620 1350 549 1350Q525 1350 491.5 1348.5Q458 1347 427 1345Q391 1343 354 1341V795Q457 796 540.0 801.0Q623 806 681 811Q749 817 801 825L770 680Q701 689 629 697Q567 704 494.0 709.5Q421 715 354 715V88Q472 88 571.0 98.0Q670 108 744 121Q830 135 901 154L872 -8Q860 -7 836.0 -6.0Q812 -5 782.5 -4.0Q753 -3 720.5 -2.5Q688 -2 659.0 -1.5Q630 -1 607.5 -0.5Q585 0 575 0H143V4Q149 25 154.5 56.0Q160 87 164.0 133.0Q168 179 170.0 242.5Q172 306 172 391V1042Q172 1127 170.0 1190.5Q168 1254 164.0 1300.5Q160 1347 154.5 1378.0Q149 1409 143 1430V1434Z"/><path transform="translate(953.8 0) scale(1 -1)" fill="#d2473c" d="M143 1434Q268 1434 391.5 1435.0Q515 1436 618.0 1437.5Q721 1439 794.0 1442.0Q867 1445 893 1450L844 1317Q811 1326 767 1333Q729 1339 674.5 1344.5Q620 1350 549 1350Q525 1350 491.5 1348.5Q458 1347 427 1345Q391 1343 354 1341V795Q457 796 540.0 801.0Q623 806 681 811Q749 817 801 825L770 680Q701 689 629 697Q567 704 494.0 709.5Q421 715 354 715V88Q472 88 571.0 98.0Q670 108 744 121Q830 135 901 154L872 -8Q860 -7 836.0 -6.0Q812 -5 782.5 -4.0Q753 -3 720.5 -2.5Q688 -2 659.0 -1.5Q630 -1 607.5 -0.5Q585 0 575 0H143V4Q149 25 154.5 56.0Q160 87 164.0 133.0Q168 179 170.0 242.5Q172 306 172 391V1042Q172 1127 170.0 1190.5Q168 1254 164.0 1300.5Q160 1347 154.5 1378.0Q149 1409 143 1430V1434Z"/><path transform="translate(457.4 0) scale(1 -1) rotate(-30 541.5 729.0) translate(541.5 729.0) scale(0.75) translate(-541.5 -729.0)" fill="#d6dae2" d="M156 20Q171 39 203.0 71.5Q235 104 277.0 148.5Q319 193 367.0 248.0Q415 303 463.0 367.0Q511 431 555.5 503.5Q600 576 634.0 655.0Q668 734 688.5 819.0Q709 904 709 993Q709 1088 686.5 1157.5Q664 1227 625.0 1272.5Q586 1318 533.5 1340.0Q481 1362 420 1362Q344 1362 282.5 1336.5Q221 1311 175.5 1277.0Q130 1243 101.5 1209.0Q73 1175 63 1157L49 1163L117 1366Q170 1390 216.5 1407.5Q263 1425 310.5 1436.0Q358 1447 408.5 1452.5Q459 1458 520 1458Q561 1458 607.0 1449.0Q653 1440 698.0 1420.0Q743 1400 783.5 1368.5Q824 1337 855.5 1291.5Q887 1246 905.5 1186.0Q924 1126 924 1049Q924 967 899.0 884.5Q874 802 833.0 722.5Q792 643 739.0 567.0Q686 491 630.0 422.0Q574 353 519.0 292.5Q464 232 420 182H805Q842 182 877.5 183.5Q913 185 943.0 188.5Q973 192 995.5 198.0Q1018 204 1030 213H1034V0H156V20Z"/></g></g>
+  <path d="M16 4 H48 L60 16 V48 L48 60 H16 L4 48 V16 Z" fill="none" stroke="#0a0709" stroke-width="2.6"/>
+  <path d="M16 4 H48 L60 16 V48 L48 60 H16 L4 48 V16 Z" fill="none" stroke="#ecd49a" stroke-opacity="0.45" stroke-width="1"/>
 </svg>

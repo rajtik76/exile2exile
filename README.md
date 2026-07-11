@@ -1,6 +1,11 @@
+<img src="public/favicon.svg" width="72" align="left" alt="E2E logo">
+
 # Exile to Exile
 
 *A free, open-source companion for Path of Exile 2 builds.*
+
+<br clear="left">
+
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/mNcjdkcBFB)

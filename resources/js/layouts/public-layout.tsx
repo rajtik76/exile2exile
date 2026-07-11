@@ -2,6 +2,7 @@ import { Link, router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { PAGE_BG, PrimaryCta, Wordmark } from '@/components/brand';
 import { usePatchStatus } from '@/lib/usePatchStatus';
+import logoMark from '../../images/brand/e2e-mark.svg';
 
 /**
  * Shared chrome for every public page: a quiet heraldic masthead and a stone
@@ -280,8 +281,14 @@ function TopBar() {
     return (
         <header className="sticky top-0 z-30 border-b border-[#c9a24a]/12 bg-[#08080b]/85 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-5">
-                {/* wordmark is the whole identity - no logo */}
+                {/* the E2E mark, then the wordmark it abbreviates */}
                 <Link href="/" className="flex items-baseline gap-3">
+                    <img
+                        src={logoMark}
+                        alt=""
+                        aria-hidden
+                        className="h-7 w-auto self-center"
+                    />
                     <Wordmark className="text-lg text-[#f1f3f8]" />
                     <span className="hidden border-l border-[#c9a24a]/25 pl-3 font-ui text-xs text-[#a7acb8] sm:inline">
                         Free Path of Exile&nbsp;2 tools - one player to another
@@ -395,7 +402,15 @@ function Footer() {
                 <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
                     {/* brand */}
                     <div className="flex flex-col gap-3 sm:col-span-2 lg:col-span-1">
-                        <Wordmark className="text-base text-[#f1f3f8]" />
+                        <div className="flex items-center gap-2.5">
+                            <img
+                                src={logoMark}
+                                alt=""
+                                aria-hidden
+                                className="h-6 w-auto"
+                            />
+                            <Wordmark className="text-base text-[#f1f3f8]" />
+                        </div>
                         <p className="max-w-xs font-body text-sm leading-relaxed text-[#a7acb8]">
                             A few tools I made for Path of Exile&nbsp;2 and put
                             online for anyone to use. From one exile to another.
