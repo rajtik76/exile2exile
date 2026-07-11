@@ -1,0 +1,19 @@
+name: Feature request
+description: An idea for a new tool or an improvement to an existing one.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would it solve
+      description: Describe the situation where the current tools fall short.
+      placeholder: When I follow a guide, I have to check act by act whether ...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like to see
+      description: How should it work? Rough ideas are fine.
+    validations:
+      required: true

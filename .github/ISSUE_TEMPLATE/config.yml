@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Discord
+    url: https://discord.gg/mNcjdkcBFB
+    about: Questions, build talk and quick feedback are easier on Discord.
+  - name: Security issue
+    url: https://github.com/rajtik76/exile2exile/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue. See SECURITY.md.

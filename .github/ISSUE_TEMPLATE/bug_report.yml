@@ -1,0 +1,32 @@
+name: Bug report
+description: Something is broken or behaves wrong.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, what happened instead?
+      placeholder: |
+        1. Open the build planner
+        2. Import this PoB code: ...
+        3. The passive tree shows no allocated nodes
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Page URL
+      description: The address where it happened (a share link is perfect).
+      placeholder: https://poe.rajtik.com/tree
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: >
+        Anything that helps to reproduce it: browser and OS, a Path of Building
+        code, a screenshot, errors from the browser console.
+    validations:
+      required: false
