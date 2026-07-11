@@ -25,3 +25,24 @@ test('searching by node name reports matches and stays error-free', function () 
         ->assertSee('hits')
         ->assertNoJavaScriptErrors();
 });
+
+/*
+ * Characterization snapshot for the tree canvas itself: it pins the rendered
+ * scene (node sprites, connections, frames, centre art) so a change inside
+ * @poe2-toolkit/tree-react that alters rendering shows up as a visual diff.
+ * The canvas paints asynchronously after the sprite atlases decode, so the
+ * test waits for the point gauge (data loaded) and a settle beat for the
+ * atlas textures to upload before comparing.
+ *
+ * No snapshot of the search highlight: its rings pulse (animated alpha and
+ * radius), so a screenshot of them can never be deterministic. The search
+ * behaviour itself is asserted textually above.
+ */
+
+test('the default tree view matches its visual snapshot', function () {
+    visit(route('tree'))
+        ->assertNoJavaScriptErrors()
+        ->waitForText('/123')
+        ->wait(3)
+        ->assertScreenshotMatches();
+});
