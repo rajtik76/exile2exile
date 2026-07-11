@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Filter\Neversink\NeversinkStrictness;
 use App\Filter\Neversink\NeversinkStyle;
+use App\Http\Requests\DestroyPlanRequest;
 use App\Http\Requests\ImportPlanRequest;
 use App\Http\Requests\StorePlanRequest;
 use App\Http\Requests\UpdatePlanRequest;
@@ -240,6 +241,41 @@ class PlannerController extends Controller
         // No token in the redirect URL: the session is already unlocked (UpdatePlanRequest
         // required it), so re-appending the secret would only leak it into logs and history.
         return to_route('planner.edit', ['plan' => $plan->slug]);
+    }
+
+    /**
+     * Delete a plan for good. Double-gated: {@see DestroyPlanRequest::authorize()}
+     * requires the unlocked session, and the token re-typed into the delete form must
+     * match - timing-safe, rate-limited like {@see unlock()} so a lingering unlock
+     * can't be abused to guess a rotated token. The token arrives only in the POST
+     * body and is never echoed, logged or flashed; the redirect carries none of it.
+     */
+    public function destroy(BuildPlan $plan, DestroyPlanRequest $request): RedirectResponse
+    {
+        $throttleKey = "planner-destroy:{$plan->slug}|".$request->ip();
+
+        // Errors land back on the editor even when the Referer is stripped.
+        $fallback = route('planner.edit', ['plan' => $plan->slug]);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::UNLOCK_MAX_ATTEMPTS)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return back(fallback: $fallback)->withErrors([
+                'token' => "Too many attempts. Try again in {$seconds} seconds.",
+            ]);
+        }
+
+        if (! $plan->matchesEditToken($request->string('token')->toString())) {
+            RateLimiter::hit($throttleKey, self::UNLOCK_LOCK_SECONDS);
+
+            return back(fallback: $fallback)->withErrors(['token' => 'That edit token is not valid for this build.']);
+        }
+
+        RateLimiter::clear($throttleKey);
+        $request->session()->forget($plan->unlockSessionKey());
+        $plan->delete();
+
+        return to_route('planner.create');
     }
 
     /**

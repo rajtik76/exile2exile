@@ -88,6 +88,13 @@ Route::put('build-planner/{plan:slug}', [PlannerController::class, 'update'])
     ->whereAlphaNumeric('slug')
     ->name('planner.update');
 
+// Delete a build. The edit token is re-typed into the delete form and travels only in
+// the request body (never a URL); throttled per IP like the unlock form.
+Route::delete('build-planner/{plan:slug}', [PlannerController::class, 'destroy'])
+    ->middleware('throttle:10,1')
+    ->whereAlphaNumeric('slug')
+    ->name('planner.destroy');
+
 // First-party, cookieless analytics dashboard. No login system yet, so it sits
 // behind HTTP Basic Auth (STATS_USER / STATS_PASS) instead of the auth guard.
 Route::get('stats', [StatsController::class, 'index'])

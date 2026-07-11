@@ -191,9 +191,7 @@
         "Stat5Value",
         "Stat6Value",
         "IsEssenceOnlyModifier",
-        "CraftingItemClassRestrictions",
-        "GenerationWeight_Tags",
-        "GenerationWeight_Values"
+        "CraftingItemClassRestrictions"
       ]
     },
     {
@@ -417,19 +415,6 @@
       "columns": [
         "Id",
         "ItemClasses"
-      ]
-    },
-    {
-      "name": "Expedition2Runes",
-      "columns": [
-        "Id",
-        "Mod"
-      ]
-    },
-    {
-      "name": "CraftableModTypes",
-      "columns": [
-        "ModType"
       ]
     }
   ]

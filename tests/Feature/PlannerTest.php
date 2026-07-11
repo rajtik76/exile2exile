@@ -846,3 +846,75 @@ test('a unique item with no author mods or requirements is accepted', function (
     expect($body['base']['id'])->toBe('Bramblejack')
         ->and($body['stats'])->toBe([]);
 });
+
+/*
+ * Deleting a build - double-gated by the unlocked session AND the re-typed token.
+ */
+
+test('deleting a build verifies the re-typed token and removes the plan', function () {
+    $plan = makePlan();
+
+    $this->withSession([$plan->unlockSessionKey() => $plan->edit_token])
+        ->delete(route('planner.destroy', ['plan' => $plan->slug]), ['token' => $plan->edit_token])
+        ->assertRedirect(route('planner.create'));
+
+    expect(BuildPlan::count())->toBe(0)
+        // The unlock is gone with the plan - nothing secret lingers in the session.
+        ->and(session($plan->unlockSessionKey()))->toBeNull();
+});
+
+test('deleting without an unlocked session is forbidden even with the right token', function () {
+    $plan = makePlan();
+
+    // The public slug plus a stolen token alone must not destroy anything: the delete
+    // form only exists inside the unlocked editor.
+    $this->delete(route('planner.destroy', ['plan' => $plan->slug]), ['token' => $plan->edit_token])
+        ->assertForbidden();
+
+    expect(BuildPlan::count())->toBe(1);
+});
+
+test('deleting with a wrong token keeps the plan and never flashes the secret', function () {
+    $plan = makePlan();
+
+    $this->withSession([$plan->unlockSessionKey() => $plan->edit_token])
+        ->from(route('planner.edit', ['plan' => $plan->slug]))
+        ->delete(route('planner.destroy', ['plan' => $plan->slug]), ['token' => 'wrong'])
+        ->assertRedirect(route('planner.edit', ['plan' => $plan->slug]))
+        ->assertSessionHasErrors('token');
+
+    expect(BuildPlan::count())->toBe(1);
+});
+
+test('a missing token never lands in the old-input session flash', function () {
+    $plan = makePlan();
+
+    // A validation failure flashes old input for the redirect back - the token field
+    // is excluded, so the secret is never persisted in the session flash.
+    $this->withSession([$plan->unlockSessionKey() => $plan->edit_token])
+        ->from(route('planner.edit', ['plan' => $plan->slug]))
+        ->delete(route('planner.destroy', ['plan' => $plan->slug]), [])
+        ->assertSessionHasErrors('token')
+        ->assertSessionMissing('_old_input.token');
+
+    expect(BuildPlan::count())->toBe(1);
+});
+
+test('deleting hard-locks after three wrong tokens', function () {
+    $plan = makePlan();
+
+    foreach (range(1, 3) as $attempt) {
+        $this->withSession([$plan->unlockSessionKey() => $plan->edit_token])
+            ->from(route('planner.edit', ['plan' => $plan->slug]))
+            ->delete(route('planner.destroy', ['plan' => $plan->slug]), ['token' => 'wrong'])
+            ->assertSessionHasErrors('token');
+    }
+
+    // Even the right token bounces during the cool-off.
+    $this->withSession([$plan->unlockSessionKey() => $plan->edit_token])
+        ->from(route('planner.edit', ['plan' => $plan->slug]))
+        ->delete(route('planner.destroy', ['plan' => $plan->slug]), ['token' => $plan->edit_token])
+        ->assertSessionHasErrors('token');
+
+    expect(BuildPlan::count())->toBe(1);
+});

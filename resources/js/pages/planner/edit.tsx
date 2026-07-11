@@ -747,6 +747,7 @@ export default function PlannerEdit({
                                                 publicUrl={publicUrl}
                                                 editUrl={editUrl}
                                                 editToken={editToken}
+                                                slug={slug}
                                             />
                                         )}
 
