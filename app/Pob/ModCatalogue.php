@@ -26,12 +26,28 @@ final class ModCatalogue
     private const array MODS_PER_TYPE = ['normal' => 0, 'magic' => 1, 'rare' => 3];
 
     /**
-     * @var list<array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>}>|null
+     * The spawn-weight tag carried by desecrated ("Soul Influence") affixes. They never
+     * roll naturally - their default weight is zero - but the Well of Souls puts them on
+     * ordinary rares, so a base accepts them as if it carried the tag itself. A mod that
+     * zeroes a base's own tag ahead of this one stays excluded (the zero matches first).
+     */
+    private const string DESECRATED_TAG = 'soul';
+
+    /**
+     * The spawn-weight tag prefix of Kalguuran genesis-tree affixes (`genesis_tree_caster`,
+     * `genesis_tree_minion`, …). Same craft-only pattern as {@see DESECRATED_TAG}: the
+     * genesis tree puts them on ordinary rares, so a base accepts the tags as its own,
+     * and an earlier zero on one of the base's tags still excludes the mod.
+     */
+    private const string GENESIS_TAG_PREFIX = 'genesis_tree_';
+
+    /**
+     * @var list<array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>, desecrated?: bool, essence?: bool, itemClasses?: list<string>}>|null
      */
     private ?array $mods = null;
 
     /**
-     * @var array<string, array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>}>|null
+     * @var array<string, array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>, desecrated?: bool, essence?: bool, itemClasses?: list<string>}>|null
      */
     private ?array $byId = null;
 
@@ -65,11 +81,17 @@ final class ModCatalogue
      * ascending; the search matches the affix wording (numbers ignored), ranked prefix
      * matches first. When the query is empty every compatible group is returned.
      *
+     * Tiers that only reach the base through desecration (the Well of Souls) are flagged
+     * `desecrated`, tiers only an essence can put there `essence`, and tiers only the
+     * Kalguuran genesis tree can put there `genesis`, so callers can rank or badge them
+     * apart from naturally rolling affixes.
+     *
      * @param  ?string  $modDomain  the base's mod domain; null = match none
      * @param  list<string>  $baseTags  the base's mod-matching tags; empty = match none
-     * @return list<array{group: string, type: string, label: string, tiers: list<array{id: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>}>}>
+     * @param  ?string  $itemClass  the base's GGPK item class, gating essence-only mods; null = lenient
+     * @return list<array{group: string, type: string, label: string, tiers: list<array{id: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, desecrated: bool, essence: bool, genesis: bool, ladder: bool}>}>
      */
-    public function search(?string $modDomain, array $baseTags, string $query, int $limit = 60): array
+    public function search(?string $modDomain, array $baseTags, string $query, int $limit = 60, ?string $itemClass = null): array
     {
         if ($modDomain === null || $baseTags === []) {
             return [];
@@ -78,8 +100,21 @@ final class ModCatalogue
         $terms = TextSearch::terms($query);
         $groups = [];
 
+        // Ladders with a naturally rolling tier on this base, precomputed so the
+        // desecration-bump fallback (see canRollOn) doesn't rescan the catalogue for
+        // every gated-out tier.
+        $naturalLadders = [];
+
         foreach ($this->all() as $mod) {
-            if (! $this->canRollOn($mod, $modDomain, $baseTags)) {
+            if ($mod['domain'] === $modDomain
+                && ($mod['group'] ?? null) !== null
+                && ($this->matchingWeight($mod, $baseTags)['weight'] ?? 0) > 0) {
+                $naturalLadders[$mod['group'].'|'.$mod['type']] = true;
+            }
+        }
+
+        foreach ($this->all() as $mod) {
+            if (! $this->canRollOn($mod, $modDomain, $baseTags, $itemClass, $naturalLadders)) {
                 continue;
             }
 
@@ -101,6 +136,17 @@ final class ModCatalogue
                 'stats' => $mod['stats'],
                 'rolls' => $mod['rolls'],
                 'families' => $mod['families'],
+                // A weight-gated-out tier reached the base through the ladder fallback,
+                // which is desecration's doing (a tier bump past the natural ceiling).
+                'desecrated' => $this->isDesecratedOnly($mod, $baseTags)
+                    || (($mod['essence'] ?? false) !== true
+                        && ($this->matchingWeight($mod, $baseTags)['weight'] ?? 0) <= 0),
+                'essence' => ($mod['essence'] ?? false) === true,
+                'genesis' => $this->isGenesisOnly($mod, $baseTags),
+                // Reached only through the ladder fallback: callers preferring a
+                // directly gated variant (e.g. the import's reverse-match) rank these last.
+                'ladder' => ($mod['essence'] ?? false) !== true
+                    && ($this->matchingWeight($mod, $baseTags)['weight'] ?? 0) <= 0,
             ];
         }
 
@@ -137,9 +183,10 @@ final class ModCatalogue
      * @param  list<mixed>  $stats  the item's raw author modifiers (untrusted shape)
      * @param  ?string  $modDomain  the base's mod domain, or null when no base is chosen
      * @param  list<string>  $baseTags  the base's tags, or empty when no base is chosen
+     * @param  ?string  $itemClass  the base's GGPK item class, gating essence-only mods; null = lenient
      * @return list<string>
      */
-    public function modErrors(string $rarity, array $stats, ?string $modDomain = null, array $baseTags = []): array
+    public function modErrors(string $rarity, array $stats, ?string $modDomain = null, array $baseTags = [], ?string $itemClass = null): array
     {
         if ($rarity === 'unique' || $stats === []) {
             return [];
@@ -169,7 +216,7 @@ final class ModCatalogue
                 $errors[] = "A modifier's value is outside its tier's range.";
             }
 
-            if ($baseTags !== [] && ! $this->canRollOn($mod, $modDomain, $baseTags)) {
+            if ($baseTags !== [] && ! $this->canRollOn($mod, $modDomain, $baseTags, $itemClass)) {
                 $errors[] = 'A modifier cannot roll on this base type.';
             }
         }
@@ -192,28 +239,122 @@ final class ModCatalogue
     }
 
     /**
-     * Whether a mod can roll on an item: its GGPK domain must match the base's (a base
+     * Whether a mod can land on an item: its GGPK domain must match the base's (a base
      * only takes mods of its own `modDomain`), and then the first of its spawn weights
-     * whose tag the item has (or the catch-all `default`) must be positive. The domain
-     * gate is first and non-optional - mods of foreign domains (Monster, Heist, …) carry
-     * a positive default weight and would otherwise leak through the tag gate alone.
+     * whose tag the item has (or `default`, or the desecration tag) must be positive.
+     * The domain gate is first and non-optional - mods of foreign domains (Monster,
+     * Heist, …) carry a positive default weight and would otherwise leak through the
+     * tag gate alone.
      *
-     * @param  array{domain: string, spawnWeights: list<array{tag: string, weight: int}>}  $mod
+     * Essence-only mods fail the weight gate by definition (an essence targets item
+     * classes directly and the mod's weights are all zero), so they fall back to the
+     * catalogue's `itemClasses` gate. A null $itemClass (no base chosen, or a caller
+     * without class data) is lenient.
+     *
+     * Any other weight-gated-out tier falls back to its ladder: desecration bumps a
+     * mod past its natural ceiling, either into a tier that zeroes the slot's own tag
+     * (gloves take "% increased Energy Shield" to T4 naturally, the Well of Souls to
+     * T5+) or into a tier with no positive weight at all (Dexterity T9). Such a tier
+     * still lands wherever a sibling tier of the same ladder rolls naturally.
+     *
+     * @param  array{id: string, domain: string, group: ?string, type: string, spawnWeights: list<array{tag: string, weight: int}>, essence?: bool, itemClasses?: list<string>}  $mod
      * @param  list<string>  $baseTags
+     * @param  ?array<string, true>  $naturalLadders  precomputed "group|type" keys with a
+     *                                                naturally rolling tier on the base; null = scan per mod
      */
-    private function canRollOn(array $mod, ?string $modDomain, array $baseTags): bool
+    private function canRollOn(array $mod, ?string $modDomain, array $baseTags, ?string $itemClass = null, ?array $naturalLadders = null): bool
     {
         if ($mod['domain'] !== $modDomain) {
             return false;
         }
 
+        if (($this->matchingWeight($mod, $baseTags)['weight'] ?? 0) > 0) {
+            return true;
+        }
+
+        if (($mod['essence'] ?? false) === true) {
+            $classes = $mod['itemClasses'] ?? [];
+
+            return $classes === [] || $itemClass === null || in_array($itemClass, $classes, true);
+        }
+
+        if (($mod['group'] ?? null) === null) {
+            return false;
+        }
+
+        return $naturalLadders !== null
+            ? isset($naturalLadders[$mod['group'].'|'.$mod['type']])
+            : $this->ladderRollsOn($mod, $baseTags);
+    }
+
+    /**
+     * Whether a sibling tier of the mod's own ladder (same group, generation type and
+     * domain) rolls naturally on the base - the gate a desecration-bumped tier inherits.
+     *
+     * @param  array{id: string, domain: string, group: ?string, type: string}  $mod
+     * @param  list<string>  $baseTags
+     */
+    private function ladderRollsOn(array $mod, array $baseTags): bool
+    {
+        if (($mod['group'] ?? null) === null) {
+            return false;
+        }
+
+        return array_any($this->all(), fn ($sibling) => $sibling['id'] !== $mod['id']
+            && ($sibling['group'] ?? null) === $mod['group']
+            && $sibling['type'] === $mod['type']
+            && $sibling['domain'] === $mod['domain']
+            && ($this->matchingWeight($sibling, $baseTags)['weight'] ?? 0) > 0);
+    }
+
+    /**
+     * The first spawn weight whose tag the item has - `default` and the craft-only tags
+     * (desecration, genesis tree) count as always carried - or null when none matches.
+     * First-match order is GGG's own semantics: an earlier zero for one of the base's
+     * tags excludes the mod even when a later tag would allow it.
+     *
+     * @param  array{spawnWeights: list<array{tag: string, weight: int}>}  $mod
+     * @param  list<string>  $baseTags
+     * @return array{tag: string, weight: int}|null
+     */
+    private function matchingWeight(array $mod, array $baseTags): ?array
+    {
         foreach ($mod['spawnWeights'] as $weight) {
-            if ($weight['tag'] === 'default' || in_array($weight['tag'], $baseTags, true)) {
-                return $weight['weight'] > 0;
+            if ($weight['tag'] === 'default'
+                || $weight['tag'] === self::DESECRATED_TAG
+                || str_starts_with($weight['tag'], self::GENESIS_TAG_PREFIX)
+                || in_array($weight['tag'], $baseTags, true)) {
+                return $weight;
             }
         }
 
-        return false;
+        return null;
+    }
+
+    /**
+     * Whether the mod reaches this base only through the Kalguuran genesis tree - the
+     * weight that lets it in is a genesis tag's, not one of the base's own tags.
+     *
+     * @param  array{spawnWeights: list<array{tag: string, weight: int}>}  $mod
+     * @param  list<string>  $baseTags
+     */
+    private function isGenesisOnly(array $mod, array $baseTags): bool
+    {
+        return str_starts_with($this->matchingWeight($mod, $baseTags)['tag'] ?? '', self::GENESIS_TAG_PREFIX);
+    }
+
+    /**
+     * Whether the mod reaches this base only through desecration - it comes from the
+     * desecrated mod domain (the catalogue's `desecrated` flag), or the weight that
+     * lets it in is the desecration tag's, not one of the base's own tags.
+     *
+     * @param  array{spawnWeights: list<array{tag: string, weight: int}>, desecrated?: bool}  $mod
+     * @param  list<string>  $baseTags
+     */
+    private function isDesecratedOnly(array $mod, array $baseTags): bool
+    {
+        return ($mod['desecrated'] ?? false) === true
+            || ($this->matchingWeight($mod, $baseTags)['tag'] ?? null) === self::DESECRATED_TAG;
     }
 
     /**
@@ -258,7 +399,7 @@ final class ModCatalogue
     /**
      * The client-facing projection of a stored mod (drops the internal spawn-weight gate).
      *
-     * @param  array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>}  $mod
+     * @param  array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>, desecrated?: bool, essence?: bool, itemClasses?: list<string>}  $mod
      * @return array{id: string, name: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>}
      */
     private function present(array $mod): array
@@ -277,7 +418,7 @@ final class ModCatalogue
     }
 
     /**
-     * @return array<string, array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>}>
+     * @return array<string, array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>, desecrated?: bool, essence?: bool, itemClasses?: list<string>}>
      */
     private function index(): array
     {
@@ -295,7 +436,7 @@ final class ModCatalogue
     }
 
     /**
-     * @return list<array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>}>
+     * @return list<array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>, desecrated?: bool, essence?: bool, itemClasses?: list<string>}>
      */
     private function all(): array
     {
@@ -312,7 +453,7 @@ final class ModCatalogue
                 return [];
             }
 
-            /** @var list<array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>}> $decoded */
+            /** @var list<array{id: string, name: string, domain: string, group: ?string, type: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, spawnWeights: list<array{tag: string, weight: int}>, desecrated?: bool, essence?: bool, itemClasses?: list<string>}> $decoded */
             return $decoded;
         });
     }

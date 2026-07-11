@@ -78,9 +78,12 @@ class PlannerReferenceController extends Controller
         $baseTags = $hasBase
             ? $icons->itemTags($validated['base'])
             : $icons->categoryTags($categories);
+        // The base's item class gates essence-only mods (an essence targets classes,
+        // not tags); before a base is picked the gate stays lenient.
+        $itemClass = $hasBase ? $icons->itemClass($validated['base']) : null;
 
         return response()->json([
-            'results' => $catalogue->search($modDomain, $baseTags, $validated['q'] ?? ''),
+            'results' => $catalogue->search($modDomain, $baseTags, $validated['q'] ?? '', itemClass: $itemClass),
         ]);
     }
 

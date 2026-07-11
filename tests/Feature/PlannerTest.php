@@ -736,7 +736,7 @@ test('body armour accepts three rune sockets', function () {
 });
 
 test('more rune sockets than the slot allows is rejected', function () {
-    // A helmet takes at most two runes; a third is over the ceiling.
+    // A rare helmet takes at most three runes (two natural + one Vaal); a fourth is over.
     $this->post(route('planner.store'), planWithItem('helmet', [
         'rarity' => 'rare',
         'base' => ['type' => 'base', 'id' => 'Helm1'],
@@ -744,10 +744,27 @@ test('more rune sockets than the slot allows is rejected', function () {
             ['type' => 'rune', 'id' => 'RuneA'],
             ['type' => 'rune', 'id' => 'RuneB'],
             ['type' => 'rune', 'id' => 'RuneC'],
+            ['type' => 'rune', 'id' => 'RuneD'],
         ],
     ]))->assertInvalid(['sections.act-1.items.slots.helmet']);
 
     expect(BuildPlan::count())->toBe(0);
+});
+
+test('a unique helmet carries up to the global socket ceiling', function () {
+    // Greymake and The Bringer of Rain wear four rune sockets on a helmet.
+    $this->post(route('planner.store'), planWithItem('helmet', [
+        'rarity' => 'unique',
+        'base' => ['type' => 'unique', 'id' => 'Greymake'],
+        'sockets' => [
+            ['type' => 'rune', 'id' => 'RuneA'],
+            ['type' => 'rune', 'id' => 'RuneB'],
+            ['type' => 'rune', 'id' => 'RuneC'],
+            ['type' => 'rune', 'id' => 'RuneD'],
+        ],
+    ]))->assertRedirect();
+
+    expect(BuildPlan::count())->toBe(1);
 });
 
 test('rune sockets on jewellery or a belt are rejected', function (string $slot) {
@@ -785,24 +802,24 @@ test('a unique item may carry defensive properties', function () {
         ->and($props['quality'])->toBe(20);
 });
 
-test('item quality above 20% is rejected', function () {
+test('item quality above the ceiling is rejected', function () {
     $this->post(route('planner.store'), planWithItem('body', [
         'rarity' => 'rare',
         'base' => ['type' => 'base', 'id' => 'Plate1'],
-        'props' => ['quality' => 21],
+        'props' => ['quality' => 101],
     ]))->assertInvalid(['sections.act-1.items.slots.body']);
 
     expect(BuildPlan::count())->toBe(0);
 });
 
-test('an item with three defence types is rejected', function () {
+test('an item with three defence types saves (triple-hybrid bases exist)', function () {
     $this->post(route('planner.store'), planWithItem('body', [
         'rarity' => 'rare',
         'base' => ['type' => 'base', 'id' => 'Plate1'],
         'props' => ['armour' => 100, 'evasion' => 100, 'energyShield' => 100],
-    ]))->assertInvalid(['sections.act-1.items.slots.body']);
+    ]))->assertRedirect();
 
-    expect(BuildPlan::count())->toBe(0);
+    expect(BuildPlan::count())->toBe(1);
 });
 
 test('a unique item may carry an item level', function () {

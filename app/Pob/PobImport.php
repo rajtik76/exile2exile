@@ -404,10 +404,12 @@ final class PobImport implements BuildDecoder
 
         $mods = $modStart === null
             ? []
-            : array_map(
-                $this->stripModTags(...),
-                array_slice($lines, $modStart),
-            );
+            : array_values(array_filter(
+                array_map($this->stripModTags(...), array_slice($lines, $modStart)),
+                // "Corrupted"/"Mirrored" are item flags PoB appends after the mods,
+                // not modifier lines; they are trailing, so implicit counting is safe.
+                static fn (string $line): bool => ! in_array($line, ['Corrupted', 'Mirrored'], true),
+            ));
 
         return new EquippedItem(
             slot: $slot,

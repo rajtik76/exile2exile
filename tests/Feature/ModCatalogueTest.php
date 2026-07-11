@@ -31,6 +31,10 @@ function arbitraryMods(): array
         ['id' => 'IncreasedLife1', 'name' => 'Hale', 'domain' => 'Item', 'group' => 'IncreasedLife', 'type' => 'prefix', 'tier' => 1, 'level' => 1, 'stats' => ['+# to maximum Life'], 'rolls' => [['stat' => 'life', 'min' => 5, 'max' => 15]], 'families' => ['IncreasedLife'], 'spawnWeights' => $default],
         ['id' => 'IncreasedLife2', 'name' => 'Healthy', 'domain' => 'Item', 'group' => 'IncreasedLife', 'type' => 'prefix', 'tier' => 2, 'level' => 10, 'stats' => ['+# to maximum Life'], 'rolls' => [['stat' => 'life', 'min' => 15, 'max' => 25]], 'families' => ['IncreasedLife'], 'spawnWeights' => $default],
 
+        // A desecration-bumped top tier of the same ladder: no positive weight anywhere,
+        // reachable only where a sibling tier rolls naturally.
+        ['id' => 'IncreasedLife3', 'name' => 'Overflowing', 'domain' => 'Item', 'group' => 'IncreasedLife', 'type' => 'prefix', 'tier' => 3, 'level' => 50, 'stats' => ['+# to maximum Life'], 'rolls' => [['stat' => 'life', 'min' => 26, 'max' => 35]], 'families' => ['IncreasedLife'], 'spawnWeights' => [['tag' => 'default', 'weight' => 0]]],
+
         // Three elemental resistances: suffixes, each its own family.
         ['id' => 'FireResist1', 'name' => 'of the Kiln', 'domain' => 'Item', 'group' => 'FireResistance', 'type' => 'suffix', 'tier' => 1, 'level' => 1, 'stats' => ['+#% to Fire Resistance'], 'rolls' => [['stat' => 'fire_resist', 'min' => 5, 'max' => 10]], 'families' => ['FireResist'], 'spawnWeights' => $default],
         ['id' => 'ColdResist1', 'name' => 'of the Tundra', 'domain' => 'Item', 'group' => 'ColdResistance', 'type' => 'suffix', 'tier' => 1, 'level' => 1, 'stats' => ['+#% to Cold Resistance'], 'rolls' => [['stat' => 'cold_resist', 'min' => 5, 'max' => 10]], 'families' => ['ColdResist'], 'spawnWeights' => $default],
@@ -44,6 +48,26 @@ function arbitraryMods(): array
 
         // A Flask-domain charm mod: legal on a charm, foreign to any Item-domain base.
         ['id' => 'CharmGainLifeOnUse1', 'name' => 'Life-giving', 'domain' => 'Flask', 'group' => 'CharmLifeOnUse', 'type' => 'prefix', 'tier' => 1, 'level' => 1, 'stats' => ['Recover # Life when used'], 'rolls' => [['stat' => 'charm_life', 'min' => 5, 'max' => 20]], 'families' => ['CharmLifeOnUse'], 'spawnWeights' => [['tag' => 'default', 'weight' => 1000]]],
+
+        // A desecrated ("Soul Influence") suffix: its only positive weight is the soul
+        // tag, so it reaches any base solely through the Well of Souls.
+        ['id' => 'SoulDualResist1', 'name' => 'of Souls', 'domain' => 'Item', 'group' => 'FireChaosResistance', 'type' => 'suffix', 'tier' => 1, 'level' => 1, 'stats' => ['+#% to Fire and Chaos Resistances'], 'rolls' => [['stat' => 'fire_chaos_resist', 'min' => 3, 'max' => 31]], 'families' => ['FireChaosResist'], 'spawnWeights' => [['tag' => 'soul', 'weight' => 1], ['tag' => 'default', 'weight' => 0]]],
+
+        // A desecrated mod that zeroes body armour ahead of its soul tag: GGG's
+        // first-match weights exclude it there even though desecration allows it elsewhere.
+        ['id' => 'SoulNotOnBody1', 'name' => 'of Buried Souls', 'domain' => 'Item', 'group' => 'SoulThorns', 'type' => 'suffix', 'tier' => 1, 'level' => 1, 'stats' => ['# to Physical Thorns damage'], 'rolls' => [['stat' => 'thorns', 'min' => 1, 'max' => 9]], 'families' => ['SoulThorns'], 'spawnWeights' => [['tag' => 'body_armour', 'weight' => 0], ['tag' => 'soul', 'weight' => 1], ['tag' => 'default', 'weight' => 0]]],
+
+        // A desecrated-domain mod (the extractor folds domain 28 into Item with the
+        // flag): scoped by its ordinary tag weights, it just never rolls naturally.
+        ['id' => 'BoneSpirit1', 'name' => 'of the Bones', 'domain' => 'Item', 'group' => 'BoneSpirit', 'type' => 'suffix', 'tier' => 1, 'level' => 1, 'stats' => ['#% increased Spirit Reservation Efficiency of Skills'], 'rolls' => [['stat' => 'spirit_efficiency', 'min' => 5, 'max' => 10]], 'families' => ['BoneSpirit'], 'spawnWeights' => [['tag' => 'body_armour', 'weight' => 1], ['tag' => 'default', 'weight' => 0]], 'desecrated' => true, 'essence' => false, 'itemClasses' => []],
+
+        // An essence-only mod: every spawn weight is zero (an essence targets item
+        // classes directly), so the catalogue's itemClasses list is its only gate.
+        ['id' => 'EssenceExtraCold1', 'name' => 'of Ice', 'domain' => 'Item', 'group' => 'EssenceExtraCold', 'type' => 'prefix', 'tier' => 1, 'level' => 1, 'stats' => ['Gain #% of Damage as Extra Cold Damage'], 'rolls' => [['stat' => 'extra_cold', 'min' => 25, 'max' => 33]], 'families' => ['EssenceExtraCold'], 'spawnWeights' => [['tag' => 'default', 'weight' => 0]], 'desecrated' => false, 'essence' => true, 'itemClasses' => ['Crossbow', 'Two Hand Sword']],
+
+        // A Kalguuran genesis-tree mod: its only positive weight is a genesis tag, and
+        // the belt zero ahead of it keeps it off belts (GGG first-match semantics).
+        ['id' => 'GenesisSpellDamage1', 'name' => 'Runic', 'domain' => 'Item', 'group' => 'GenesisSpellDamage', 'type' => 'prefix', 'tier' => 1, 'level' => 1, 'stats' => ['#% increased Spell Damage'], 'rolls' => [['stat' => 'spell_damage', 'min' => 26, 'max' => 29]], 'families' => ['GenesisSpellDamage'], 'spawnWeights' => [['tag' => 'belt', 'weight' => 0], ['tag' => 'genesis_tree_caster', 'weight' => 1], ['tag' => 'default', 'weight' => 0]]],
     ];
 }
 
@@ -153,6 +177,93 @@ test('search returns nothing without a domain, and honours it', function () {
     // Flask domain + charm tags surfaces charm affixes.
     $charmGroups = $this->catalogue->search('Flask', ['utility_flask', 'default'], 'recover life');
     expect($charmGroups)->not->toBeEmpty();
+});
+
+test('a desecrated mod is legal on any base its weights do not zero', function () {
+    // The soul tag counts as always carried: the Well of Souls can put the mod on an
+    // ordinary rare, so validation accepts it even though it never rolls naturally.
+    expect($this->catalogue->modErrors('rare', [['modId' => 'SoulDualResist1', 'values' => [16]]], 'Item', ['ring', 'default']))
+        ->toBe([]);
+});
+
+test('search flags desecrated-only tiers apart from natural ones', function () {
+    $groups = collect($this->catalogue->search('Item', ['ring', 'default'], ''));
+
+    $soul = $groups->firstWhere('group', 'FireChaosResistance');
+    $natural = $groups->firstWhere('group', 'FireResistance');
+
+    expect($soul['tiers'][0]['desecrated'])->toBeTrue()
+        ->and($natural['tiers'][0]['desecrated'])->toBeFalse();
+});
+
+test('a zeroed base tag ahead of the soul tag still excludes the mod', function () {
+    // GGG's weights are first-match: body armour's zero wins over the later soul weight.
+    $errors = $this->catalogue->modErrors('rare', [['modId' => 'SoulNotOnBody1', 'values' => [5]]], 'Item', ['body_armour', 'default']);
+
+    expect($errors)->toContain('A modifier cannot roll on this base type.')
+        ->and(collect($this->catalogue->search('Item', ['body_armour', 'default'], ''))->firstWhere('group', 'SoulThorns'))->toBeNull()
+        // A base the mod does not zero takes it through desecration.
+        ->and($this->catalogue->modErrors('rare', [['modId' => 'SoulNotOnBody1', 'values' => [5]]], 'Item', ['ring', 'default']))->toBe([]);
+});
+
+test('an essence-only mod is gated by item class, leniently without one', function () {
+    $mod = [['modId' => 'EssenceExtraCold1', 'values' => [29]]];
+
+    // On a matching class it is legal; on a foreign class it cannot land; with no
+    // class known (no base picked, or a caller without class data) the gate is lenient.
+    expect($this->catalogue->modErrors('rare', $mod, 'Item', ['weapon', 'default'], 'Crossbow'))->toBe([])
+        ->and($this->catalogue->modErrors('rare', $mod, 'Item', ['ring', 'default'], 'Ring'))
+        ->toContain('A modifier cannot roll on this base type.')
+        ->and($this->catalogue->modErrors('rare', $mod, 'Item', ['ring', 'default']))->toBe([]);
+});
+
+test('search honours the item class for essence-only mods and flags them', function () {
+    $forCrossbow = collect($this->catalogue->search('Item', ['weapon', 'default'], '', 60, 'Crossbow'));
+    $forRing = collect($this->catalogue->search('Item', ['ring', 'default'], '', 60, 'Ring'));
+
+    expect($forCrossbow->firstWhere('group', 'EssenceExtraCold')['tiers'][0]['essence'])->toBeTrue()
+        ->and($forRing->firstWhere('group', 'EssenceExtraCold'))->toBeNull();
+});
+
+test('a desecrated-domain mod keeps its tag scoping and its flag', function () {
+    // BoneSpirit1 carries an ordinary body_armour weight (it lands there through
+    // desecration); a weapon does not take it, and its tiers are flagged desecrated.
+    $forBody = collect($this->catalogue->search('Item', ['body_armour', 'default'], ''));
+    $forWeapon = collect($this->catalogue->search('Item', ['weapon', 'default'], ''));
+
+    expect($forBody->firstWhere('group', 'BoneSpirit')['tiers'][0]['desecrated'])->toBeTrue()
+        ->and($forWeapon->firstWhere('group', 'BoneSpirit'))->toBeNull()
+        ->and($this->catalogue->modErrors('rare', [['modId' => 'BoneSpirit1', 'values' => [7]]], 'Item', ['body_armour', 'default']))->toBe([]);
+});
+
+test('a desecration-bumped tier lands where its own ladder rolls', function () {
+    // IncreasedLife3 has no positive weight anywhere; its ladder (IncreasedLife1-2)
+    // rolls on any Item base here, so desecration can bump into it - and search flags
+    // it desecrated. A ladder foreign to the base still fails (Spirit is body-only).
+    expect($this->catalogue->modErrors('rare', [['modId' => 'IncreasedLife3', 'values' => [30]]], 'Item', ['ring', 'default']))
+        ->toBe([]);
+
+    $ladder = collect($this->catalogue->search('Item', ['ring', 'default'], ''))->firstWhere('group', 'IncreasedLife');
+    $tiers = collect($ladder['tiers'])->keyBy('id');
+
+    expect($tiers['IncreasedLife3']['desecrated'])->toBeTrue()
+        ->and($tiers['IncreasedLife1']['desecrated'])->toBeFalse()
+        ->and(collect($this->catalogue->search('Item', ['ring', 'default'], ''))->firstWhere('group', 'Spirit'))->toBeNull();
+});
+
+test('a genesis-tree mod is legal on any base its weights do not zero', function () {
+    $mod = [['modId' => 'GenesisSpellDamage1', 'values' => [28]]];
+
+    // The genesis tags count as always carried (the tree puts the mod on ordinary
+    // rares); the belt zero ahead of them still excludes it there.
+    expect($this->catalogue->modErrors('rare', $mod, 'Item', ['ring', 'default']))->toBe([])
+        ->and($this->catalogue->modErrors('rare', $mod, 'Item', ['belt', 'default']))
+        ->toContain('A modifier cannot roll on this base type.');
+
+    $forRing = collect($this->catalogue->search('Item', ['ring', 'default'], ''));
+
+    expect($forRing->firstWhere('group', 'GenesisSpellDamage')['tiers'][0]['genesis'])->toBeTrue()
+        ->and($forRing->firstWhere('group', 'FireResistance')['tiers'][0]['genesis'])->toBeFalse();
 });
 
 test('resolve returns a mod tier line and null for the unknown', function () {

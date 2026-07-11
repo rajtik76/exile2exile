@@ -440,26 +440,28 @@ test('a rare flask or charm is rejected but a rare gear item is allowed', functi
         ->not->toContain('A flask or charm cannot be rare.');
 });
 
-test('item quality is clamped to 20 and flagged when a raw payload exceeds it', function () {
+test('item quality is clamped to the ceiling and flagged when a raw payload exceeds it', function () {
+    // "+X% to Maximum Quality" mods and implicits stack well past the ordinary 20%
+    // (a corrupted Refined Breach Ring shows +73%), so the ceiling is generous.
     // Canonicalisation clamps, so a stored item is always legal…
     $data = PlanSchema::canonicalize([
         'tabs' => PlanSchema::baseTabs(),
         'sections' => ['act-1' => ['items' => ['slots' => [
-            'body' => ['rarity' => 'rare', 'base' => ['type' => 'base', 'id' => 'X'], 'props' => ['quality' => 50]],
+            'body' => ['rarity' => 'rare', 'base' => ['type' => 'base', 'id' => 'X'], 'props' => ['quality' => 150]],
         ]]]],
     ]);
 
-    expect($data['sections']['act-1']['items']['slots']['body']['props']['quality'])->toBe(20)
+    expect($data['sections']['act-1']['items']['slots']['body']['props']['quality'])->toBe(100)
         // …while itemErrors flags a raw over-cap payload.
-        ->and(PlanSchema::itemErrors('body', ['rarity' => 'rare', 'props' => ['quality' => 21]]))
-        ->toContain('Quality cannot exceed 20%.');
+        ->and(PlanSchema::itemErrors('body', ['rarity' => 'rare', 'props' => ['quality' => 101]]))
+        ->toContain('Quality cannot exceed 100%.')
+        ->and(PlanSchema::itemErrors('body', ['rarity' => 'rare', 'props' => ['quality' => 73]]))
+        ->toBe([]);
 });
 
-test('more than two defence types is rejected, two is allowed', function () {
+test('all three defence types at once are legal (triple-hybrid bases exist)', function () {
     expect(PlanSchema::itemErrors('body', ['rarity' => 'rare', 'props' => ['armour' => 100, 'evasion' => 100, 'energyShield' => 100]]))
-        ->toContain('An item has at most two defence types.')
-        ->and(PlanSchema::itemErrors('body', ['rarity' => 'rare', 'props' => ['armour' => 100, 'evasion' => 100]]))
-        ->not->toContain('An item has at most two defence types.');
+        ->toBe([]);
 });
 
 test('tabsError passes the base tabs and rejects a reorder', function () {

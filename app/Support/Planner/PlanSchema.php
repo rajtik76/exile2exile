@@ -83,8 +83,8 @@ final class PlanSchema
     /** Most author-typed modifier lines an item may carry. */
     private const int MAX_ITEM_STATS = 20;
 
-    /** Most rune sockets an item may carry (weapons/body; less on other gear). */
-    private const int MAX_ITEM_SOCKETS = 3;
+    /** Most rune sockets an item may carry (a corrupted weapon/body: 3 natural + 1 Vaal). */
+    private const int MAX_ITEM_SOCKETS = 4;
 
     /**
      * Highest item level the game produces - a character/monster tops out at 100, and
@@ -111,11 +111,15 @@ final class PlanSchema
      */
     public const array ITEM_PROP_KEYS = ['quality', 'armour', 'evasion', 'energyShield', 'block'];
 
-    /** The three defence types; a base carries at most two of them (single or hybrid). */
+    /** The three defence types; triple-hybrid bases carry all of them at once. */
     public const array ITEM_DEFENCE_KEYS = ['armour', 'evasion', 'energyShield'];
 
-    /** Highest quality equipment reaches by ordinary means. */
-    public const int MAX_ITEM_QUALITY = 20;
+    /**
+     * Validation ceiling for item quality. Ordinary gear caps at 20%, but "+X% to
+     * Maximum Quality" modifiers and implicits stack well past it (a corrupted Refined
+     * Breach Ring shows +73%), so the ceiling is generous rather than a game rule.
+     */
+    public const int MAX_ITEM_QUALITY = 100;
 
     /**
      * Equipment slots the items paper-doll fills, each holding one item reference.
@@ -144,14 +148,15 @@ final class PlanSchema
 
     /**
      * Per-slot rune-socket ceiling. Weapons and body armour take the most, smaller
-     * armour fewer; jewellery and belts take none. Mirrors the client's
+     * armour fewer; jewellery and belts take none. Each cap is the natural maximum
+     * plus the one socket a Vaal corruption can add. Mirrors the client's
      * SLOT_MAX_SOCKETS so a forged payload can't exceed what the paper-doll allows.
      *
      * @var array<string, int>
      */
     public const array SLOT_MAX_SOCKETS = [
-        'weapon1' => 3, 'weapon2' => 3, 'body' => 3,
-        'helmet' => 2, 'gloves' => 2, 'boots' => 2,
+        'weapon1' => 4, 'weapon2' => 4, 'body' => 4,
+        'helmet' => 3, 'gloves' => 3, 'boots' => 3,
         'belt' => 0, 'amulet' => 0, 'ring1' => 0, 'ring2' => 0,
         'flask1' => 0, 'flask2' => 0,
         'charm1' => 0, 'charm2' => 0, 'charm3' => 0,
@@ -479,22 +484,17 @@ final class PlanSchema
             $errors[] = 'Quality cannot exceed '.self::MAX_ITEM_QUALITY.'%.';
         }
 
-        // A base carries at most two defence types (a single or hybrid base); three would
-        // be an item that can't exist.
-        $defences = array_filter(
-            self::ITEM_DEFENCE_KEYS,
-            static fn (string $key): bool => is_numeric($props[$key] ?? 0) && (int) ($props[$key] ?? 0) > 0,
-        );
-
-        if (count($defences) > 2) {
-            $errors[] = 'An item has at most two defence types.';
-        }
-
         if (($item['rarity'] ?? null) === 'rare' && in_array($slot, self::NO_RARE_SLOTS, true)) {
             $errors[] = 'A flask or charm cannot be rare.';
         }
 
         $maxSockets = self::SLOT_MAX_SOCKETS[$slot] ?? 0;
+
+        // A unique can carry more sockets than its slot's rares (Greymake and The
+        // Bringer of Rain wear four on a helmet), so uniques take the global ceiling.
+        if (($item['rarity'] ?? null) === 'unique' && $maxSockets > 0) {
+            $maxSockets = self::MAX_ITEM_SOCKETS;
+        }
 
         if (count($sockets) > $maxSockets) {
             $errors[] = $maxSockets === 0

@@ -21,6 +21,11 @@ const WITCH_BUILD = 'witch-lvl80-runes-of-aldur-league.txt';
 // armour/evasion prefix and a quality-inflated defence line the import must drop.
 const MERC_BUILD = 'mercenary-lvl86-witchhunter-leech-hybrid.txt';
 
+// A lvl97 Witchhunter whose gear exercises the import's edge cases: desecrated
+// (Well of Souls) dual resistances, corrupted items, a catalyst-inflated dexterity
+// roll, flask charge gain rendered per second, and the instant-recovery hybrid.
+const DESECRATED_BUILD = 'mercenary-lvl97-witchhunter-desecrated-corrupted.txt';
+
 it('maps the build class and resolves the ascendancy to its live tree id', function () {
     $data = mapFixture(WITCH_BUILD);
 
@@ -82,8 +87,8 @@ it('reverse-matches rare item mods to in-range GGPK affixes', function () {
         ->and($modIds)->toContain('ColdResist4');
 });
 
-it('produces items that pass the planner and affix validation rules', function () {
-    $data = PlanSchema::canonicalize(mapFixture(WITCH_BUILD));
+it('produces items that pass the planner and affix validation rules', function (string $build) {
+    $data = PlanSchema::canonicalize(mapFixture($build));
     $slots = $data['sections'][PlanSchema::SINGLE_KEY]['items']['slots'];
     $icons = new IconResolver;
     $catalogue = new ModCatalogue;
@@ -92,11 +97,12 @@ it('produces items that pass the planner and affix validation rules', function (
         $isBase = ($item['base']['type'] ?? null) === 'base';
         $domain = $isBase ? $icons->itemModDomain($item['base']['id']) : null;
         $tags = $isBase ? $icons->itemTags($item['base']['id']) : [];
+        $itemClass = $isBase ? $icons->itemClass($item['base']['id']) : null;
 
         expect(PlanSchema::itemErrors($slotKey, $item))->toBe([])
-            ->and($catalogue->modErrors($item['rarity'], $item['stats'], $domain, $tags))->toBe([]);
+            ->and($catalogue->modErrors($item['rarity'], $item['stats'], $domain, $tags, $itemClass))->toBe([]);
     }
-});
+})->with([WITCH_BUILD, MERC_BUILD, DESECRATED_BUILD]);
 
 it('matches a divided roll (leech %) in display scale, not the raw stat value', function () {
     $catalogue = new ModCatalogue;
@@ -185,6 +191,109 @@ it('imports the item level requirement and defensive properties from PoB', funct
             'energyShield' => 0,
             'block' => 0,
         ]);
+});
+
+/**
+ * Whether the live extract carries the desecrated mod domain and essence-only mods
+ * (extracts before that carry only soul-tagged and naturally rolling affixes). Contract
+ * expectations that depend on those extra mods branch on this, so the suite passes on
+ * either data generation - the CI release gate runs it against a staged extract.
+ */
+function catalogueCarriesCraftOnlyMods(): bool
+{
+    return new ModCatalogue()->resolve('AbyssModGenWeaponAmanamuSuffixSpiritReservationEfficiency') !== null;
+}
+
+it('matches desecrated affixes that never roll naturally', function () {
+    $slots = mapFixture(DESECRATED_BUILD)['sections'][PlanSchema::SINGLE_KEY]['items']['slots'];
+    $catalogue = new ModCatalogue;
+
+    // "+16% to Fire and Chaos Resistances" never rolls naturally - it comes from the
+    // Well of Souls (a soul-tag suffix, or a desecrated-domain mod in newer extracts) -
+    // so the natural tag gate alone would drop it.
+    $dualResist = collect($slots['belt']['stats'])->first(function (array $stat) use ($catalogue): bool {
+        $mod = $catalogue->resolve($stat['modId']);
+
+        return $mod !== null && str_contains(implode(' ', $mod['stats']), 'Fire and Chaos Resistances');
+    });
+
+    expect($dualResist)->not->toBeNull()
+        ->and($dualResist['values'])->toBe([16]);
+});
+
+it('keeps natural affixes ahead of desecrated hybrids that would swallow them', function () {
+    $slots = mapFixture(DESECRATED_BUILD)['sections'][PlanSchema::SINGLE_KEY]['items']['slots'];
+
+    // The belt's adjacent "+156 to maximum Life" / "+74 to maximum Mana" lines fit the
+    // desecrated life+mana hybrid, but they are two natural mods; the natural pass must
+    // claim them before desecrated candidates ever compete (longest match would win).
+    $belt = array_column($slots['belt']['stats'], 'values', 'modId');
+
+    expect($belt)->not->toHaveKey('SoulInfluenceIncreasedLifeAndMana')
+        ->and($belt['IncreasedLife10'] ?? null)->toBe([156])
+        ->and($belt['IncreasedMana6'] ?? null)->toBe([74]);
+});
+
+it('matches a desecration-bumped tier its ladder unlocks on the base', function () {
+    $slots = mapFixture(DESECRATED_BUILD)['sections'][PlanSchema::SINGLE_KEY]['items']['slots'];
+
+    // "+34 to Dexterity" exceeds every naturally rolling ring tier (T8 caps at 33);
+    // T9 (34-36) has no positive spawn weight anywhere - only desecration bumps into
+    // it - and lands because the Dexterity ladder itself rolls on rings.
+    $ring = array_column($slots['ring1']['stats'], 'values', 'modId');
+
+    expect($ring)->toHaveKey('Dexterity9')
+        ->and($ring['Dexterity9'])->toBe([34]);
+});
+
+it('matches flask mods across per-minute renders and the instant-recovery hybrid', function () {
+    $catalogue = new ModCatalogue;
+    $slots = mapFixture(DESECRATED_BUILD)['sections'][PlanSchema::SINGLE_KEY]['items']['slots'];
+
+    // PoB renders "Gains 0.25 Charges per Second" while GGPK stores the roll per minute
+    // (a 15); the stored value always sits in the tier's own scale, whichever the live
+    // extract uses. The Seething hybrid renders its lines in reverse stat order, shows
+    // no number for the boolean "Instant Recovery" roll and its -50 roll as "50% reduced".
+    $flask = array_column($slots['flask1']['stats'], 'values', 'modId');
+    $charm = array_column($slots['charm2']['stats'], 'values', 'modId');
+
+    expect($flask['FlaskFillChargesPerMinute3'] ?? null)
+        ->toBe([$catalogue->resolve('FlaskFillChargesPerMinute3')['rolls'][0]['max']])
+        ->and($flask['FlaskFullInstantRecovery1'] ?? null)->toBe([1, -50])
+        ->and($charm['FlaskFillChargesPerMinute1'] ?? null)
+        ->toBe([$catalogue->resolve('FlaskFillChargesPerMinute1')['rolls'][0]['max']]);
+});
+
+it('matches essence-only and desecrated weapon mods when the extract carries them', function () {
+    $slots = mapFixture(DESECRATED_BUILD)['sections'][PlanSchema::SINGLE_KEY]['items']['slots'];
+    $weapon = array_column($slots['weapon1']['stats'], 'values', 'modId');
+
+    // Essence mods carry no positive spawn weight (gated by item class instead) and
+    // desecrated mods live in their own mod domain; both resolve on the crossbow.
+    expect($weapon['EssenceDamageasExtraCold2H'] ?? null)->toBe([29])
+        ->and($weapon['EssenceOnslaughtonKill1'] ?? null)->toBe([22])
+        ->and($weapon['AbyssModGenWeaponAmanamuSuffixSpiritReservationEfficiency'] ?? null)->toBe([7]);
+})->skip(fn (): bool => ! catalogueCarriesCraftOnlyMods(), 'live extract predates craft-only mods');
+
+it('drops only the wordings the GGPK extract does not carry', function () {
+    $snapshot = (new PobImport)->import(file_get_contents(dirname(__DIR__, 2).'/resources/pob/poe2/'.DESECRATED_BUILD));
+    $mapper = new PobPlanMapper(new IconResolver, new ModCatalogue);
+    $mapper->map($snapshot);
+
+    // Corrupted flag lines, desecrated dual resistances, catalyst-inflated rolls and
+    // flask renders all resolve. On a current extract only "+5 to Level of all Attack
+    // Skills" remains - no Mods row rolls above +3, so the render cannot be explained;
+    // an older extract also lacks the essence/desecrated weapon mods entirely.
+    expect($mapper->droppedMods())->toBe([
+        'weapon1' => catalogueCarriesCraftOnlyMods()
+            ? ['+5 to Level of all Attack Skills']
+            : [
+                '7% increased Spirit Reservation Efficiency of Skills',
+                'Gain 29% of Damage as Extra Cold Damage',
+                '+5 to Level of all Attack Skills',
+                '22% chance to gain Onslaught on Killing Hits with this Weapon',
+            ],
+    ]);
 });
 
 it('leaves a unique item without author mods but keeps its properties', function () {

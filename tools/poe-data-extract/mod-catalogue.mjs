@@ -21,8 +21,28 @@ import { renderBlock } from '@poe2-toolkit/ggpk';
  */
 const AFFIX_DOMAINS = new Set(['Item', 'Flask']);
 
+/**
+ * PoE2's desecrated (Well of Souls) equipment mods live in their own mod domain,
+ * number 28, which the extractor's PoE1-era enum table names "Unveiled". They are
+ * ordinary prefixes/suffixes scoped by their spawn-weight tags (weapon, helmet, …);
+ * they just never roll naturally - only desecration puts them on an item. They are
+ * folded into the Item domain carrying `desecrated: true`, so the app can offer and
+ * validate them while keeping them apart from natural affixes.
+ */
+const DESECRATED_DOMAIN = 'Unveiled';
+
 /** The Mods stat foreign-key + value columns, paired (Stat1 -> Stat1Value, …). */
 const STAT_SLOTS = [1, 2, 3, 4, 5, 6];
+
+/**
+ * Stats GGG stores per minute but describes per second (`per_minute_to_per_second*`
+ * value handlers): flask charge gain, life/mana regeneration and the like. The
+ * toolkit's renderer either skips those handlers (unknown `_2dp` variants leave the
+ * raw per-minute roll: "Gains 15 Charges per Second") or misapplies them (the plain
+ * variant divides by 100 and rounds: "1 Life Regeneration per second" for a 60-120
+ * roll), so the rendered numbers are rebuilt from the raw rolls here.
+ */
+const PER_MINUTE_STAT = /_(?:every|per)_minute$/;
 
 /**
  * A number token in a rendered stat line: a `(min-max)` range or a lone value.
@@ -69,6 +89,90 @@ export function toDisplayRolls(stats, rawRolls) {
 }
 
 /**
+ * Rewrite per-minute rolls in rendered stat lines to the per-second display GGG's
+ * own `per_minute_to_per_second*` handlers produce ("Gains 15 …" -> "Gains 0.25 …",
+ * two decimals). The replacement values come from the RAW rolls, not the rendered
+ * token - the renderer may have already mangled the token (its plain `per_minute`
+ * handler divides by 100 and rounds), while the raw per-minute roll is exact. A shim
+ * over the toolkit renderer; drop it once the renderer applies the handlers itself.
+ * Number tokens are walked in text order, aligned one-to-one with `rawRolls` (the
+ * same convention as {@link toDisplayRolls}); a roll only rewrites when its line
+ * carries the per-second wording, and on a token-count mismatch the lines are
+ * returned untouched.
+ *
+ * @param {string[]} stats  the rendered ranged line(s)
+ * @param {Array<{stat: string, min: number, max: number}>} rawRolls  raw ranges, in text order
+ * @returns {string[]}
+ */
+export function toPerSecondStats(stats, rawRolls) {
+    if (!rawRolls.some((roll) => PER_MINUTE_STAT.test(roll.stat))) {
+        return stats;
+    }
+
+    const tokenCount = stats.join(' ').match(ROLL_TOKEN)?.length ?? 0;
+
+    if (tokenCount !== rawRolls.length) {
+        return stats;
+    }
+
+    const perSecond = (value) => String(Math.round((Number(value) / 60) * 100) / 100);
+    let index = 0;
+
+    return stats.map((line) => line.replace(ROLL_TOKEN, (token) => {
+        const roll = rawRolls[index++];
+
+        if (!PER_MINUTE_STAT.test(roll.stat) || !/per second/i.test(line)) {
+            return token;
+        }
+
+        const min = perSecond(roll.min);
+        const max = perSecond(roll.max);
+
+        return min === max ? min : `(${min}-${max})`;
+    }));
+}
+
+/**
+ * Map each essence-granted mod to the item classes its essence can put it on, from
+ * the EssenceMods table (mod, display mod and outcome mods all count) joined through
+ * EssenceTargetItemCategories to ItemClasses ids. Essence mods carry no positive
+ * spawn weight - an essence targets item classes directly - so this list is the only
+ * gate the app can apply.
+ *
+ * @param {Array<{TargetItemCategory?: number, Mod?: number, DisplayMod?: number, OutcomeMods?: number[]}>} essenceModRows
+ * @param {Array<{Id?: string, ItemClasses?: number[]}>} categoryRows
+ * @param {Array<{Id?: string}>} itemClassRows
+ * @param {Array<{Id?: string}>} modRows
+ * @returns {Record<string, string[]>} mod id => sorted item-class ids
+ */
+export function buildEssenceClasses(essenceModRows, categoryRows, itemClassRows, modRows) {
+    /** @type {Record<string, Set<string>>} */
+    const classesByMod = {};
+
+    for (const row of essenceModRows) {
+        const category = row.TargetItemCategory != null ? categoryRows[row.TargetItemCategory] : undefined;
+        const classes = (category?.ItemClasses ?? [])
+            .map((index) => itemClassRows[index]?.Id)
+            .filter((id) => typeof id === 'string');
+
+        for (const ref of [row.Mod, row.DisplayMod, ...(row.OutcomeMods ?? [])]) {
+            const id = ref != null ? modRows[ref]?.Id : undefined;
+
+            if (typeof id !== 'string' || id === '') {
+                continue;
+            }
+
+            const set = (classesByMod[id] ??= new Set());
+            classes.forEach((itemClass) => set.add(itemClass));
+        }
+    }
+
+    return Object.fromEntries(
+        Object.entries(classesByMod).map(([id, set]) => [id, [...set].sort()]),
+    );
+}
+
+/**
  * Merge a min-rendered and max-rendered line into one: identical numbers collapse to
  * the plain value, differing ones become `(min-max)`. The two lines share a template,
  * so their numbers line up positionally.
@@ -94,14 +198,22 @@ function mergeRangeLine(minLine, maxLine) {
  * join domain-first (a base only takes mods of its own `modDomain`), then group by
  * (group, type) into a tier ladder and filter by a base's tags via {@link Mod.spawnWeights}.
  *
+ * Beyond naturally rolling affixes the catalogue carries two craft-only groups: the
+ * desecrated domain's mods (flagged `desecrated`, see {@link DESECRATED_DOMAIN}) and
+ * essence-granted mods (flagged `essence`, gated by `itemClasses` from
+ * {@link buildEssenceClasses} since their spawn weights are all zero).
+ *
  * @param {Record<string, import('@poe2-toolkit/mod-extractor').Mod>} modData
- * @returns {Array<{id: string, name: string, domain: string, group: string|null, type: 'prefix'|'suffix', tier: number|null, level: number, stats: string[], rolls: Array<{stat: string, min: number, max: number}>, families: string[], spawnWeights: Array<{tag: string, weight: number}>}>}
+ * @param {Record<string, string[]>} essenceClasses  mod id => item classes its essence targets
+ * @returns {Array<{id: string, name: string, domain: string, group: string|null, type: 'prefix'|'suffix', tier: number|null, level: number, stats: string[], rolls: Array<{stat: string, min: number, max: number}>, families: string[], spawnWeights: Array<{tag: string, weight: number}>, desecrated: boolean, essence: boolean, itemClasses: string[]}>}
  */
-export function buildModCatalogue(modData) {
+export function buildModCatalogue(modData, essenceClasses = {}) {
     const mods = [];
 
     for (const [id, mod] of Object.entries(modData)) {
-        if (!AFFIX_DOMAINS.has(mod.domain)) {
+        const desecrated = mod.domain === DESECRATED_DOMAIN;
+
+        if (!AFFIX_DOMAINS.has(mod.domain) && !desecrated) {
             continue;
         }
 
@@ -109,16 +221,28 @@ export function buildModCatalogue(modData) {
             continue;
         }
 
+        const rawRolls = (mod.rolls ?? []).map((roll) => ({ stat: roll.stat, min: roll.min, max: roll.max }));
+        // Per-minute rolls are rescaled to the per-second display first, so the
+        // re-derived display ranges below match the text (and the game tooltip).
+        const stats = toPerSecondStats(mod.stats ?? [], rawRolls);
+
+        // Essences also grant naturally rolling mods (their outcome tiers); those stay
+        // plain natural affixes. The essence flag marks only mods an essence is the sole
+        // route to: referenced by EssenceMods and without any positive spawn weight.
+        const spawnWeights = mod.spawnWeights ?? [];
+        const essence = essenceClasses[id] !== undefined && !spawnWeights.some((gate) => gate.weight > 0);
+
         mods.push({
             id,
             name: mod.name ?? '',
-            domain: mod.domain,
+            // Desecrated mods roll on ordinary equipment, so they join as Item mods.
+            domain: desecrated ? 'Item' : mod.domain,
             group: mod.group ?? null,
             type: mod.generationType === 'Prefix' ? 'prefix' : 'suffix',
             tier: mod.tier ?? null,
             level: mod.level ?? 0,
             // The rendered ranged line(s), e.g. "(170-179)% increased Physical Damage".
-            stats: mod.stats ?? [],
+            stats,
             // The numeric ranges behind each `(min-max)` token, in text order, so the
             // app can offer one bounded input per range and validate the author's roll.
             // Each roll keeps its `stat` id - the key the app groups on to sum same-stat
@@ -126,9 +250,12 @@ export function buildModCatalogue(modData) {
             // Re-derived in display scale from the rendered stats (see toDisplayRolls):
             // the raw extractor ranges are the undivided stat values, which the app never
             // rescales, so a divided stat (leech, %-with-decimals) would mismatch its text.
-            rolls: toDisplayRolls(mod.stats ?? [], (mod.rolls ?? []).map((roll) => ({ stat: roll.stat, min: roll.min, max: roll.max }))),
+            rolls: toDisplayRolls(stats, rawRolls),
             families: mod.families ?? [],
-            spawnWeights: mod.spawnWeights ?? [],
+            spawnWeights,
+            desecrated,
+            essence,
+            itemClasses: essence ? essenceClasses[id] : [],
         });
     }
 

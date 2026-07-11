@@ -22,6 +22,7 @@ import { refKey } from '@/lib/planReferences';
 import type { PlanReference } from '@/lib/planReferences';
 import {
     MAX_ITEM_QUALITY,
+    MAX_ITEM_SOCKETS,
     MODS_PER_RARITY,
     RARITY_COLOR,
     SLOT_MAX_SOCKETS,
@@ -128,7 +129,11 @@ export default function SlotEditor({
     const rarity = deriveRarity(item.base, item.stats, modMap);
     const rarityColor = RARITY_COLOR[rarity];
     const isUnique = item.base?.type === 'unique';
-    const maxSockets = SLOT_MAX_SOCKETS[slot.key] ?? 0;
+    // A unique can carry more sockets than its slot's rares (Greymake wears four on a
+    // helmet), so uniques take the global ceiling instead of the slot's.
+    const slotSockets = SLOT_MAX_SOCKETS[slot.key] ?? 0;
+    const maxSockets =
+        isUnique && slotSockets > 0 ? MAX_ITEM_SOCKETS : slotSockets;
     const runes = resolveRunes(item.sockets, map);
 
     // Author modifiers apply to any non-unique base (a unique carries its own). Flasks

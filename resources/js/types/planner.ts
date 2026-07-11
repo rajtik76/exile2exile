@@ -355,23 +355,34 @@ export const NO_RARE_SLOTS = new Set(
  */
 export const MAX_ITEM_LEVEL = 100;
 
-/** Highest quality equipment reaches by ordinary means. Mirrors PlanSchema. */
-export const MAX_ITEM_QUALITY = 20;
+/**
+ * Validation ceiling for item quality. Ordinary gear caps at 20%, but "+X% to Maximum
+ * Quality" modifiers and implicits stack well past it (a corrupted Refined Breach Ring
+ * shows +73%), so the ceiling is generous rather than a game rule. Mirrors PlanSchema.
+ */
+export const MAX_ITEM_QUALITY = 100;
 
-/** The three defence types; a base carries at most two (a single or hybrid base). */
+/** The three defence types; triple-hybrid bases carry all of them at once. */
 export const ITEM_DEFENCE_KEYS = ['armour', 'evasion', 'energyShield'] as const;
 
 /**
- * Max rune sockets per slot. Runes go in weapons and armour only - rings, amulets
+ * Most rune sockets any item carries; uniques reach it even on small gear
+ * (Greymake wears four on a helmet). Mirrors PlanSchema.
+ */
+export const MAX_ITEM_SOCKETS = 4;
+
+/**
+ * Max rune sockets per slot: the natural maximum plus the one socket a Vaal
+ * corruption can add. Runes go in weapons and armour only - rings, amulets
  * and belts take none. (PoE2 runecrafting is a game rule, not a GGPK data column.)
  */
 export const SLOT_MAX_SOCKETS: Record<string, number> = {
-    weapon1: 3,
-    weapon2: 3,
-    body: 3,
-    helmet: 2,
-    gloves: 2,
-    boots: 2,
+    weapon1: 4,
+    weapon2: 4,
+    body: 4,
+    helmet: 3,
+    gloves: 3,
+    boots: 3,
     belt: 0,
     amulet: 0,
     ring1: 0,

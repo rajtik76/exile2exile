@@ -63,7 +63,7 @@ abstract class PlanRequest extends FormRequest
             'sections.*.items.slots.*.stats.*.modId' => ['required', 'string', 'max:120'],
             'sections.*.items.slots.*.stats.*.values' => ['nullable', 'array', 'max:8'],
             'sections.*.items.slots.*.stats.*.values.*' => ['numeric'],
-            'sections.*.items.slots.*.sockets' => ['nullable', 'array', 'max:3'],
+            'sections.*.items.slots.*.sockets' => ['nullable', 'array', 'max:4'],
             'sections.*.items.slots.*.sockets.*' => ['nullable', 'array'],
             'sections.*.items.slots.*.sockets.*.type' => ['nullable', 'string', 'in:rune'],
             'sections.*.items.slots.*.sockets.*.id' => ['nullable', 'string', 'max:120'],
@@ -158,7 +158,7 @@ abstract class PlanRequest extends FormRequest
 
                 $messages = [
                     ...PlanSchema::itemErrors((string) $slot, $item),
-                    ...$catalogue->modErrors($rarity, $stats, self::baseModDomain($item, $icons), self::baseTags($item, $icons)),
+                    ...$catalogue->modErrors($rarity, $stats, self::baseModDomain($item, $icons), self::baseTags($item, $icons), self::baseItemClass($item, $icons)),
                 ];
 
                 $priority = $item['priority'] ?? null;
@@ -247,6 +247,23 @@ abstract class PlanRequest extends FormRequest
         }
 
         return $icons->itemModDomain($base['id']);
+    }
+
+    /**
+     * The GGPK item class of an item's chosen base, or null when it has no base (or a
+     * unique). Gates essence-only mods, which target item classes instead of tags.
+     *
+     * @param  array<string, mixed>  $item
+     */
+    private static function baseItemClass(array $item, IconResolver $icons): ?string
+    {
+        $base = $item['base'] ?? null;
+
+        if (! is_array($base) || ($base['type'] ?? null) !== 'base' || ! is_string($base['id'] ?? null)) {
+            return null;
+        }
+
+        return $icons->itemClass($base['id']);
     }
 
     /**

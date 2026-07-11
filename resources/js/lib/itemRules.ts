@@ -1,9 +1,9 @@
 import { modValuesValid } from '@/lib/modLines';
 import type { ModMap } from '@/lib/modLines';
 import {
-    ITEM_DEFENCE_KEYS,
     MAX_ITEM_LEVEL,
     MAX_ITEM_QUALITY,
+    MAX_ITEM_SOCKETS,
     MODS_PER_RARITY,
     NO_RARE_SLOTS,
     SLOT_MAX_SOCKETS,
@@ -38,16 +38,17 @@ export function itemErrors(
         errors.push(`Quality cannot exceed ${MAX_ITEM_QUALITY}%.`);
     }
 
-    // A base carries at most two defence types (a single or hybrid base).
-    if (ITEM_DEFENCE_KEYS.filter((key) => item.props[key] > 0).length > 2) {
-        errors.push('An item has at most two defence types.');
-    }
-
     if (item.rarity === 'rare' && NO_RARE_SLOTS.has(slotKey)) {
         errors.push('A flask or charm cannot be rare.');
     }
 
-    const maxSockets = SLOT_MAX_SOCKETS[slotKey] ?? 0;
+    const slotSockets = SLOT_MAX_SOCKETS[slotKey] ?? 0;
+    // A unique can carry more sockets than its slot's rares (Greymake wears four on
+    // a helmet), so uniques take the global ceiling instead of the slot's.
+    const maxSockets =
+        item.rarity === 'unique' && slotSockets > 0
+            ? MAX_ITEM_SOCKETS
+            : slotSockets;
 
     if (item.sockets.length > maxSockets) {
         errors.push(

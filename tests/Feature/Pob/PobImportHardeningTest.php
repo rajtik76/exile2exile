@@ -29,6 +29,32 @@ it('fails gracefully on an export with no passive-tree spec', function () {
     expect(fn () => $import->fromXml($xml))->toThrow(InvalidArgumentException::class);
 });
 
+it('drops item flag lines (Corrupted, Mirrored) from the parsed mods', function () {
+    $import = new PobImport;
+    $xml = '<?xml version="1.0"?><PathOfBuilding2>'
+        .'<Build level="1" className="Warrior"/>'
+        .'<Tree activeSpec="1"><Spec classId="0" treeVersion="x" nodes=""/></Tree>'
+        .'<Skills activeSkillSet="1"><SkillSet id="1"/></Skills>'
+        .'<Items activeItemSet="1"><Item id="1">Rarity: RARE'."\n"
+        .'Doom Band'."\n"
+        .'Iron Ring'."\n"
+        .'Item Level: 80'."\n"
+        .'Implicits: 1'."\n"
+        .'+8 to maximum Life'."\n"
+        .'+15 to Strength'."\n"
+        .'Corrupted'."\n"
+        .'Mirrored</Item>'
+        .'<ItemSet id="1"><Slot name="Ring 1" itemId="1"/></ItemSet></Items>'
+        .'</PathOfBuilding2>';
+
+    $item = $import->fromXml($xml)->items[0];
+
+    // The flags are trailing, so implicit counting stays intact: one implicit line,
+    // one explicit line, and neither flag survives as a modifier.
+    expect($item->mods)->toBe(['+8 to maximum Life', '+15 to Strength'])
+        ->and($item->explicitMods())->toBe(['+15 to Strength']);
+});
+
 it('does not resolve external entities (XXE) when parsing an export', function () {
     $import = new PobImport;
     $secret = tempnam(sys_get_temp_dir(), 'xxe');

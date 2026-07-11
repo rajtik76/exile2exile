@@ -158,11 +158,29 @@ test('more sockets than the slot allows is an error', () => {
         { type: 'rune' as const, id: 'A' },
         { type: 'rune' as const, id: 'B' },
         { type: 'rune' as const, id: 'C' },
+        { type: 'rune' as const, id: 'D' },
     ];
 
+    // Three fit a helmet (two natural plus one from a Vaal corruption), four do not.
+    expect(
+        itemErrors('helmet', item({ sockets: sockets.slice(0, 3) }), {}),
+    ).toEqual([]);
     expect(itemErrors('helmet', item({ sockets }), {})).toContain(
-        'This slot holds at most 2 rune sockets.',
+        'This slot holds at most 3 rune sockets.',
     );
+
+    // A unique takes the global ceiling (Greymake wears four on a helmet).
+    expect(
+        itemErrors(
+            'helmet',
+            item({
+                rarity: 'unique',
+                base: { type: 'unique', id: 'Greymake' },
+                sockets,
+            }),
+            {},
+        ),
+    ).toEqual([]);
 });
 
 test('any socket on jewellery or a belt is an error', () => {
@@ -207,12 +225,12 @@ test('a unique with author modifiers is an error, but its properties are allowed
     expect(withProps).toEqual([]);
 });
 
-test('quality above 20% is an error', () => {
-    const errors = itemErrors(
+test('quality above the ceiling is an error, 73% is legal', () => {
+    const overCap = itemErrors(
         'body',
         item({
             props: {
-                quality: 21,
+                quality: 101,
                 armour: 0,
                 evasion: 0,
                 energyShield: 0,
@@ -222,10 +240,27 @@ test('quality above 20% is an error', () => {
         {},
     );
 
-    expect(errors).toContain('Quality cannot exceed 20%.');
+    // "+X% to Maximum Quality" mods and implicits stack well past the ordinary 20%
+    // (a corrupted Refined Breach Ring shows +73%), so the ceiling is generous.
+    expect(overCap).toContain('Quality cannot exceed 100%.');
+    expect(
+        itemErrors(
+            'body',
+            item({
+                props: {
+                    quality: 73,
+                    armour: 0,
+                    evasion: 0,
+                    energyShield: 0,
+                    block: 0,
+                },
+            }),
+            {},
+        ),
+    ).toEqual([]);
 });
 
-test('more than two defence types is an error', () => {
+test('all three defence types at once are legal (triple-hybrid bases exist)', () => {
     const errors = itemErrors(
         'body',
         item({
@@ -240,7 +275,7 @@ test('more than two defence types is an error', () => {
         {},
     );
 
-    expect(errors).toContain('An item has at most two defence types.');
+    expect(errors).toEqual([]);
 });
 
 test('a hybrid item with two defence types is legal', () => {

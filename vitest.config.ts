@@ -18,7 +18,11 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
-        include: ['resources/js/**/*.test.{ts,tsx}'],
+        include: [
+            'resources/js/**/*.test.{ts,tsx}',
+            // The GGPK extractor's pure transforms (no CDN or table I/O in tests).
+            'tools/poe-data-extract/*.test.mjs',
+        ],
         coverage: {
             provider: 'v8',
             // The hand-written application layer - pure view logic and hooks.

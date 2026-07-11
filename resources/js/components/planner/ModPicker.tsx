@@ -12,6 +12,12 @@ interface ModTier {
     stats: string[];
     rolls: ModRoll[];
     families: string[];
+    /** Reaches the base only through desecration (the Well of Souls), never naturally. */
+    desecrated: boolean;
+    /** Reaches the base only through an essence, never naturally. */
+    essence: boolean;
+    /** Reaches the base only through the Kalguuran genesis tree, never naturally. */
+    genesis: boolean;
 }
 
 /** An affix group: one wording, its prefix/suffix type and its tier ladder. */
@@ -34,6 +40,13 @@ const TYPE_STYLE: Record<'prefix' | 'suffix', React.CSSProperties> = {
     prefix: { color: '#8fb3ff', backgroundColor: '#8fb3ff20' },
     suffix: { color: '#e0b070', backgroundColor: '#e0b07020' },
 };
+
+/** Craft-only tier badges: the flag on the tier, its label and accent colour. */
+const CRAFT_BADGES = [
+    ['desecrated', 'Desecrated', '#b48fff'],
+    ['essence', 'Essence', '#6fd3c7'],
+    ['genesis', 'Genesis', '#9fd36f'],
+] as const;
 
 /** Turn a picked tier into the resolved mod stored + rendered on the item. */
 function toModInfo(group: ModGroup, tier: ModTier): ModInfo {
@@ -243,6 +256,20 @@ export default function ModPicker({
                         <span className="pl-text-xs min-w-0 flex-1 break-words text-[var(--pl-text)]">
                             {option.tier.stats.join(', ')}
                         </span>
+                        {CRAFT_BADGES.map(([key, label, color]) =>
+                            option.tier[key] ? (
+                                <span
+                                    key={key}
+                                    className="pl-text-2xs mt-0.5 shrink-0 rounded-xs px-1 py-px font-semibold uppercase"
+                                    style={{
+                                        color,
+                                        backgroundColor: `${color}20`,
+                                    }}
+                                >
+                                    {label}
+                                </span>
+                            ) : null,
+                        )}
                         <span className="pl-text-2xs shrink-0 whitespace-nowrap text-[var(--pl-faint)]">
                             lvl {option.tier.level}
                         </span>

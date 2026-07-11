@@ -58,6 +58,23 @@ final class PobPlanMapper
     private const array MODS_PER_TYPE = ['normal' => 0, 'magic' => 1, 'rare' => 3];
 
     /**
+     * Planner slots whose items take catalysts. Catalyst quality inflates a rendered
+     * roll (up to {@see MAX_CATALYST_QUALITY}) and PoB exports no quality line for
+     * jewellery, so on these slots an out-of-range value may be the quality-inflated
+     * render of a real top-tier roll.
+     */
+    private const array CATALYST_SLOTS = ['ring1', 'ring2', 'amulet', 'belt'];
+
+    /**
+     * The most catalyst quality is assumed to inflate a jewellery roll. Ordinary
+     * catalysts reach +20%, but "+X% to Maximum Quality" modifiers and implicits stack
+     * well past that (a corrupted Refined Breach Ring shows +73%). Kept a bound at all
+     * so an arbitrary wrong value can't claim a tier; used as a last resort only,
+     * after aggregate decomposition.
+     */
+    private const float MAX_CATALYST_QUALITY = 2.0;
+
+    /**
      * @var array<string, string>|null "class|ascendancy" (both lowercased) => the tree's
      *                                 ascendancy id, built once from the tree data.
      */
@@ -289,7 +306,17 @@ final class PobPlanMapper
             return [];
         }
 
-        $candidates = $this->candidateAffixes($domain, $tags);
+        $candidates = $this->candidateAffixes($domain, $tags, $this->icons->itemClass($item->baseType));
+
+        // Desecrated, essence and genesis-tree affixes reach a base only through
+        // crafting, so they must not compete with naturally rolling affixes: the
+        // desecrated life+mana hybrid would otherwise steal two adjacent natural lines
+        // (the longest match wins). They join as a second pass, only for lines no
+        // natural affix explains.
+        $natural = array_values(array_filter(
+            $candidates,
+            static fn (array $candidate): bool => ! $candidate['crafted'],
+        ));
 
         $context = [
             'stats' => [],
@@ -305,7 +332,8 @@ final class PobPlanMapper
         $index = 0;
 
         while ($index < count($lines)) {
-            $options = $this->matchOptions($lines, $index, $candidates);
+            $options = $this->matchOptions($lines, $index, $natural)
+                ?? $this->matchOptions($lines, $index, $candidates);
 
             if ($options === null) {
                 $unmatched[] = $lines[$index];
@@ -324,32 +352,26 @@ final class PobPlanMapper
         usort($pending, static fn (array $a, array $b): int => count($a['options']) <=> count($b['options']));
 
         foreach ($pending as $entry) {
-            $chosen = null;
-
-            foreach ($entry['options'] as $type => $option) {
-                if (($context['counts'][$type] ?? 0) < $maxPerType
-                    && array_intersect($option['families'], $context['families']) === []) {
-                    $chosen = [$type, $option];
-                    break;
-                }
-            }
-
-            if ($chosen === null) {
+            if (! $this->assignOptions($entry['options'], $maxPerType, $context)) {
                 $unmatched = [...$unmatched, ...$entry['lines']];
-
-                continue;
             }
-
-            [$type, $option] = $chosen;
-            $context['counts'][$type]++;
-            $context['families'] = [...$context['families'], ...$option['families']];
-            $context['stats'][] = ['modId' => $option['id'], 'values' => $option['values']];
         }
 
         // A line whose value tops every single tier is a summed (aggregate) line, as the
-        // game renders same-stat mods added together. Try to split it back into a pure
-        // affix plus a hybrid, sharing the hybrid's other stat with its own summed line.
+        // game renders same-stat mods added together. Try to split it back into real
+        // affixes (pure + hybrid, or two same-wording pures of different families).
         $unmatched = $this->decomposeAggregates($unmatched, $lines, $candidates, $maxPerType, $context);
+
+        // Last resort on catalyst slots: a still-unexplained value may be a real roll
+        // inflated by quality (PoB folds it into the render and exports no quality line
+        // for jewellery), so match it against its tier clamped. After decomposition on
+        // purpose - a summed line splits value-exactly, clamping loses the excess.
+        if (in_array($slotKey, self::CATALYST_SLOTS, true)) {
+            $unmatched = array_values(array_filter(
+                $unmatched,
+                fn (string $line): bool => ! $this->assignQualityInflated($line, $candidates, $maxPerType, $context),
+            ));
+        }
 
         $this->recordDropped($slotKey, $unmatched);
 
@@ -357,16 +379,53 @@ final class PobPlanMapper
     }
 
     /**
-     * Split summed defence lines back into real affixes. A line like "135% increased Armour
-     * and Evasion" tops the 110% ceiling of any single affix because the game adds every
-     * mod's same-stat roll together; the true item is a pure affix plus a hybrid (e.g.
-     * Legend's 94% + Predator's 41% + its +46 life). For each still-unmatched line whose
-     * value exceeds the highest pure tier, this looks for a two-stat hybrid whose second
-     * stat also appears as its own summed line, then picks rolls so both remainders land in
-     * real pure tiers - emitting the pure affix, the hybrid, and the companion's pure affix
-     * (replacing whatever single match the companion line first got). Lines it can't split
-     * are returned still unmatched. Best-effort: the split's exact tiers aren't recoverable
-     * from a sum, but the totals match what the game shows.
+     * Assign one line's viable options into the running item context: the first
+     * generation type with a free slot and no family clash wins. Returns whether the
+     * line was placed.
+     *
+     * @param  array<string, array{id: string, values: list<int|float>, families: list<string>}>  $options
+     * @param  array{stats: list<array{modId: string, values: list<int|float>}>, counts: array<string, int>, families: list<string>}  $context
+     */
+    private function assignOptions(array $options, int $maxPerType, array &$context): bool
+    {
+        foreach ($options as $type => $option) {
+            if (($context['counts'][$type] ?? 0) < $maxPerType
+                && array_intersect($option['families'], $context['families']) === []) {
+                $context['counts'][$type]++;
+                $context['families'] = [...$context['families'], ...$option['families']];
+                $context['stats'][] = ['modId' => $option['id'], 'values' => $option['values']];
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Match a single leftover line allowing quality inflation (value over the tier's
+     * ceiling, stored clamped) and assign it into the context. Returns whether it landed.
+     *
+     * @param  list<array{id: string, type: string, statCount: int, template: string, statTemplates: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>}>  $candidates
+     * @param  array{stats: list<array{modId: string, values: list<int|float>}>, counts: array<string, int>, families: list<string>}  $context
+     */
+    private function assignQualityInflated(string $line, array $candidates, int $maxPerType, array &$context): bool
+    {
+        $options = $this->matchOptions([$line], 0, $candidates, quality: true);
+
+        return $options !== null && $this->assignOptions($options['options'], $maxPerType, $context);
+    }
+
+    /**
+     * Split summed lines back into real affixes. The game renders same-stat rolls added
+     * together, so a line can top every single tier's ceiling - the true item carries
+     * several mods. Two shapes are recovered: a pure affix plus a two-stat hybrid whose
+     * companion stat is another summed line (e.g. Legend's 94% + Predator's 41% and its
+     * +46 life), and two pure affixes of the same wording from different families (a
+     * natural tier plus a craft-only desecrated/genesis tier, e.g. "147% increased
+     * Energy Shield" or a doubled "Adds X to Y Lightning damage"). Lines it can't split
+     * are returned still unmatched. Best-effort: the split's exact tiers aren't
+     * recoverable from a sum, but the totals match what the game shows.
      *
      * @param  list<string>  $unmatched
      * @param  list<string>  $lines
@@ -383,13 +442,16 @@ final class PobPlanMapper
             $template = self::template($line);
             $values = self::numbers($line);
 
-            if (count($values) !== 1 || $values[0] <= $this->pureCeiling($candidates, $template)) {
+            if ($values === [] || ! $this->exceedsPureCeiling($candidates, $template, $values)) {
                 $stillUnmatched[] = $line;
 
                 continue;
             }
 
-            $split = $this->splitAggregate($template, $values[0], $aggregates, $candidates, $maxPerType, $context);
+            $split = (count($values) === 1
+                ? $this->splitAggregate($template, $values[0], $aggregates, $candidates, $maxPerType, $context)
+                : null)
+                ?? $this->splitPurePair($template, $values, $candidates, $maxPerType, $context);
 
             if ($split === null) {
                 $stillUnmatched[] = $line;
@@ -397,6 +459,125 @@ final class PobPlanMapper
         }
 
         return $stillUnmatched;
+    }
+
+    /**
+     * Whether any of a line's values tops the corresponding roll of every pure affix of
+     * its template - the mark of a summed (aggregate) render. A template with no pure
+     * candidates is never treated as a sum.
+     *
+     * @param  list<array{statCount: int, template: string, rolls: list<array{stat: string, min: int, max: int}>}>  $candidates
+     * @param  list<int|float>  $values
+     */
+    private function exceedsPureCeiling(array $candidates, string $template, array $values): bool
+    {
+        $ceilings = [];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate['statCount'] !== 1 || $candidate['template'] !== $template || count($candidate['rolls']) !== count($values)) {
+                continue;
+            }
+
+            foreach ($candidate['rolls'] as $index => $roll) {
+                $ceilings[$index] = max($ceilings[$index] ?? 0, $roll['max']);
+            }
+        }
+
+        if ($ceilings === []) {
+            return false;
+        }
+
+        return array_any($values, static fn (int|float $value, int $index): bool => $value > ($ceilings[$index] ?? 0));
+    }
+
+    /**
+     * Try to explain a summed line as TWO pure affixes of the same wording from
+     * different mutual-exclusion families - the render the game shows when a natural
+     * tier and a craft-only (desecrated/genesis) tier of one stat share an item. Each
+     * of the line's values must split as `first + second` with both parts inside the
+     * pair's respective rolls; the split takes the first pair whose per-roll intervals
+     * intersect, favouring the highest first-tier part. On success it mutates
+     * {@see $context} (both mods added, counts and families updated) and returns true;
+     * otherwise returns null and changes nothing.
+     *
+     * @param  list<int|float>  $values
+     * @param  list<array{id: string, type: string, statCount: int, template: string, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>}>  $candidates
+     * @param  array{stats: list<array{modId: string, values: list<int|float>}>, counts: array<string, int>, families: list<string>}  $context
+     */
+    private function splitPurePair(string $template, array $values, array $candidates, int $maxPerType, array &$context): ?bool
+    {
+        $pures = array_values(array_filter(
+            $candidates,
+            static fn (array $candidate): bool => $candidate['statCount'] === 1
+                && $candidate['template'] === $template
+                && count($candidate['rolls']) === count($values),
+        ));
+
+        foreach ($pures as $first) {
+            foreach ($pures as $second) {
+                if ($first['id'] === $second['id']
+                    || array_intersect($first['families'], $second['families']) !== []) {
+                    continue;
+                }
+
+                $firstValues = [];
+                $secondValues = [];
+
+                foreach ($values as $index => $total) {
+                    // The window of first-tier parts that leave the remainder inside
+                    // the second tier's roll; empty when the pair can't sum to the line.
+                    $low = max($first['rolls'][$index]['min'], $total - $second['rolls'][$index]['max']);
+                    $high = min($first['rolls'][$index]['max'], $total - $second['rolls'][$index]['min']);
+
+                    if ($low > $high) {
+                        continue 2;
+                    }
+
+                    $firstValues[] = $high;
+                    $secondValues[] = $total - $high;
+                }
+
+                if ($this->applyPurePair($first, $firstValues, $second, $secondValues, $maxPerType, $context)) {
+                    return true;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Commit a pure-pair decomposition when the per-type caps and one-mod-per-family
+     * rule still hold with both mods added. Returns whether it was applied.
+     *
+     * @param  array{id: string, type: string, families: list<string>}  $first
+     * @param  list<int|float>  $firstValues
+     * @param  array{id: string, type: string, families: list<string>}  $second
+     * @param  list<int|float>  $secondValues
+     * @param  array{stats: list<array{modId: string, values: list<int|float>}>, counts: array<string, int>, families: list<string>}  $context
+     */
+    private function applyPurePair(array $first, array $firstValues, array $second, array $secondValues, int $maxPerType, array &$context): bool
+    {
+        $counts = $context['counts'];
+        $counts[$first['type']] = ($counts[$first['type']] ?? 0) + 1;
+        $counts[$second['type']] = ($counts[$second['type']] ?? 0) + 1;
+
+        if (($counts['prefix'] ?? 0) > $maxPerType || ($counts['suffix'] ?? 0) > $maxPerType) {
+            return false;
+        }
+
+        $families = [...$context['families'], ...$first['families'], ...$second['families']];
+
+        if (count($families) !== count(array_unique($families))) {
+            return false;
+        }
+
+        $context['counts'] = $counts;
+        $context['families'] = $families;
+        $context['stats'][] = ['modId' => $first['id'], 'values' => $firstValues];
+        $context['stats'][] = ['modId' => $second['id'], 'values' => $secondValues];
+
+        return true;
     }
 
     /**
@@ -419,25 +600,6 @@ final class PobPlanMapper
         }
 
         return $aggregates;
-    }
-
-    /**
-     * The highest value any single pure (one-stat) affix of a template can roll - the
-     * ceiling above which a rendered line must be a sum of several mods.
-     *
-     * @param  list<array{statCount: int, template: string, rolls: list<array{stat: string, min: int, max: int}>}>  $candidates
-     */
-    private function pureCeiling(array $candidates, string $template): int
-    {
-        $ceiling = 0;
-
-        foreach ($candidates as $candidate) {
-            if ($candidate['statCount'] === 1 && $candidate['template'] === $template) {
-                $ceiling = max($ceiling, $candidate['rolls'][0]['max']);
-            }
-        }
-
-        return $ceiling;
     }
 
     /**
@@ -484,17 +646,24 @@ final class PobPlanMapper
                 }
 
                 for ($companion = $companionRoll['min']; $companion <= $companionRoll['max']; $companion++) {
-                    $pureCompanion = $this->pureTier($candidates, $companionTemplate, $companionTotal - $companion);
+                    // The companion line may be the hybrid's part alone (no pure
+                    // companion mod at all) or the hybrid's part plus its own pure.
+                    $pureCompanion = $companion === $companionTotal
+                        ? null
+                        : $this->pureTier($candidates, $companionTemplate, $companionTotal - $companion);
 
-                    if ($pureCompanion === null) {
+                    if ($companion !== $companionTotal && $pureCompanion === null) {
                         continue;
                     }
 
                     $additions = [
                         ['modId' => $purePrimary, 'values' => [$total - $primary], 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $purePrimary)],
-                        ['modId' => $pureCompanion, 'values' => [$companionTotal - $companion], 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $pureCompanion)],
                         ['modId' => $hybrid['id'], 'values' => $this->orderedValues($hybrid, $primaryIndex, $primary, $companion), 'type' => $hybrid['type'], 'families' => $hybrid['families']],
                     ];
+
+                    if ($pureCompanion !== null) {
+                        $additions[] = ['modId' => $pureCompanion, 'values' => [$companionTotal - $companion], 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $pureCompanion)];
+                    }
 
                     if ($this->applySplit($companionTemplate, $additions, $maxPerType, $candidates, $context)) {
                         return true;
@@ -644,14 +813,19 @@ final class PobPlanMapper
      * multi-stat (hybrid) affix keeps all its lines so it can be matched over the same number
      * of consecutive PoB lines.
      *
+     * Candidates only a craft can put on the base (desecrated, essence, genesis tree)
+     * carry `crafted: true`, so the matcher can hold them back behind natural affixes.
+     *
      * @param  list<string>  $tags
-     * @return list<array{id: string, type: string, statCount: int, template: string, statTemplates: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>}>
+     * @return list<array{id: string, type: string, statCount: int, template: string, statTemplates: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, crafted: bool, ladder: bool}>
      */
-    private function candidateAffixes(string $domain, array $tags): array
+    private function candidateAffixes(string $domain, array $tags, ?string $itemClass): array
     {
         $candidates = [];
 
-        foreach ($this->mods->search($domain, $tags, '') as $group) {
+        // No group limit: the reverse-match must see every affix the base can carry,
+        // not the first page the editor's search UI shows.
+        foreach ($this->mods->search($domain, $tags, '', PHP_INT_MAX, $itemClass) as $group) {
             foreach ($group['tiers'] as $tier) {
                 $statTemplates = array_map(self::template(...), $tier['stats']);
 
@@ -665,26 +839,36 @@ final class PobPlanMapper
                     'statTemplates' => $statTemplates,
                     'rolls' => $tier['rolls'],
                     'families' => $tier['families'],
+                    'crafted' => $tier['desecrated'] || $tier['essence'] || $tier['genesis'],
+                    'ladder' => $tier['ladder'],
                 ];
             }
         }
+
+        // Ladder-fallback tiers rank last: when a line fits both a directly gated
+        // variant and a foreign slot's variant reached through the fallback (the bone
+        // mods come per slot), the direct one must win the first-viable pick.
+        usort($candidates, static fn (array $a, array $b): int => $a['ladder'] <=> $b['ladder']);
 
         return $candidates;
     }
 
     /**
      * The affix matches for the run of lines starting at $index: a candidate of N stats
-     * matches when the next N lines share its number-free template and their rolled values
-     * all sit in the tier's ranges. The longest match wins (a hybrid isn't pre-empted by a
-     * single-stat affix matching only its first line), and every viable generation type is
-     * returned - one per type - so an ambiguous line (both a prefix and a suffix fit) can be
-     * assigned its type later. Null when nothing fits.
+     * matches when the next N lines cover its stat templates (in any order - PoB renders
+     * a hybrid's lines in on-screen order, not GGPK stat order) and their rolled values
+     * map onto the tier's ranges (see {@see canonicalValues}). The longest match wins (a
+     * hybrid isn't pre-empted by a single-stat affix matching only its first line), and
+     * every viable generation type is returned - one per type - so an ambiguous line
+     * (both a prefix and a suffix fit) can be assigned its type later. Null when nothing
+     * fits. With $quality (catalyst slots) an over-ceiling value may match clamped; the
+     * highest tier wins there, as the smallest inflation is the likeliest render.
      *
      * @param  list<string>  $lines
-     * @param  list<array{id: string, type: string, statCount: int, template: string, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>}>  $candidates
+     * @param  list<array{id: string, type: string, statCount: int, template: string, statTemplates: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>}>  $candidates
      * @return array{statCount: int, lines: list<string>, options: array<string, array{id: string, values: list<int|float>, families: list<string>}>}|null
      */
-    private function matchOptions(array $lines, int $index, array $candidates): ?array
+    private function matchOptions(array $lines, int $index, array $candidates, bool $quality = false): ?array
     {
         $viable = [];
 
@@ -696,21 +880,22 @@ final class PobPlanMapper
             }
 
             $window = array_slice($lines, $index, $statCount);
-            $template = implode("\n", array_map(self::template(...), $window));
+            $ordered = self::alignWindow($window, $candidate['statTemplates']);
 
-            if ($candidate['template'] !== $template) {
+            if ($ordered === null) {
                 continue;
             }
 
-            $values = self::numbers(implode("\n", $window));
+            $values = self::canonicalValues($candidate['rolls'], self::numbers(implode("\n", $ordered)), $quality);
 
-            if (self::valuesInRange($candidate['rolls'], $values)) {
+            if ($values !== null) {
                 $viable[] = [
                     'statCount' => $statCount,
                     'type' => $candidate['type'],
                     'id' => $candidate['id'],
                     'values' => $values,
                     'families' => $candidate['families'],
+                    'ceiling' => max([0, ...array_column($candidate['rolls'], 'max')]),
                 ];
             }
         }
@@ -719,25 +904,135 @@ final class PobPlanMapper
             return null;
         }
 
-        // Keep only the longest match, then one option per generation type (first wins).
+        // Keep only the longest match, then one option per generation type: the first
+        // viable tier normally, the highest tier when quality-clamping (an inflated
+        // render most likely hides the roll closest to it).
         $statCount = max(array_map(static fn (array $match): int => $match['statCount'], $viable));
         $options = [];
 
         foreach ($viable as $match) {
-            if ($match['statCount'] === $statCount && ! isset($options[$match['type']])) {
-                $options[$match['type']] = [
-                    'id' => $match['id'],
-                    'values' => $match['values'],
-                    'families' => $match['families'],
-                ];
+            if ($match['statCount'] !== $statCount) {
+                continue;
+            }
+
+            $kept = $options[$match['type']] ?? null;
+
+            if ($kept === null || ($quality && $match['ceiling'] > $kept['ceiling'])) {
+                $options[$match['type']] = $match;
             }
         }
 
         return [
             'statCount' => $statCount,
             'lines' => array_slice($lines, $index, $statCount),
-            'options' => $options,
+            'options' => array_map(
+                static fn (array $match): array => [
+                    'id' => $match['id'],
+                    'values' => $match['values'],
+                    'families' => $match['families'],
+                ],
+                $options,
+            ),
         ];
+    }
+
+    /**
+     * Reorder a window of rendered lines into the candidate's own stat order, matching
+     * by number-free template, or null when the window doesn't cover the candidate's
+     * stats exactly. A one-stat candidate reduces to a plain template comparison.
+     *
+     * @param  list<string>  $window
+     * @param  list<string>  $statTemplates
+     * @return list<string>|null
+     */
+    private static function alignWindow(array $window, array $statTemplates): ?array
+    {
+        $ordered = [];
+        $used = [];
+
+        foreach ($statTemplates as $statTemplate) {
+            $found = array_find_key($window, fn ($line, $i) => ! isset($used[$i]) && self::template($line) === $statTemplate);
+            if ($found === null) {
+                return null;
+            }
+
+            $used[$found] = true;
+            $ordered[] = $window[$found];
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * Map a window's parsed numbers onto the tier's rolls, returning the values exactly
+     * as the catalogue stores them, or null when they cannot be explained. Beyond the
+     * plain one-in-range-value-per-roll case this accepts three renderings PoB uses:
+     * a negative roll shown positive under inverted wording ("50% reduced ..." for a
+     * -50 roll), a per-minute roll shown per second (flask charge gain), and a constant
+     * hidden roll that renders no number at all (the boolean of "Instant Recovery").
+     * With $quality a value may also exceed its roll's ceiling by up to what catalysts
+     * add on jewellery ({@see MAX_CATALYST_QUALITY}); it is stored clamped to the
+     * ceiling, since the un-inflated roll is not recoverable from the render.
+     *
+     * @param  list<array{stat: string, min: int, max: int}>  $rolls
+     * @param  list<int|float>  $values
+     * @return list<int|float>|null
+     */
+    private static function canonicalValues(array $rolls, array $values, bool $quality): ?array
+    {
+        if (count($values) > count($rolls)) {
+            return null;
+        }
+
+        // How many rolls may self-fill because their number never renders.
+        $hidden = count($rolls) - count($values);
+        $canonical = [];
+        $next = 0;
+
+        foreach ($rolls as $roll) {
+            $value = $values[$next] ?? null;
+
+            if ($value !== null) {
+                $renderings = [$value, -$value];
+
+                if (str_contains($roll['stat'], 'every_minute')) {
+                    $renderings[] = self::asWhole(round($value * 60, 4));
+                }
+
+                foreach ($renderings as $rendering) {
+                    if ($rendering >= $roll['min'] && $rendering <= $roll['max']) {
+                        $canonical[] = $rendering;
+                        $next++;
+
+                        continue 2;
+                    }
+                }
+
+                if ($quality && $value > $roll['max'] && $value <= floor($roll['max'] * self::MAX_CATALYST_QUALITY)) {
+                    $canonical[] = $roll['max'];
+                    $next++;
+
+                    continue;
+                }
+            }
+
+            if ($hidden > 0 && $roll['min'] === $roll['max']) {
+                $canonical[] = $roll['min'];
+                $hidden--;
+
+                continue;
+            }
+
+            return null;
+        }
+
+        return $next === count($values) ? $canonical : null;
+    }
+
+    /** A float that is a whole number as int (15.0 becomes 15), anything else unchanged. */
+    private static function asWhole(int|float $value): int|float
+    {
+        return is_float($value) && floor($value) === $value ? (int) $value : $value;
     }
 
     /**
@@ -870,21 +1165,5 @@ final class PobPlanMapper
             static fn (string $number): int|float => str_contains($number, '.') ? (float) $number : (int) $number,
             $matches[0],
         );
-    }
-
-    /**
-     * Whether the parsed values fit the tier's rolls: one value per roll, each within
-     * its [min, max].
-     *
-     * @param  list<array{stat: string, min: int, max: int}>  $rolls
-     * @param  list<int|float>  $values
-     */
-    private static function valuesInRange(array $rolls, array $values): bool
-    {
-        if (count($values) !== count($rolls) || $values === []) {
-            return false;
-        }
-
-        return array_all($rolls, fn ($roll, $index) => ! ($values[$index] < $roll['min'] || $values[$index] > $roll['max']));
     }
 }

@@ -20,7 +20,7 @@ import { extractGems } from '@poe2-toolkit/gem-extractor';
 import { extractRunes } from '@poe2-toolkit/rune-extractor';
 import { extractMods } from '@poe2-toolkit/mod-extractor';
 
-import { buildModCatalogue, buildBaseImplicits } from './mod-catalogue.mjs';
+import { buildModCatalogue, buildBaseImplicits, buildEssenceClasses } from './mod-catalogue.mjs';
 
 const TOOLS = fileURLToPath(new URL('./', import.meta.url));
 // DATA_OUT roots the output tree somewhere else (a staging release dir) while
@@ -42,8 +42,17 @@ const gems = await extractGems(source);
 const runes = await extractRunes(source);
 const modData = (await extractMods(source)).data;
 
+// Essence-granted mods carry no positive spawn weight (an essence targets item
+// classes directly), so their class gate is joined from the EssenceMods table.
+const essenceClasses = buildEssenceClasses(
+  JSON.parse(readFileSync(join(TABLES_DIR, 'EssenceMods.json'), 'utf8')),
+  JSON.parse(readFileSync(join(TABLES_DIR, 'EssenceTargetItemCategories.json'), 'utf8')),
+  JSON.parse(readFileSync(join(TABLES_DIR, 'ItemClasses.json'), 'utf8')),
+  JSON.parse(readFileSync(join(TABLES_DIR, 'Mods.json'), 'utf8')),
+);
+
 // The explicit-affix catalogue (item prefix/suffix mods) the modifier picker searches.
-const mods = buildModCatalogue(modData);
+const mods = buildModCatalogue(modData, essenceClasses);
 
 // Base implicits are resolved from BaseItemTypes.Implicit_Mods (row indices into Mods),
 // rendered here through GGG's own stat descriptions, then folded onto each normal base
