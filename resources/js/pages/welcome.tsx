@@ -18,7 +18,7 @@ import atlasBg from '../../images/landing/atlas.jpg';
 /**
  * The landing is a signpost, not a sales page. The kit's tools are skill gems,
  * so the hero inspects them one at a time in a socket - a self-advancing gem
- * carousel whose navigation dots ARE the five gems, each in its own colour. A
+ * carousel whose navigation dots ARE the gems, each in its own colour. A
  * short inscription underneath says what this is and why it exists. From one
  * exile to another.
  */
@@ -45,7 +45,6 @@ type Tool = {
     cta: string;
     /** Live destination. Omitted on tools that aren't ready to open yet. */
     href?: string;
-    external?: boolean;
     /** Optional status pill beside the kind, e.g. a work-in-progress note. */
     tag?: string;
     /** Not finished - shows a muted "coming soon" marker instead of a live CTA. */
@@ -86,15 +85,6 @@ const TOOLS: Tool[] = [
         body: "Get pinged the moment a new patch ships, straight off GGG's servers.",
         cta: 'Wire a webhook',
         href: '/patch-webhook',
-    },
-    {
-        tone: 'topaz',
-        name: 'Source',
-        kind: 'Open code on GitHub',
-        body: "It's all one public repo. Read it, fork it, send a pull request - or just take it.",
-        cta: 'Visit the repo',
-        href: 'https://github.com/rajtik76/poe2-toolkit',
-        external: true,
     },
 ];
 
@@ -273,7 +263,7 @@ function Hero() {
                     </div>
                 </div>
 
-                {/* controls: arrows flank the five gems that double as nav */}
+                {/* controls: arrows flank the gems that double as nav */}
                 <div className="relative flex items-center justify-center gap-4 border-t border-[#b6bdcb]/10 bg-[#0a0a10]/70 px-6 py-4">
                     <Arrow direction="prev" onClick={prev} />
                     <div className="flex items-center gap-2 sm:gap-3">
@@ -364,7 +354,7 @@ function GemSocket({
     );
 }
 
-/** The tool's call-to-action - an ember link, or an anchor for external repos. */
+/** The tool's call-to-action - an ember link into the tool itself. */
 function ToolCta({ tool }: { tool: Tool }) {
     // Not shipped yet: a muted, non-interactive marker in place of a live CTA.
     if (tool.comingSoon || !tool.href) {
@@ -378,19 +368,6 @@ function ToolCta({ tool }: { tool: Tool }) {
     const className =
         'mt-6 inline-flex items-center gap-2 rounded-sm border border-[#c2762f]/70 bg-gradient-to-b from-[#8a4a1f] to-[#5e2f12] px-6 py-2.5 font-ui text-[13px] font-semibold tracking-[0.1em] text-[#fbe7c4] uppercase shadow-lg transition hover:border-[#ecd49a]/70 hover:brightness-110';
 
-    if (tool.external) {
-        return (
-            <a
-                href={tool.href}
-                target="_blank"
-                rel="noreferrer"
-                className={className}
-            >
-                {tool.cta} →
-            </a>
-        );
-    }
-
     return (
         <Link href={tool.href} className={className}>
             {tool.cta} →
@@ -398,7 +375,7 @@ function ToolCta({ tool }: { tool: Tool }) {
     );
 }
 
-/** One of the five gems, doubling as a carousel dot. Lit when its tool is active. */
+/** One of the gems, doubling as a carousel dot. Lit when its tool is active. */
 function GemDot({
     tool,
     active,

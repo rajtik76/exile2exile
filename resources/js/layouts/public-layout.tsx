@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PAGE_BG, PrimaryCta, Wordmark } from '@/components/brand';
 import { usePatchStatus } from '@/lib/usePatchStatus';
 
@@ -100,11 +100,109 @@ function PatchStatus() {
 const NAV_LINKS: { href: string; label: string; spa?: boolean }[] = [
     { href: '/tree', label: 'Tree', spa: true },
     { href: '/patch-webhook', label: 'Patches', spa: true },
+];
+
+/** The public repositories behind the project, listed in the GitHub menu. */
+const GITHUB_LINKS: { href: string; label: string; kind: string }[] = [
+    {
+        href: 'https://github.com/rajtik76/exile2exile',
+        label: 'Exile to Exile',
+        kind: 'This whole site',
+    },
     {
         href: 'https://github.com/rajtik76/poe2-toolkit',
-        label: 'GitHub',
+        label: 'poe2-toolkit',
+        kind: 'Passive-tree packages, also on npm',
     },
 ];
+
+/**
+ * Desktop "GitHub" nav entry: a button that unfolds a small panel with one row
+ * per public repository. Closes on outside click, Escape, or following a link.
+ */
+function GitHubMenu() {
+    const [open, setOpen] = useState(false);
+    const rootRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const onPointerDown = (event: PointerEvent) => {
+            if (!rootRef.current?.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+
+        return () => {
+            document.removeEventListener('pointerdown', onPointerDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
+    }, [open]);
+
+    return (
+        <div ref={rootRef} className="relative">
+            <button
+                type="button"
+                onClick={() => setOpen((value) => !value)}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                className="flex items-center gap-1.5 font-ui transition hover:text-[#ecd49a]"
+            >
+                GitHub
+                <svg
+                    viewBox="0 0 10 6"
+                    aria-hidden
+                    className={`size-2.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                >
+                    <path
+                        d="M1 1l4 4 4-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </svg>
+            </button>
+
+            {open && (
+                <div
+                    role="menu"
+                    className="absolute top-full right-0 mt-4 w-64 rounded-md border border-[#c9a24a]/25 bg-[#0c0c12]/95 p-1.5 shadow-xl shadow-black/60 backdrop-blur"
+                >
+                    {GITHUB_LINKS.map((link) => (
+                        <a
+                            key={link.href}
+                            role="menuitem"
+                            href={link.href}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => setOpen(false)}
+                            className="flex flex-col gap-0.5 rounded-sm px-3 py-2.5 transition hover:bg-[#c9a24a]/10"
+                        >
+                            <span className="text-sm font-medium text-[#d6dae2]">
+                                {link.label}
+                            </span>
+                            <span className="text-xs text-[#787d8a]">
+                                {link.kind}
+                            </span>
+                        </a>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 /** A single nav entry, rendered as an Inertia <Link>, internal or external anchor. */
 function NavItem({
@@ -195,6 +293,7 @@ function TopBar() {
                     {NAV_LINKS.map((link) => (
                         <NavItem key={link.href} {...link} />
                     ))}
+                    <GitHubMenu />
                     <span className="hidden lg:inline-flex">{cta}</span>
                 </nav>
 
@@ -213,6 +312,16 @@ function TopBar() {
                             <NavItem
                                 key={link.href}
                                 {...link}
+                                onClick={() => setMenuOpen(false)}
+                                className="rounded-sm px-2 py-2.5 text-sm text-[#d6dae2] hover:bg-[#c9a24a]/10"
+                            />
+                        ))}
+                        {/* the two public repos, flat - no dropdown on mobile */}
+                        {GITHUB_LINKS.map((link) => (
+                            <NavItem
+                                key={link.href}
+                                href={link.href}
+                                label={`GitHub · ${link.label}`}
                                 onClick={() => setMenuOpen(false)}
                                 className="rounded-sm px-2 py-2.5 text-sm text-[#d6dae2] hover:bg-[#c9a24a]/10"
                             />
@@ -318,10 +427,16 @@ function Footer() {
                             Join the Discord
                         </FooterLink>
                         <FooterLink
-                            href="https://github.com/rajtik76/poe2-toolkit"
+                            href="https://github.com/rajtik76/exile2exile"
                             external
                         >
                             Source on GitHub
+                        </FooterLink>
+                        <FooterLink
+                            href="https://github.com/rajtik76/poe2-toolkit"
+                            external
+                        >
+                            poe2-toolkit on GitHub
                         </FooterLink>
                         <FooterLink href="/#why" spa>
                             Why this exists

@@ -12,6 +12,7 @@ Exile to Exile is an unofficial community project. It is not affiliated with, en
 ## Developers
 
 - [PoE2 patch webhook]({{ route('patch-webhook') }}): subscribe a URL and receive an HMAC-signed POST the moment a new Path of Exile 2 client version is detected on GGG's patch server (polled every five minutes). No account, no polling on your side.
+- [Exile to Exile on GitHub](https://github.com/rajtik76/exile2exile): the full source of this site, MIT-licensed.
 - [@@poe2-toolkit on GitHub](https://github.com/rajtik76/poe2-toolkit): the open-source packages that power the tree - GGPK extraction, a headless geometry engine, and a WebGL renderer.
 
 ## About

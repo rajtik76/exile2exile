@@ -20,6 +20,8 @@ test('llms.txt lists the tools via route-derived urls and drops build-compare', 
     $response->assertSee(route('planner.create'), false);
     $response->assertSee(route('tree'), false);
     $response->assertSee(route('patch-webhook'), false);
+    // Both GitHub repos are listed: the app itself and the toolkit packages.
+    $response->assertSee('https://github.com/rajtik76/exile2exile', false);
     // The @ in the toolkit link survives Blade escaping.
     $response->assertSee('@poe2-toolkit on GitHub', false);
     // The removed build-compare tool must not reappear.

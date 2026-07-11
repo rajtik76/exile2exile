@@ -79,12 +79,6 @@ const WAYPOINTS: { tone: GemTone; name: string; kind: string; href: string }[] =
             kind: 'New-patch webhook',
             href: '/patch-webhook',
         },
-        {
-            tone: 'topaz',
-            name: 'Source',
-            kind: 'Code on GitHub',
-            href: 'https://github.com/rajtik76/poe2-toolkit',
-        },
     ];
 
 export default function ErrorPage({ status }: { status: number }) {
