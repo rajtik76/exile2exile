@@ -51,6 +51,22 @@ const CRAFT_BADGES = [
     ['influence', 'Influence', '#e09a70'],
 ] as const;
 
+/**
+ * Word-based match, mirroring the server's affix search: every whitespace-separated
+ * term must appear somewhere in the haystack, in any order. A plain substring test
+ * would drop tiers the first step just offered ("to attack" finds the affix by words,
+ * but is not a contiguous substring of "+3 to Level of all Attack Skills").
+ */
+export function matchesTerms(haystack: string, query: string): boolean {
+    const hay = haystack.toLowerCase();
+
+    return query
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean)
+        .every((term) => hay.includes(term));
+}
+
 /** Turn a picked tier into the resolved mod stored + rendered on the item. */
 function toModInfo(group: ModGroup, tier: ModTier): ModInfo {
     return {
@@ -105,10 +121,10 @@ export default function ModPicker({
     async function search(query: string): Promise<ModOption[]> {
         // Second step: the expanded affix's tiers, filtered by the search box.
         if (expanded) {
-            const needle = query.trim().toLowerCase();
+            const needle = query.trim();
             const tiers = needle
                 ? expanded.tiers.filter((tier) =>
-                      tier.stats.join(' ').toLowerCase().includes(needle),
+                      matchesTerms(tier.stats.join(' '), needle),
                   )
                 : expanded.tiers;
 
@@ -206,6 +222,13 @@ export default function ModPicker({
 
     return (
         <SearchPicker<ModOption>
+            // Remount on step change so the affix query doesn't linger as a tier
+            // filter (and vice versa) - each step starts with a blank search box.
+            key={
+                expanded
+                    ? `tiers:${expanded.group}|${expanded.type}`
+                    : 'affixes'
+            }
             width={440}
             highlightKey={
                 !expanded && initialGroup ? `g:${initialGroup}` : undefined

@@ -52,7 +52,11 @@ const essenceClasses = buildEssenceClasses(
 );
 
 // The explicit-affix catalogue (item prefix/suffix mods) the modifier picker searches.
-const mods = buildModCatalogue(modData, essenceClasses);
+const { mods, skipped: skippedMods } = buildModCatalogue(modData, essenceClasses);
+
+if (skippedMods.length > 0) {
+  console.log(`mods skipped (no rendered stat line): ${skippedMods.length} - ${skippedMods.join(', ')}`);
+}
 
 // Base implicits are resolved from BaseItemTypes.Implicit_Mods (row indices into Mods),
 // rendered here through GGG's own stat descriptions, then folded onto each normal base

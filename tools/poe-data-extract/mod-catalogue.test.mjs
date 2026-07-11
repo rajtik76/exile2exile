@@ -100,7 +100,7 @@ describe('buildModCatalogue craft-only flags', () => {
     };
 
     it('folds the desecrated domain into Item mods flagged desecrated', () => {
-        const mods = buildModCatalogue({
+        const { mods } = buildModCatalogue({
             BoneMod: { ...base, domain: 'Unveiled', generationType: 'Suffix', spawnWeights: [{ tag: 'weapon', weight: 1 }, { tag: 'default', weight: 0 }] },
         });
 
@@ -109,7 +109,7 @@ describe('buildModCatalogue craft-only flags', () => {
     });
 
     it('flags essence-only mods (no positive weight) and carries their item classes', () => {
-        const mods = buildModCatalogue(
+        const { mods } = buildModCatalogue(
             {
                 EssenceOnly: { ...base, domain: 'Item', generationType: 'Prefix', spawnWeights: [{ tag: 'default', weight: 0 }] },
             },
@@ -120,7 +120,7 @@ describe('buildModCatalogue craft-only flags', () => {
     });
 
     it('keeps an essence-granted mod natural when it also rolls naturally', () => {
-        const mods = buildModCatalogue(
+        const { mods } = buildModCatalogue(
             {
                 NaturalTier: { ...base, domain: 'Item', generationType: 'Prefix', spawnWeights: [{ tag: 'ring', weight: 500 }, { tag: 'default', weight: 0 }] },
             },
@@ -131,11 +131,21 @@ describe('buildModCatalogue craft-only flags', () => {
     });
 
     it('still excludes foreign domains and non-affix generation types', () => {
-        const mods = buildModCatalogue({
+        const { mods } = buildModCatalogue({
             MonsterMod: { ...base, domain: 'Monster', generationType: 'Prefix', spawnWeights: [] },
             UniqueMod: { ...base, domain: 'Item', generationType: 'Unique', spawnWeights: [] },
         });
 
         expect(mods).toEqual([]);
+    });
+
+    it('skips mods the renderer produced no stat line for, and reports them', () => {
+        const { mods, skipped } = buildModCatalogue({
+            Rendered: { ...base, domain: 'Item', generationType: 'Prefix', spawnWeights: [{ tag: 'default', weight: 1 }] },
+            Unrendered: { ...base, stats: [], domain: 'Item', generationType: 'Prefix', spawnWeights: [{ tag: 'default', weight: 1 }] },
+        });
+
+        expect(mods.map((mod) => mod.id)).toEqual(['Rendered']);
+        expect(skipped).toEqual(['Unrendered']);
     });
 });

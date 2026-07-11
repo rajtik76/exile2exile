@@ -205,10 +205,11 @@ function mergeRangeLine(minLine, maxLine) {
  *
  * @param {Record<string, import('@poe2-toolkit/mod-extractor').Mod>} modData
  * @param {Record<string, string[]>} essenceClasses  mod id => item classes its essence targets
- * @returns {Array<{id: string, name: string, domain: string, group: string|null, type: 'prefix'|'suffix', tier: number|null, level: number, stats: string[], rolls: Array<{stat: string, min: number, max: number}>, families: string[], spawnWeights: Array<{tag: string, weight: number}>, desecrated: boolean, essence: boolean, itemClasses: string[]}>}
+ * @returns {{mods: Array<{id: string, name: string, domain: string, group: string|null, type: 'prefix'|'suffix', tier: number|null, level: number, stats: string[], rolls: Array<{stat: string, min: number, max: number}>, families: string[], spawnWeights: Array<{tag: string, weight: number}>, desecrated: boolean, essence: boolean, itemClasses: string[]}>, skipped: string[]}}
  */
 export function buildModCatalogue(modData, essenceClasses = {}) {
     const mods = [];
+    const skipped = [];
 
     for (const [id, mod] of Object.entries(modData)) {
         const desecrated = mod.domain === DESECRATED_DOMAIN;
@@ -225,6 +226,16 @@ export function buildModCatalogue(modData, essenceClasses = {}) {
         // Per-minute rolls are rescaled to the per-second display first, so the
         // re-derived display ranges below match the text (and the game tooltip).
         const stats = toPerSecondStats(mod.stats ?? [], rawRolls);
+
+        // A mod the stat-description renderer produced no line for is unusable: the
+        // picker would show an empty row and the import could never match its text.
+        // Skip it loudly rather than ship a valueless entry (the Contract suite
+        // asserts every shipped mod carries a rendered line).
+        if (stats.length === 0) {
+            skipped.push(id);
+
+            continue;
+        }
 
         // Essences also grant naturally rolling mods (their outcome tiers); those stay
         // plain natural affixes. The essence flag marks only mods an essence is the sole
@@ -274,7 +285,7 @@ export function buildModCatalogue(modData, essenceClasses = {}) {
         return (a.tier ?? 0) - (b.tier ?? 0);
     });
 
-    return mods;
+    return { mods, skipped };
 }
 
 /**
