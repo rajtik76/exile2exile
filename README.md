@@ -125,13 +125,31 @@ Then open the URL the dev command prints. The data extraction is needed once
 per patch; it writes the passive tree, icons and item/gem data the app serves
 (see "Game data" above).
 
+## Running tests
+
+The suites differ in what they need on your machine:
+
+```bash
+composer test:exclude-snapshots   # Unit + Feature: no game data needed, runs anywhere
+composer test:contract            # Contract: needs the real extracted game data (npm run refresh:data)
+composer test:update-snapshots    # Browser: needs Playwright (npx playwright install chromium)
+composer test                     # everything at once
+```
+
+Unit and Feature tests mock all external data, so they are the ones to run on a
+fresh clone and the ones CI runs for pull requests. Contract tests validate the
+app against the real GGPK extract; Browser tests drive a real browser through
+Playwright. Quality checks (eslint, prettier, tsc, pint, rector, phpstan) plus
+the JS and PHP test suites run together via `composer review`, which is also the
+pre-commit hook.
+
 ## Development notes
 
 I'm a Laravel / PHP developer, so this is built on Laravel's React starter kit. I
 chose React to learn it - I'm comfortable with Vue and wanted the practice. The
 PHP backend I wrote and reviewed by hand; the React frontend was built largely
 with AI assistance. Bug reports and issues are welcome - I maintain this and can
-support it.
+support it. If you want to contribute code, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
