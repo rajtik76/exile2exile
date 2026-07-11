@@ -1,3 +1,4 @@
+import { isRecord } from '@/lib/guards';
 import {
     BASE_PHASES,
     MAX_CUSTOM_TABS,
@@ -133,6 +134,60 @@ export function draftKeyFor(slug: string | null): string {
     return `planner-draft:${slug ?? 'new'}`;
 }
 
+function isPlanEntryShape(value: unknown): boolean {
+    return (
+        isRecord(value) &&
+        typeof value.id === 'string' &&
+        typeof value.name === 'string' &&
+        typeof value.note === 'string' &&
+        typeof value.priority === 'number'
+    );
+}
+
+function isPlanGroupShape(value: unknown): boolean {
+    return (
+        isRecord(value) &&
+        typeof value.notes === 'string' &&
+        Array.isArray(value.entries) &&
+        value.entries.every(isPlanEntryShape)
+    );
+}
+
+function isPlanSectionShape(value: unknown): boolean {
+    return (
+        isRecord(value) &&
+        SECTION_KEYS.every((key) => isPlanGroupShape(value[key]))
+    );
+}
+
+/**
+ * Structural check for a draft read back from localStorage. The store is
+ * user-editable and drafts can predate a schema change, so a value that lost
+ * its shape is dropped rather than crashing the editor deep in a render.
+ * Groups are checked down to their entries; the optional per-group extras
+ * (allocation, slots, gem groups) already fall back field-by-field in the UI.
+ */
+function isPlanDraft(value: unknown): value is PlanDraft {
+    return (
+        isRecord(value) &&
+        typeof value.title === 'string' &&
+        typeof value.description === 'string' &&
+        (value.mode === 'phases' || value.mode === 'single') &&
+        isRecord(value.build) &&
+        Array.isArray(value.tabs) &&
+        value.tabs.every(
+            (tab: unknown) =>
+                isRecord(tab) &&
+                typeof tab.id === 'string' &&
+                typeof tab.label === 'string' &&
+                (tab.kind === 'base' || tab.kind === 'custom'),
+        ) &&
+        isRecord(value.sections) &&
+        Object.values(value.sections).every(isPlanSectionShape) &&
+        typeof value.activeTabId === 'string'
+    );
+}
+
 export function loadDraft(key: string): PlanDraft | null {
     if (typeof window === 'undefined') {
         return null;
@@ -141,7 +196,13 @@ export function loadDraft(key: string): PlanDraft | null {
     try {
         const raw = window.localStorage.getItem(key);
 
-        return raw ? (JSON.parse(raw) as PlanDraft) : null;
+        if (!raw) {
+            return null;
+        }
+
+        const parsed: unknown = JSON.parse(raw);
+
+        return isPlanDraft(parsed) ? parsed : null;
     } catch {
         return null;
     }

@@ -83,7 +83,8 @@ describe('treeAssetUrl', () => {
 
 describe('loadTreeData', () => {
     it('normalises the raw payload and memoises across calls', async () => {
-        mockTreeFetch({ nodes: { 1: {} } });
+        const payload = { nodes: { 1: {} }, groups: {}, classes: [] };
+        mockTreeFetch(payload);
 
         const { loadTreeData } = await import('@/lib/tree-scene');
 
@@ -91,9 +92,18 @@ describe('loadTreeData', () => {
         await loadTreeData();
 
         // normalizeGggTree is stubbed to identity, so the raw payload comes back.
-        expect(first).toEqual({ nodes: { 1: {} } });
+        expect(first).toEqual(payload);
         // Memoised: the shared raw fetch fired only once for both calls.
         expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it('rejects a payload that is not a tree extract', async () => {
+        // A misrouted or truncated response: JSON, but not the tree tables.
+        mockTreeFetch({ message: 'not found' });
+
+        const { loadTreeData } = await import('@/lib/tree-scene');
+
+        await expect(loadTreeData()).rejects.toThrow('Malformed tree data');
     });
 });
 

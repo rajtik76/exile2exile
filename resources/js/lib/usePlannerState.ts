@@ -14,6 +14,7 @@ import type {
 } from '@poe2-toolkit/tree-core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { resolveClassId } from '@/lib/classCatalog';
+import { isNumberArray, isRecord } from '@/lib/guards';
 
 /**
  * A shared build's allocation as the server stores and replays it: the class by
@@ -208,6 +209,18 @@ export function usePlannerState(
         setBuildError(null);
         buildForm.post('/tree/allocation', {
             onSuccess: (response) => {
+                // The fields the planner reads directly must be present and
+                // well-typed before the response is adopted as an allocation.
+                if (
+                    !isRecord(response) ||
+                    typeof response.className !== 'string' ||
+                    !isNumberArray(response.allocated)
+                ) {
+                    setBuildError('Could not load build.');
+
+                    return;
+                }
+
                 const alloc = response as unknown as BuildAllocation & {
                     className: string;
                 };
@@ -267,10 +280,18 @@ export function usePlannerState(
         }));
         void shareForm.post('/tree/share', {
             onSuccess: (response) => {
+                // Adopt the link only when the reply actually carries one.
+                const url =
+                    isRecord(response) && typeof response.url === 'string'
+                        ? response.url
+                        : null;
+
                 setShareResult({
                     for: sharedAllocation,
-                    url: (response as ShareResponse).url,
-                    error: null,
+                    url,
+                    error: url
+                        ? null
+                        : 'Could not create a share link. Try again.',
                 });
             },
             onError: () => {

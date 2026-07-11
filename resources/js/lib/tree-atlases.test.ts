@@ -21,6 +21,7 @@ beforeEach(() => {
         'fetch',
         vi.fn((url: string) =>
             Promise.resolve({
+                ok: true,
                 json: () =>
                     Promise.resolve({
                         frames: url.includes('frame')
@@ -61,5 +62,37 @@ test('loads every node atlas and normalises frame keys to domain keys', async ()
     });
     expect(Object.keys(resources.atlases)).toEqual(
         expect.arrayContaining(['skills', 'frame', 'mastery-effect-active']),
+    );
+});
+
+test('rejects when a manifest fetch is not ok', async () => {
+    vi.stubGlobal(
+        'fetch',
+        vi.fn(() =>
+            Promise.resolve({
+                ok: false,
+                status: 404,
+                json: () => Promise.resolve({}),
+            } as unknown as Response),
+        ),
+    );
+
+    await expect(loadTreeAtlases('/tree/current')).rejects.toThrow('HTTP 404');
+});
+
+test('rejects a manifest without a frame map', async () => {
+    vi.stubGlobal(
+        'fetch',
+        vi.fn(() =>
+            Promise.resolve({
+                ok: true,
+                // JSON, but not an atlas manifest.
+                json: () => Promise.resolve({ message: 'not found' }),
+            } as unknown as Response),
+        ),
+    );
+
+    await expect(loadTreeAtlases('/tree/current')).rejects.toThrow(
+        'Malformed atlas manifest',
     );
 });

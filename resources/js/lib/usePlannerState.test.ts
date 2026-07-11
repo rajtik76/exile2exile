@@ -181,6 +181,26 @@ describe('usePlannerState', () => {
         expect(result.current.frameToken).toBe(before + 1);
     });
 
+    it('rejects a malformed import response instead of adopting it', () => {
+        httpForm.post.mockImplementation((_url: string, options) => {
+            // The allocated array is missing.
+            options.onSuccess({ className: 'Witch' });
+        });
+
+        const { result } = renderHook(() => usePlannerState(makeTreeData()));
+
+        act(() => {
+            result.current.setCode('some-pob-code');
+        });
+        act(() => {
+            result.current.loadBuild();
+        });
+
+        expect(result.current.imported).toBe(false);
+        expect(result.current.allocation).toBeNull();
+        expect(result.current.buildError).toBe('Could not load build.');
+    });
+
     it('clears an imported build', () => {
         const { result } = renderHook(() => usePlannerState(makeTreeData()));
 
@@ -253,6 +273,27 @@ describe('usePlannerState', () => {
         // Second click on the same tree must not mint another row.
         expect(httpForm.post).toHaveBeenCalledTimes(1);
         expect(result.current.shareUrl).toBe('https://x.test/t/abc');
+    });
+
+    it('treats a share reply without a url as a failure', () => {
+        httpForm.post.mockImplementation((_url: string, options) => {
+            // The url field is missing.
+            options.onSuccess({ slug: 'abc' });
+        });
+
+        const { result } = renderHook(() => usePlannerState(makeTreeData()));
+
+        act(() => {
+            result.current.applyAllocation({ classId: 0, allocated: [100] });
+        });
+        act(() => {
+            result.current.share();
+        });
+
+        expect(result.current.shareUrl).toBeNull();
+        expect(result.current.shareError).toBe(
+            'Could not create a share link. Try again.',
+        );
     });
 
     it('surfaces a share error when the request fails', () => {

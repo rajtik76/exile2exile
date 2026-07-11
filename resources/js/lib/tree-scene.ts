@@ -3,6 +3,7 @@ import { normalizeGggTree } from '@poe2-toolkit/tree-core/ggg';
 import type { GggTreeJson } from '@poe2-toolkit/tree-core/ggg';
 import type { RenderResources } from '@poe2-toolkit/tree-react';
 import { withAssetVersion } from '@/lib/assetVersion';
+import { isRecord } from '@/lib/guards';
 import { loadTreeAtlases } from '@/lib/tree-atlases';
 
 /**
@@ -22,19 +23,19 @@ export function treeAssetUrl(name: string): string {
     return withAssetVersion(`${treeAssetBase}/${name}.webp`);
 }
 
-let rawPromise: Promise<GggTreeJson> | null = null;
+let rawPromise: Promise<unknown> | null = null;
 let dataPromise: Promise<TreeData> | null = null;
 let resourcesPromise: Promise<RenderResources> | null = null;
 
 /** Fetch and parse the raw `data.json` once; shared by every derived loader. */
-function loadRawTree(): Promise<GggTreeJson> {
+function loadRawTree(): Promise<unknown> {
     rawPromise ??= fetch(withAssetVersion(`${TREE_BASE}/data.json`)).then(
         (response) => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
 
-            return response.json() as Promise<GggTreeJson>;
+            return response.json() as Promise<unknown>;
         },
     );
 
@@ -46,9 +47,23 @@ function loadRawTree(): Promise<GggTreeJson> {
  * comparison view renders two trees from the same ~5 MB source.
  */
 export function loadTreeData(): Promise<TreeData> {
-    dataPromise ??= loadRawTree().then((raw) =>
-        normalizeGggTree(raw, TREE_VERSION),
-    );
+    dataPromise ??= loadRawTree().then((raw) => {
+        // Fail loudly at the source when the deployed payload is not a tree
+        // extract (a misrouted response, a truncated deploy) instead of letting
+        // normalisation crash on a missing table.
+        if (
+            !isRecord(raw) ||
+            !isRecord(raw.nodes) ||
+            !isRecord(raw.groups) ||
+            !Array.isArray(raw.classes)
+        ) {
+            throw new Error(
+                'Malformed tree data: missing nodes/groups/classes',
+            );
+        }
+
+        return normalizeGggTree(raw as unknown as GggTreeJson, TREE_VERSION);
+    });
 
     return dataPromise;
 }
@@ -69,14 +84,17 @@ export interface PointBudget {
  */
 export function loadPointBudget(): Promise<PointBudget> {
     return loadRawTree().then((raw) => {
-        const data = raw as {
-            maxBasicPoints?: number;
-            maxWeaponSetPoints?: number;
-        };
+        const data = isRecord(raw) ? raw : {};
 
         return {
-            basic: data.maxBasicPoints ?? FALLBACK_BUDGET.basic,
-            weaponSet: data.maxWeaponSetPoints ?? FALLBACK_BUDGET.weaponSet,
+            basic:
+                typeof data.maxBasicPoints === 'number'
+                    ? data.maxBasicPoints
+                    : FALLBACK_BUDGET.basic,
+            weaponSet:
+                typeof data.maxWeaponSetPoints === 'number'
+                    ? data.maxWeaponSetPoints
+                    : FALLBACK_BUDGET.weaponSet,
         };
     });
 }

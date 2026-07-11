@@ -1,5 +1,6 @@
 import type { RenderResources } from '@poe2-toolkit/tree-react';
 import { withAssetVersion } from '@/lib/assetVersion';
+import { isRecord } from '@/lib/guards';
 
 /**
  * Loads GGG webp atlases + their JSON frame maps into a {@link RenderResources}
@@ -29,14 +30,31 @@ export async function loadTreeAtlases(
         NODE_ATLASES.map(async (name) => {
             const [json, image] = await Promise.all([
                 fetch(withAssetVersion(`${assetBase}/${name}.json`)).then(
-                    (response) => response.json() as Promise<AtlasJson>,
+                    (response) => {
+                        if (!response.ok) {
+                            throw new Error(
+                                `HTTP ${response.status} for ${name}.json`,
+                            );
+                        }
+
+                        return response.json() as Promise<unknown>;
+                    },
                 ),
                 loadImage(withAssetVersion(`${assetBase}/${name}.webp`)),
             ]);
+
+            // The manifest is deploy-served data; refuse anything that is not
+            // a frame map rather than blitting from NaN coordinates.
+            if (!isRecord(json) || !isRecord(json.frames)) {
+                throw new Error(`Malformed atlas manifest: ${name}.json`);
+            }
+
             atlases[name] = image;
             const tag = `${name}:`;
 
-            for (const [key, value] of Object.entries(json.frames)) {
+            for (const [key, value] of Object.entries(
+                (json as unknown as AtlasJson).frames,
+            )) {
                 // Strip the atlas-name tag (`frame:`, `line:`); keep variant-prefixed
                 // keys like `normalActive:` / `masteryEffectActive:`.
                 const domainKey = key.startsWith(tag)

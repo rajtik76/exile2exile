@@ -191,4 +191,67 @@ describe('drafts', () => {
         window.localStorage.setItem('planner-draft:bad', '{not json');
         expect(loadDraft('planner-draft:bad')).toBeNull();
     });
+
+    test('round-trips a draft with populated sections', () => {
+        const draft: PlanDraft = {
+            title: 'Draft',
+            description: '',
+            mode: 'phases',
+            build: emptyBuild(),
+            tabs: [{ id: 'act-1', label: 'Act I', kind: 'base' }],
+            sections: { 'act-1': emptySection() },
+            activeTabId: 'act-1',
+        };
+        const key = draftKeyFor('full');
+
+        saveDraft(key, draft);
+        expect(loadDraft(key)).toEqual(draft);
+    });
+
+    test('drops a draft whose shape no longer matches', () => {
+        const key = draftKeyFor('stale');
+
+        // Valid JSON, wrong shape: a pre-schema-change or hand-edited value.
+        window.localStorage.setItem(key, JSON.stringify({ title: 'x' }));
+        expect(loadDraft(key)).toBeNull();
+
+        window.localStorage.setItem(
+            key,
+            JSON.stringify({
+                title: 'x',
+                description: '',
+                mode: 'nope',
+                build: emptyBuild(),
+                tabs: [],
+                sections: {},
+                activeTabId: SINGLE_KEY,
+            }),
+        );
+        expect(loadDraft(key)).toBeNull();
+    });
+
+    test('drops a draft carrying a malformed section group', () => {
+        const key = draftKeyFor('broken');
+
+        window.localStorage.setItem(
+            key,
+            JSON.stringify({
+                title: 'x',
+                description: '',
+                mode: 'single',
+                build: emptyBuild(),
+                tabs: [],
+                // The items group lost its entries array.
+                sections: {
+                    [SINGLE_KEY]: {
+                        items: { notes: '' },
+                        gems: emptyGroup(),
+                        tree: emptyGroup(),
+                    },
+                },
+                activeTabId: SINGLE_KEY,
+            }),
+        );
+        expect(loadDraft(key)).toBeNull();
+    });
 });
