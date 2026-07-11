@@ -219,6 +219,42 @@ test('poe2:pack-release fails for a version that is not staged', function () {
     Process::assertNothingRan();
 });
 
+test('poe2:link-game-data links the three game-data paths through the current release', function () {
+    $base = storage_path('framework/testing/link-happy-'.getmypid());
+    File::deleteDirectory($base);
+    $root = fakeGameDataRoot();
+    app()->setBasePath($base);
+    app()->usePublicPath($base.'/public');
+
+    $this->artisan('poe2:link-game-data')->assertSuccessful();
+
+    expect(is_link($base.'/public/tree/current'))->toBeTrue()
+        ->and(readlink($base.'/public/tree/current'))->toBe($root.'/current/public/tree/current')
+        ->and(is_link($base.'/public/icons/poe2'))->toBeTrue()
+        ->and(readlink($base.'/public/icons/poe2'))->toBe($root.'/current/public/icons/poe2')
+        ->and(is_link($base.'/resources/poe2/ggpk'))->toBeTrue()
+        ->and(readlink($base.'/resources/poe2/ggpk'))->toBe($root.'/current/resources/poe2/ggpk');
+
+    // Re-running after a deploy replaces the existing links instead of failing.
+    $this->artisan('poe2:link-game-data')->assertSuccessful();
+
+    expect(is_link($base.'/public/tree/current'))->toBeTrue();
+});
+
+test('poe2:link-game-data --force replaces a real directory with the symlink', function () {
+    $base = storage_path('framework/testing/link-force-'.getmypid());
+    File::deleteDirectory($base);
+    $root = fakeGameDataRoot();
+    app()->setBasePath($base);
+    app()->usePublicPath($base.'/public');
+    File::ensureDirectoryExists($base.'/public/tree/current');
+
+    $this->artisan('poe2:link-game-data', ['--force' => true])->assertSuccessful();
+
+    expect(is_link($base.'/public/tree/current'))->toBeTrue()
+        ->and(readlink($base.'/public/tree/current'))->toBe($root.'/current/public/tree/current');
+});
+
 test('poe2:link-game-data refuses to replace a real directory without --force', function () {
     $public = storage_path('framework/testing/link-'.getmypid()).'/public';
     File::deleteDirectory(dirname($public));

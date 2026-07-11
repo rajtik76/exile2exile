@@ -24,6 +24,24 @@ test('conditions render to their exact filter lines', function () {
         ->and(Conditions::corrupted(false)->render())->toBe('Corrupted False');
 });
 
+test('every numeric condition renders its exact filter keyword', function () {
+    expect(Conditions::areaLevel(Operator::AtLeast, 65)->render())->toBe('AreaLevel >= 65')
+        ->and(Conditions::dropLevel(Operator::AtMost, 44)->render())->toBe('DropLevel <= 44')
+        ->and(Conditions::quality(Operator::MoreThan, 10)->render())->toBe('Quality > 10')
+        ->and(Conditions::sockets(Operator::AtLeast, 3)->render())->toBe('Sockets >= 3')
+        ->and(Conditions::baseArmour(Operator::MoreThan, 0)->render())->toBe('BaseArmour > 0')
+        ->and(Conditions::baseEvasion(Operator::MoreThan, 0)->render())->toBe('BaseEvasion > 0')
+        ->and(Conditions::gemLevel(Operator::AtLeast, 18)->render())->toBe('GemLevel >= 18')
+        ->and(Conditions::waystoneTier(Operator::AtLeast, 15)->render())->toBe('WaystoneTier >= 15')
+        ->and(Conditions::width(Operator::AtMost, 2)->render())->toBe('Width <= 2')
+        ->and(Conditions::height(Operator::LessThan, 4)->render())->toBe('Height < 4');
+});
+
+test('every flag condition renders its exact filter keyword', function () {
+    expect(Conditions::mirrored(true)->render())->toBe('Mirrored True')
+        ->and(Conditions::anyEnchantment(false)->render())->toBe('AnyEnchantment False');
+});
+
 test('HasExplicitMod renders the count against the operator and quotes each affix', function () {
     expect(Conditions::hasExplicitMod(Operator::AtLeast, 1, "Athlete's", 'of the Yeti')->render())
         ->toBe('HasExplicitMod >=1 "Athlete\'s" "of the Yeti"');
