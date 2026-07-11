@@ -102,7 +102,7 @@
         ],
         "test:exclude-snapshots": [
             "@cache:clear",
-            "@php ./vendor/bin/pest --parallel --testsuite=Unit,Feature"
+            "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Unit,Feature"
         ],
         "test:update-snapshots": [
             "@cache:clear",
