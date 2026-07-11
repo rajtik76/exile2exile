@@ -17,25 +17,18 @@ use Tests\TestCase;
 |
 */
 
+// All three suites get a fresh database: Feature tests mock everything external,
+// Contract tests run against REAL extracted game data (never mocked), guarding that
+// the data has the structure, icons, affixes and tree the app needs (CI downloads
+// the served or freshly staged release for them, see data-contract.yml), and Browser
+// tests render pages whose nav reads the patch status from the database.
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->in('Feature');
+    ->in('Feature', 'Browser', 'Contract');
 
 // No Feature test may spawn a real OS process (e.g. the game-data extractor). Every
 // process must be faked; an un-faked one throws instead of running for real.
 beforeEach(fn () => Process::preventStrayProcesses())->in('Feature');
-
-// Browser tests drive a real browser; the build viewer is session-based, so no
-// database refresh is needed here.
-pest()->extend(TestCase::class)->in('Browser');
-
-// Contract tests run against REAL extracted game data (never mocked), guarding that the
-// data has the structure, icons, affixes and tree the app needs. Some validate through
-// DB-backed endpoints (a shared build's JSON document), so they get a fresh database too.
-// CI downloads the served or freshly staged release for them (see data-contract.yml).
-pest()->extend(TestCase::class)
-    ->use(RefreshDatabase::class)
-    ->in('Contract');
 
 /**
  * Fake the `game-data` disk and seed just what a test needs, so nothing depends on
