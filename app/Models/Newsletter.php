@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property string $title
  * @property string $body
+ * @property int $dispatched_up_to_id
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  *

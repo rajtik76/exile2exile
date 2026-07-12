@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
+use App\Models\Newsletter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -14,9 +15,12 @@ use Illuminate\Queue\Attributes\Queue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * One newsletter issue for one recipient. The unsubscribe URL is a signed,
- * per-recipient link, so it is both clickable from the email body and usable
- * for RFC 8058 one-click unsubscribe via the List-Unsubscribe headers.
+ * One newsletter issue for one recipient. Takes the Newsletter model, not
+ * title/body strings: SerializesModels stores only a model identifier, so a
+ * large body is not copied into every per-recipient queue payload. The
+ * unsubscribe URL is the recipient's token-bound link, clickable from the
+ * email body and used for RFC 8058 one-click unsubscribe via the
+ * List-Unsubscribe headers.
  */
 #[Queue(\App\Enums\Queue::Mail)]
 class NewsletterMail extends Mailable implements ShouldQueue
@@ -24,15 +28,14 @@ class NewsletterMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public function __construct(
-        public readonly string $title,
-        public readonly string $body,
+        public readonly Newsletter $newsletter,
         public readonly string $unsubscribeUrl,
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->title,
+            subject: $this->newsletter->title,
         );
     }
 

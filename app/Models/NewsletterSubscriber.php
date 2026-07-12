@@ -9,11 +9,17 @@ use Database\Factories\NewsletterSubscriberFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
  * A newsletter recipient. Rows start unconfirmed; the double opt-in link in
  * the confirmation email stamps confirmed_at, and only confirmed rows receive
  * issues. Unsubscribing deletes the row outright.
+ *
+ * Confirm and unsubscribe links carry the per-row {@see $token} (bound via
+ * {subscriber:token} in the routes), not a signed URL: delivered mail must
+ * stay valid across an APP_KEY rotation, and a 48-char random token is not
+ * enumerable the way sequential ids are.
  *
  * @method static Builder<static>|NewsletterSubscriber confirmed()
  * @method static \Database\Factories\NewsletterSubscriberFactory factory($count = null, $state = [])
@@ -27,6 +33,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static Builder<static>|NewsletterSubscriber whereUpdatedAt($value)
  *
  * @property string $email
+ * @property string $token
  * @property CarbonImmutable|null $confirmed_at
  * @property int $id
  * @property CarbonImmutable|null $created_at
@@ -40,13 +47,21 @@ class NewsletterSubscriber extends Model
     use HasFactory;
 
     /**
-     * confirmed_at is deliberately not fillable: it is only stamped server-side
-     * when the signed confirmation link is opened, so no signup payload can
-     * self-confirm by mass assignment.
+     * confirmed_at and token are deliberately not fillable: confirmed_at is
+     * only stamped server-side when the confirmation link is used, and the
+     * token is generated once on creation, so no signup payload can set them.
      *
      * @var list<string>
      */
     protected $fillable = ['email'];
+
+    #[\Override]
+    protected static function booted(): void
+    {
+        static::creating(function (self $subscriber): void {
+            $subscriber->token ??= Str::random(48);
+        });
+    }
 
     /** @return array<string, string> */
     #[\Override]
@@ -65,5 +80,17 @@ class NewsletterSubscriber extends Model
     public function scopeConfirmed(Builder $query): void
     {
         $query->whereNotNull('confirmed_at');
+    }
+
+    /** The token-bound double opt-in link for this subscriber. */
+    public function confirmUrl(): string
+    {
+        return route('newsletter.confirm', ['subscriber' => $this]);
+    }
+
+    /** The token-bound unsubscribe link embedded in every issue. */
+    public function unsubscribeUrl(): string
+    {
+        return route('newsletter.unsubscribe', ['subscriber' => $this]);
     }
 }

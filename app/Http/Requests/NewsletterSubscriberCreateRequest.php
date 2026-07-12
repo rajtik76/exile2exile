@@ -5,12 +5,21 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class NewsletterSubscriberCreateRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return true;
+    }
+
     /**
-     * @return array<string, list<mixed>>
+     * No unique rule on purpose: a "taken" error would let anyone probe which
+     * addresses are subscribed, and would dead-end users whose confirmation
+     * mail was lost. Duplicates are handled idempotently by
+     * CreateNewsletterSubscriber instead.
+     *
+     * @return array<string, list<string>>
      */
     public function rules(): array
     {
@@ -20,13 +29,7 @@ class NewsletterSubscriberCreateRequest extends FormRequest
                 'string',
                 'email',
                 'max:254',
-                Rule::unique('newsletter_subscribers', 'email'),
             ],
         ];
-    }
-
-    public function authorize(): bool
-    {
-        return true;
     }
 }

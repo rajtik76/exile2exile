@@ -3,15 +3,75 @@ import { useAppName } from '@/components/brand';
 import { LegalPage, LegalSection } from '@/components/legal-page';
 import newsletter from '@/routes/newsletter';
 
-type Status = 'pending' | 'confirmed' | 'unsubscribed' | null;
+type Status =
+    | 'pending'
+    | 'confirmed'
+    | 'unsubscribed'
+    | 'confirm-pending'
+    | 'unsubscribe-pending'
+    | null;
+
+/**
+ * Interstitial for the signed email links: GET renders this panel and the
+ * actual confirm/unsubscribe happens on a POST back to the same signed URL,
+ * so a mail scanner prefetching the link changes nothing.
+ */
+function ActionPanel({
+    status,
+    actionUrl,
+}: {
+    status: 'confirm-pending' | 'unsubscribe-pending';
+    actionUrl: string;
+}) {
+    const form = useForm({});
+
+    const copy =
+        status === 'confirm-pending'
+            ? {
+                  title: 'Confirm your subscription',
+                  body: 'Click the button below and newsletter issues will start arriving at your address.',
+                  button: 'Confirm subscription',
+              }
+            : {
+                  title: 'Unsubscribe from the newsletter',
+                  body: 'Click the button below and your address is removed immediately. You can sign up again anytime.',
+                  button: 'Unsubscribe',
+              };
+
+    return (
+        <div className="rounded-sm border border-[#c9a24a]/25 bg-[#c9a24a]/10 p-4">
+            <p className="font-ui text-xs font-semibold tracking-[0.14em] text-[#ecd49a] uppercase">
+                {copy.title}
+            </p>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-[#a7acb8]">
+                {copy.body}
+            </p>
+            <button
+                type="button"
+                disabled={form.processing}
+                onClick={() => form.post(actionUrl)}
+                className="mt-3 rounded-sm border border-[#c9a24a]/40 bg-[#c9a24a]/15 px-4 py-2 font-ui text-xs font-semibold tracking-[0.14em] text-[#ecd49a] uppercase transition hover:bg-[#c9a24a]/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+                {form.processing ? 'Working…' : copy.button}
+            </button>
+        </div>
+    );
+}
 
 /** Flash banner for the double opt-in flow states. */
 function StatusBanner({ status }: { status: Status }) {
-    if (!status) {
+    if (
+        !status ||
+        status === 'confirm-pending' ||
+        status === 'unsubscribe-pending'
+    ) {
         return null;
     }
 
-    const copy: Record<NonNullable<Status>, { title: string; body: string }> = {
+    const copy: Record<
+        Exclude<NonNullable<Status>, 'confirm-pending' | 'unsubscribe-pending'>,
+        { title: string; body: string }
+    > = {
         pending: {
             title: 'Almost there - check your inbox',
             body: 'We sent you a confirmation link. Click it and you are on the list; until then we will not send you anything.',
@@ -46,7 +106,13 @@ function StatusBanner({ status }: { status: Status }) {
  * unconfirmed subscriber and triggers a confirmation email; the signed links
  * in our emails bounce back to this page with a `status` flash prop.
  */
-export default function Newsletter({ status = null }: { status?: Status }) {
+export default function Newsletter({
+    status = null,
+    actionUrl,
+}: {
+    status?: Status;
+    actionUrl?: string;
+}) {
     const appName = useAppName();
     const form = useForm({ email: '' });
 
@@ -55,9 +121,19 @@ export default function Newsletter({ status = null }: { status?: Status }) {
         form.post(newsletter.store.url(), { preserveScroll: true });
     }
 
+    const pendingAction =
+        (status === 'confirm-pending' || status === 'unsubscribe-pending') &&
+        actionUrl
+            ? status
+            : null;
+
     return (
         <LegalPage title="Newsletter" eyebrow="Stay in the loop">
-            <StatusBanner status={status} />
+            {pendingAction && actionUrl ? (
+                <ActionPanel status={pendingAction} actionUrl={actionUrl} />
+            ) : (
+                <StatusBanner status={status} />
+            )}
 
             <LegalSection heading="What you get">
                 <p>

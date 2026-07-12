@@ -9,6 +9,7 @@ use App\Http\Controllers\SeoController;
 use App\Http\Controllers\SharedTreeController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\TreeController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -148,20 +149,28 @@ Route::delete('t/{sharedTree}', [SharedTreeController::class, 'destroy'])
     ->whereAlphaNumeric('sharedTree')
     ->name('shared.destroy');
 
-// Newsletter signup with double opt-in. Confirm and unsubscribe are signed,
-// per-subscriber links sent by email: GET for humans, and unsubscribe also
-// accepts POST for RFC 8058 one-click unsubscribe from mail providers. A link
-// used after the row is gone (double click) still lands on the status page.
+// Newsletter signup with double opt-in. Confirm and unsubscribe links carry
+// the subscriber's random per-row token (not a signed URL, so delivered mail
+// survives an APP_KEY rotation). GET renders an interstitial (mail scanners
+// prefetch GET links, so it must be side-effect free); the mutation happens
+// on POST - from the interstitial's form, or for unsubscribe also as an
+// RFC 8058 one-click POST from a mail provider (CSRF-exempt in
+// bootstrap/app.php, which expects a bare 2xx even when the row is already
+// gone). A link used after the row is gone (double click, stale confirm mail)
+// still lands on the status page.
 Route::get('newsletter', [NewsletterSubscriberController::class, 'create'])->name('newsletter.create');
 Route::post('newsletter', [NewsletterSubscriberController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('newsletter.store');
-Route::get('newsletter/confirm/{subscriber}', [NewsletterSubscriberController::class, 'confirm'])
-    ->middleware(['signed', 'throttle:30,1'])
-    ->name('newsletter.confirm');
-Route::match(['get', 'post'], 'newsletter/unsubscribe/{subscriber}', [NewsletterSubscriberController::class, 'unsubscribe'])
-    ->middleware(['signed', 'throttle:30,1'])
+Route::match(['get', 'post'], 'newsletter/confirm/{subscriber:token}', [NewsletterSubscriberController::class, 'confirm'])
+    ->middleware('throttle:30,1')
     ->missing(fn () => redirect()->route('newsletter.create')->with('newsletter.status', 'unsubscribed'))
+    ->name('newsletter.confirm');
+Route::match(['get', 'post'], 'newsletter/unsubscribe/{subscriber:token}', [NewsletterSubscriberController::class, 'unsubscribe'])
+    ->middleware('throttle:30,1')
+    ->missing(fn (Request $request) => $request->isMethod('POST') && ! $request->inertia()
+        ? response()->noContent(200)
+        : redirect()->route('newsletter.create')->with('newsletter.status', 'unsubscribed'))
     ->name('newsletter.unsubscribe');
 
 // Test-only harness for the class/ascendancy portrait snapshot test. Never

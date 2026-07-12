@@ -30,6 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        // RFC 8058 one-click unsubscribe: mail providers POST to the signed
+        // link server-to-server, with no session and no CSRF token. The route
+        // stays protected by its URL signature instead.
+        $middleware->validateCsrfTokens(except: ['newsletter/unsubscribe/*']);
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,

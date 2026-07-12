@@ -1,5 +1,5 @@
 <x-mail::message>
-{!! $body !!}
+{!! $newsletter->body !!}
 
 Thanks,<br>
 {{ config('app.name') }}
