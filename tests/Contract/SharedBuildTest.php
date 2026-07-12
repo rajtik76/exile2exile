@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\SharedBuild;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 
 /**
@@ -19,89 +20,73 @@ function shareableBuild(array $overrides = []): array
     ], $overrides);
 }
 
-test('sharing a tree allocation stores it and returns a public link', function () {
-    $response = $this->postJson(route('shared.store'), shareableBuild());
+/** A saved tree with its edit token minted, as the store action creates them. */
+function makeSharedBuild(array $overrides = []): SharedBuild
+{
+    return SharedBuild::create(array_merge([
+        'slug' => Str::random(12),
+        'edit_token' => Str::random(64),
+        'build' => shareableBuild(),
+    ], $overrides));
+}
 
-    $response->assertOk()
-        ->assertJsonStructure(['slug', 'url']);
+/** A share from before the edit flow existed: no token, read-only forever. */
+function makeLegacyBuild(array $overrides = []): SharedBuild
+{
+    return makeSharedBuild(array_merge(['edit_token' => null], $overrides));
+}
 
-    $slug = $response->json('slug');
+/*
+ * Saving - every save mints its own row, edit token and unlocked session.
+ */
 
-    expect($response->json('url'))->toContain("/t/{$slug}");
+test('saving a tree stores it, unlocks the session and redirects to the editor without a token in the url', function () {
+    $response = $this->post(route('shared.store'), shareableBuild());
 
-    $shared = SharedBuild::firstWhere('slug', $slug);
+    $shared = SharedBuild::sole();
 
-    expect($shared)->not->toBeNull()
-        ->and($shared->build['className'])->toBe('Witch')
+    $response->assertRedirect(route('shared.edit', ['sharedBuild' => $shared->slug]));
+
+    expect($shared->build['className'])->toBe('Witch')
         ->and($shared->build['ascendId'])->toBe('Witch1')
-        ->and($shared->build['allocated'])->toBe([4, 16, 30]);
+        ->and($shared->build['allocated'])->toBe([4, 16, 30])
+        ->and($shared->edit_token)->not->toBeNull()
+        ->and(strlen((string) $shared->edit_token))->toBe(64)
+        // The author lands straight in the editor: the session already holds
+        // the verified token, and the redirect URL never carries it.
+        ->and(session($shared->unlockSessionKey()))->toBe($shared->edit_token);
 });
 
-test('re-sharing the same tree returns the same link without a duplicate', function () {
-    $first = $this->postJson(route('shared.store'), shareableBuild());
-    $second = $this->postJson(route('shared.store'), shareableBuild());
+test('identical trees no longer collapse to one row - each save owns its link and token', function () {
+    // Shares used to be content-addressed, but an editable row belongs to whoever
+    // holds its token: two authors saving the same tree must never converge on
+    // the same link (the second would inherit the first author's edit rights).
+    $this->post(route('shared.store'), shareableBuild());
+    $this->post(route('shared.store'), shareableBuild());
 
-    $first->assertOk();
-    $second->assertOk();
+    $builds = SharedBuild::all();
 
-    expect($second->json('slug'))->toBe($first->json('slug'));
-    expect(SharedBuild::count())->toBe(1);
+    expect($builds)->toHaveCount(2)
+        ->and($builds[0]->slug)->not->toBe($builds[1]->slug)
+        ->and($builds[0]->edit_token)->not->toBe($builds[1]->edit_token);
 });
 
-test('node order does not change the dedup hash', function () {
-    $this->postJson(route('shared.store'), shareableBuild(['allocated' => [4, 16, 30]]))->assertOk();
-    $this->postJson(route('shared.store'), shareableBuild(['allocated' => [30, 4, 16]]))->assertOk();
-
-    expect(SharedBuild::count())->toBe(1);
-});
-
-test('a different tree gets its own link', function () {
-    $first = $this->postJson(route('shared.store'), shareableBuild(['allocated' => [4, 16]]));
-    $second = $this->postJson(route('shared.store'), shareableBuild(['allocated' => [4, 16, 30]]));
-
-    expect($second->json('slug'))->not->toBe($first->json('slug'));
-    expect(SharedBuild::count())->toBe(2);
-});
-
-test('sharing stores weapon-set assignments', function () {
-    $response = $this->postJson(route('shared.store'), shareableBuild([
+test('saving stores weapon-set assignments', function () {
+    $this->post(route('shared.store'), shareableBuild([
         'weaponSets' => [16 => 1, 30 => 2],
     ]));
 
-    $response->assertOk();
-    $shared = SharedBuild::firstWhere('slug', $response->json('slug'));
-
-    expect($shared->build['weaponSets'])->toBe([16 => 1, 30 => 2]);
-});
-
-test('an empty weapon-set map hashes like a build without one', function () {
-    // A build shared before weapon sets existed (no key) and the same build with
-    // an empty weaponSets map must collapse to a single row.
-    $this->postJson(route('shared.store'), shareableBuild())->assertOk();
-    $this->postJson(route('shared.store'), shareableBuild(['weaponSets' => []]))->assertOk();
-
-    expect(SharedBuild::count())->toBe(1);
-});
-
-test('weapon sets change the dedup hash', function () {
-    $plain = $this->postJson(route('shared.store'), shareableBuild());
-    $tagged = $this->postJson(route('shared.store'), shareableBuild(['weaponSets' => [30 => 1]]));
-
-    expect($tagged->json('slug'))->not->toBe($plain->json('slug'));
-    expect(SharedBuild::count())->toBe(2);
+    expect(SharedBuild::sole()->build['weaponSets'])->toBe([16 => 1, 30 => 2]);
 });
 
 test('a weapon set on an unallocated node is dropped', function () {
     // 999 is not in `allocated`, so its assignment must not be stored.
-    $response = $this->postJson(route('shared.store'), shareableBuild([
+    $this->post(route('shared.store'), shareableBuild([
         'allocated' => [4, 16, 30],
         'weaponSets' => [30 => 1, 999 => 2],
     ]));
 
-    $response->assertOk();
-    $shared = SharedBuild::firstWhere('slug', $response->json('slug'));
-
-    expect($shared->build['weaponSets'])->toBe([30 => 1]);
+    expect(SharedBuild::sole()->build['weaponSets'])->toBe([30 => 1]);
 });
 
 test('an invalid weapon set value is rejected', function () {
@@ -111,27 +96,60 @@ test('an invalid weapon set value is rejected', function () {
     expect(SharedBuild::count())->toBe(0);
 });
 
-test('the viewer renders a shared build by its slug', function () {
-    $shared = SharedBuild::create([
-        'slug' => 'abc123XYZ789',
-        'build' => shareableBuild(),
-    ]);
+test('a build allocating a node outside the tree is rejected', function () {
+    $this->postJson(route('shared.store'), shareableBuild(['allocated' => [999999999]]))
+        ->assertInvalid(['allocated']);
+
+    expect(SharedBuild::count())->toBe(0);
+});
+
+test('a save without a class is rejected', function () {
+    $this->postJson(route('shared.store'), shareableBuild(['className' => '']))
+        ->assertInvalid(['className']);
+});
+
+/*
+ * The read-only viewer - and what it must never leak.
+ */
+
+test('the viewer renders a shared build by its slug and never exposes the edit token', function () {
+    $shared = makeSharedBuild(['slug' => 'abc123XYZ789']);
 
     $this->get(route('shared.show', $shared))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('tree/shared')
             ->where('slug', 'abc123XYZ789')
+            ->where('editable', true)
             ->where('build.className', 'Witch')
             ->where('build.ascendId', 'Witch1')
+            ->missing('editToken')
+        )
+        // The secret must not appear anywhere in the page payload.
+        ->assertDontSee($shared->edit_token);
+});
+
+test('a legacy pre-token share renders read-only, with no edit entry', function () {
+    $shared = makeLegacyBuild();
+
+    $this->get(route('shared.show', $shared))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('tree/shared')
+            ->where('editable', false)
         );
 });
 
+test('the json document never exposes the edit token', function () {
+    $shared = makeSharedBuild();
+
+    $this->get(route('shared.json', ['slug' => $shared->slug]))
+        ->assertOk()
+        ->assertDontSee($shared->edit_token);
+});
+
 test('viewing a shared build records the visit', function () {
-    $shared = SharedBuild::create([
-        'slug' => 'viewstamp01',
-        'build' => shareableBuild(),
-    ]);
+    $shared = makeSharedBuild();
 
     expect($shared->last_viewed_at)->toBeNull();
 
@@ -144,31 +162,277 @@ test('an unknown slug 404s', function () {
     $this->get('/t/does-not-exist')->assertNotFound();
 });
 
-test('a build allocating a node outside the tree is rejected', function () {
-    $this->postJson(route('shared.store'), shareableBuild(['allocated' => [999999999]]))
+/*
+ * The editor gate - the unlock form guards the edit page.
+ */
+
+test('the editor shows the unlock form until the session is unlocked', function () {
+    $shared = makeSharedBuild();
+
+    $this->get(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('tree/unlock')
+            ->where('slug', $shared->slug)
+            ->where('className', 'Witch')
+            ->missing('editToken')
+        )
+        // The locked gate must not carry the secret anywhere in its payload.
+        ->assertDontSee($shared->edit_token);
+});
+
+test('the editor renders once the session is unlocked, with the token exposed only to its author', function () {
+    $shared = makeSharedBuild();
+
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->get(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('tree')
+            ->where('mode', 'edit')
+            ->where('slug', $shared->slug)
+            ->where('editToken', $shared->edit_token)
+            ->where('initialBuild.className', 'Witch')
+            ->where('initialBuild.allocated', [4, 16, 30])
+        );
+});
+
+test('a stale unlock does not open the editor after the token rotated', function () {
+    $shared = makeSharedBuild();
+
+    $this->withSession([$shared->unlockSessionKey() => 'stale-token'])
+        ->get(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('tree/unlock'));
+});
+
+test('a legacy share has no editor and bounces to the viewer', function () {
+    $shared = makeLegacyBuild();
+
+    $this->get(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->assertRedirect(route('shared.show', ['sharedBuild' => $shared->slug]));
+});
+
+test('an unknown slug has no editor', function () {
+    $this->get('/t/doesnotexist/edit')->assertNotFound();
+});
+
+/*
+ * Unlocking - the token travels once, in the POST body.
+ */
+
+test('unlock verifies the token in the body and opens the editor', function () {
+    $shared = makeSharedBuild();
+
+    $this->post(route('shared.unlock', ['sharedBuild' => $shared->slug]), ['token' => $shared->edit_token])
+        ->assertRedirect(route('shared.edit', ['sharedBuild' => $shared->slug]));
+
+    expect(session($shared->unlockSessionKey()))->toBe($shared->edit_token);
+});
+
+test('unlock requires a token', function () {
+    $shared = makeSharedBuild();
+
+    $this->from(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->post(route('shared.unlock', ['sharedBuild' => $shared->slug]), [])
+        ->assertSessionHasErrors('token');
+
+    expect(session($shared->unlockSessionKey()))->toBeNull();
+});
+
+test('unlock rejects a wrong token without unlocking', function () {
+    $shared = makeSharedBuild();
+
+    $this->from(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->post(route('shared.unlock', ['sharedBuild' => $shared->slug]), ['token' => 'wrong'])
+        ->assertSessionHasErrors('token');
+
+    expect(session($shared->unlockSessionKey()))->toBeNull();
+});
+
+test('unlock hard-locks after three wrong tokens', function () {
+    $shared = makeSharedBuild();
+
+    foreach (range(1, 3) as $attempt) {
+        $this->from(route('shared.edit', ['sharedBuild' => $shared->slug]))
+            ->post(route('shared.unlock', ['sharedBuild' => $shared->slug]), ['token' => 'wrong'])
+            ->assertSessionHasErrors('token');
+    }
+
+    // Even the right token bounces during the cool-off.
+    $this->from(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->post(route('shared.unlock', ['sharedBuild' => $shared->slug]), ['token' => $shared->edit_token])
+        ->assertSessionHasErrors('token');
+
+    expect(session($shared->unlockSessionKey()))->toBeNull();
+});
+
+test('a legacy share cannot be unlocked - there is no token to match', function () {
+    $shared = makeLegacyBuild();
+
+    // Any guess must 404, so a legacy row can never be edited into.
+    $this->post(route('shared.unlock', ['sharedBuild' => $shared->slug]), ['token' => ''])
+        ->assertNotFound();
+});
+
+/*
+ * Updating - only through the unlocked session.
+ */
+
+test('an edit is saved once the session is unlocked', function () {
+    $shared = makeSharedBuild();
+
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->put(route('shared.update', ['sharedBuild' => $shared->slug]), shareableBuild(['allocated' => [4, 16]]))
+        ->assertRedirect(route('shared.edit', ['sharedBuild' => $shared->slug]));
+
+    expect($shared->fresh()->build['allocated'])->toBe([4, 16]);
+});
+
+test('an edit without an unlocked session is forbidden even with the token in the body', function () {
+    $shared = makeSharedBuild();
+
+    // The token has no business in an update payload - authorization rides only
+    // on the unlocked session, so a leaked token pasted into a raw PUT does nothing.
+    $this->put(
+        route('shared.update', ['sharedBuild' => $shared->slug]),
+        shareableBuild(['allocated' => [4, 16]]) + ['token' => $shared->edit_token],
+    )->assertForbidden();
+
+    expect($shared->fresh()->build['allocated'])->toBe([4, 16, 30]);
+});
+
+test('a stale unlock cannot save an edit after the token rotated', function () {
+    $shared = makeSharedBuild();
+
+    $this->withSession([$shared->unlockSessionKey() => 'stale-token'])
+        ->put(route('shared.update', ['sharedBuild' => $shared->slug]), shareableBuild(['allocated' => [4, 16]]))
+        ->assertForbidden();
+});
+
+test('an unlocked but invalid edit fails validation without saving', function () {
+    $shared = makeSharedBuild();
+
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->putJson(route('shared.update', ['sharedBuild' => $shared->slug]), shareableBuild(['allocated' => [999999999]]))
         ->assertInvalid(['allocated']);
 
-    expect(SharedBuild::count())->toBe(0);
+    expect($shared->fresh()->build['allocated'])->toBe([4, 16, 30]);
 });
 
-test('a share without a class is rejected', function () {
-    $this->postJson(route('shared.store'), shareableBuild(['className' => '']))
-        ->assertInvalid(['className']);
+test('an edit refreshes the cached build document', function () {
+    $shared = makeSharedBuild();
+
+    // Prime the forever-cache with the original document.
+    $this->get(route('shared.json', ['slug' => $shared->slug]))
+        ->assertOk()
+        ->assertJsonPath('passives.pointsAllocated', 3);
+
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->put(route('shared.update', ['sharedBuild' => $shared->slug]), shareableBuild(['allocated' => [4, 16]]));
+
+    // The stale entry was dropped on update: the document reflects the edit.
+    $this->get(route('shared.json', ['slug' => $shared->slug]))
+        ->assertOk()
+        ->assertJsonPath('passives.pointsAllocated', 2);
 });
+
+/*
+ * Deleting - double-gated by the unlocked session AND the re-typed token.
+ */
+
+test('deleting a build verifies the re-typed token and removes it for good', function () {
+    $shared = makeSharedBuild();
+
+    // Prime the document cache, so the delete provably clears it too.
+    $this->get(route('shared.json', ['slug' => $shared->slug]))->assertOk();
+
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->delete(route('shared.destroy', ['sharedBuild' => $shared->slug]), ['token' => $shared->edit_token])
+        ->assertRedirect(route('tree'));
+
+    expect(SharedBuild::count())->toBe(0)
+        // The unlock is gone with the build - nothing secret lingers in the session.
+        ->and(session($shared->unlockSessionKey()))->toBeNull();
+
+    // The public page and the document are gone with it - nothing serves from cache.
+    $this->get(route('shared.show', ['sharedBuild' => $shared->slug]))->assertNotFound();
+    $this->get(route('shared.json', ['slug' => $shared->slug]))->assertNotFound();
+});
+
+test('deleting without an unlocked session is forbidden even with the right token', function () {
+    $shared = makeSharedBuild();
+
+    // The public slug plus a stolen token alone must not destroy anything: the
+    // delete form only exists inside the unlocked editor.
+    $this->delete(route('shared.destroy', ['sharedBuild' => $shared->slug]), ['token' => $shared->edit_token])
+        ->assertForbidden();
+
+    expect(SharedBuild::count())->toBe(1);
+});
+
+test('deleting with a wrong token keeps the build and never flashes the secret', function () {
+    $shared = makeSharedBuild();
+
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->from(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->delete(route('shared.destroy', ['sharedBuild' => $shared->slug]), ['token' => 'wrong'])
+        ->assertRedirect(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->assertSessionHasErrors('token');
+
+    expect(SharedBuild::count())->toBe(1);
+});
+
+test('a missing token never lands in the old-input session flash', function () {
+    $shared = makeSharedBuild();
+
+    // A validation failure flashes old input for the redirect back - the token field
+    // is excluded, so the secret is never persisted in the session flash.
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->from(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->delete(route('shared.destroy', ['sharedBuild' => $shared->slug]), [])
+        ->assertSessionHasErrors('token')
+        ->assertSessionMissing('_old_input.token');
+
+    expect(SharedBuild::count())->toBe(1);
+});
+
+test('deleting hard-locks after three wrong tokens', function () {
+    $shared = makeSharedBuild();
+
+    foreach (range(1, 3) as $attempt) {
+        $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+            ->from(route('shared.edit', ['sharedBuild' => $shared->slug]))
+            ->delete(route('shared.destroy', ['sharedBuild' => $shared->slug]), ['token' => 'wrong'])
+            ->assertSessionHasErrors('token');
+    }
+
+    // Even the right token bounces during the cool-off.
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->from(route('shared.edit', ['sharedBuild' => $shared->slug]))
+        ->delete(route('shared.destroy', ['sharedBuild' => $shared->slug]), ['token' => $shared->edit_token])
+        ->assertSessionHasErrors('token');
+
+    expect(SharedBuild::count())->toBe(1);
+});
+
+/*
+ * Seeding the /tree planner from a shared build.
+ */
 
 test('the planner opens seeded from a shared build via ?from', function () {
-    $shared = SharedBuild::create([
-        'slug' => 'seedme12345A',
-        'build' => shareableBuild(),
-    ]);
+    $shared = makeSharedBuild(['slug' => 'seedme12345A']);
 
     $this->get(route('tree', ['from' => $shared->slug]))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('tree')
+            ->where('mode', 'create')
             ->where('initialBuild.className', 'Witch')
             ->where('initialBuild.allocated', [4, 16, 30])
-        );
+            // A snapshot seed is not an edit session: no token comes with it.
+            ->where('editToken', null)
+        )
+        ->assertDontSee($shared->edit_token);
 });
 
 test('the planner opens empty without a from slug', function () {
@@ -176,6 +440,7 @@ test('the planner opens empty without a from slug', function () {
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('tree')
+            ->where('mode', 'create')
             ->where('initialBuild', null)
         );
 });

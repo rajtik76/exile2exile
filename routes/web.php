@@ -107,8 +107,9 @@ Route::get('tree', [TreeController::class, 'index'])->name('tree');
 // Decode a PoB code/pobb.in link into the renderer's allocation (class +
 // ascendancy + allocated node ids).
 Route::post('tree/allocation', [TreeController::class, 'allocation'])->name('tree.allocation');
-// Share the current passive-tree allocation as a public, read-only link. Throttled
-// per IP (guest action, no auth) so the endpoint can't be hammered to fill the table.
+// Save the current passive-tree allocation under a public slug and mint its secret
+// edit token - same guest model as the build planner. Throttled per IP (guest
+// action, no auth) so the endpoint can't be hammered to fill the table.
 Route::post('tree/share', [SharedBuildController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('shared.store');
@@ -124,6 +125,27 @@ Route::get('t/{slug}.json', [SharedBuildController::class, 'showJson'])
 Route::get('t/{sharedBuild}', [SharedBuildController::class, 'show'])
     ->whereAlphaNumeric('sharedBuild')
     ->name('shared.show');
+// The editor for a saved tree. Shows the unlock form until the session holds the
+// verified edit token; legacy token-less shares bounce back to the viewer.
+Route::get('t/{sharedBuild}/edit', [SharedBuildController::class, 'edit'])
+    ->whereAlphaNumeric('sharedBuild')
+    ->name('shared.edit');
+// Verify the secret edit token (submitted in the form body, never a URL) and unlock
+// the editor for this session. Throttled per IP so the token can't be brute-forced.
+Route::post('t/{sharedBuild}/unlock', [SharedBuildController::class, 'unlock'])
+    ->middleware('throttle:10,1')
+    ->whereAlphaNumeric('sharedBuild')
+    ->name('shared.unlock');
+Route::put('t/{sharedBuild}', [SharedBuildController::class, 'update'])
+    ->middleware('throttle:20,1')
+    ->whereAlphaNumeric('sharedBuild')
+    ->name('shared.update');
+// Delete a saved tree. The edit token is re-typed into the delete form and travels
+// only in the request body (never a URL); throttled per IP like the unlock form.
+Route::delete('t/{sharedBuild}', [SharedBuildController::class, 'destroy'])
+    ->middleware('throttle:10,1')
+    ->whereAlphaNumeric('sharedBuild')
+    ->name('shared.destroy');
 
 // Test-only harness for the class/ascendancy portrait snapshot test. Never
 // exposed in production.

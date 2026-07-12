@@ -6,16 +6,26 @@ namespace App\Http\Controllers;
 
 use App\Build\BuildDocument;
 use App\Build\BuildDocumentBuilder;
+use App\Http\Requests\DestroySharedBuildRequest;
 use App\Http\Requests\ShareBuildRequest;
+use App\Http\Requests\UpdateSharedBuildRequest;
 use App\Http\Resources\BuildDocumentResource;
 use App\Models\SharedBuild;
-use App\Support\BuildHash;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Shared passive trees: a guest saves an allocation under a public slug (/t/{slug})
+ * and edits it only with the secret token minted at save time - the same account-less
+ * guest model as {@see PlannerController}. Rows shared before the edit flow carry no
+ * token and stay read-only forever.
+ */
 class SharedBuildController extends Controller
 {
     /**
@@ -23,6 +33,18 @@ class SharedBuildController extends Controller
      * enough that links are unguessable and collisions are vanishing.
      */
     private const int SLUG_LENGTH = 12;
+
+    /**
+     * Length of the secret edit token. Longer than the slug: it is the only thing
+     * standing between a public link and a mutable tree.
+     */
+    private const int TOKEN_LENGTH = 64;
+
+    /** Wrong unlock attempts (per build + IP) before a cool-off kicks in. */
+    private const int UNLOCK_MAX_ATTEMPTS = 3;
+
+    /** How long the unlock cool-off lasts once the attempt cap is hit, in seconds. */
+    private const int UNLOCK_LOCK_SECONDS = 900;
 
     /**
      * Bumped whenever {@see BuildDocumentBuilder}'s output shape or resolution
@@ -33,28 +55,29 @@ class SharedBuildController extends Controller
     private const int DOCUMENT_VERSION = 4;
 
     /**
-     * Persist a guest's passive-tree allocation under a fresh public slug and
-     * hand back the shareable link. Each share is its own immutable row: there is
-     * no owner, no dedup and no edit - to change a build, re-share it (see the
-     * phase-1 guest model). Validation and sanitising live in {@see ShareBuildRequest}.
+     * Persist a guest's passive-tree allocation under a fresh public slug, mint its
+     * secret edit token and land the author on the edit page holding it. The unlock
+     * is remembered in the session, so the author arrives straight in the editor
+     * without the token ever touching a URL - they must save the token (shown in the
+     * editor's link panel) to unlock again from another browser.
+     *
+     * Every save is its own row: shares used to be content-addressed (identical
+     * trees collapsed to one row), but an editable row is owned by whoever holds
+     * its token, so two authors must never converge on the same link.
      */
-    public function store(ShareBuildRequest $request): JsonResponse
+    public function store(ShareBuildRequest $request): RedirectResponse
     {
-        $build = $request->build();
+        $token = Str::random(self::TOKEN_LENGTH);
 
-        // Content-addressed: an identical tree collapses to the row it already
-        // owns, so re-sharing returns the same link instead of a duplicate.
-        // createOrFirst is race-safe: two identical concurrent shares can't both insert -
-        // the loser's unique-hash violation is caught and the existing row returned.
-        $shared = SharedBuild::createOrFirst(
-            ['hash' => BuildHash::canonical($build)],
-            ['slug' => $this->freshSlug(), 'build' => $build],
-        );
-
-        return response()->json([
-            'slug' => $shared->slug,
-            'url' => route('shared.show', $shared),
+        $shared = SharedBuild::create([
+            'slug' => $this->freshSlug(),
+            'edit_token' => $token,
+            'build' => $request->build(),
         ]);
+
+        $request->session()->put($shared->unlockSessionKey(), $token);
+
+        return to_route('shared.edit', ['sharedBuild' => $shared->slug]);
     }
 
     /**
@@ -65,14 +88,15 @@ class SharedBuildController extends Controller
     public function show(SharedBuild $sharedBuild, BuildDocumentBuilder $builder, Cache $cache): Response
     {
         // Record the visit so a future cleanup can prune links nobody opens.
-        // forceFill + saveQuietly leaves `updated_at` untouched - the row is
-        // otherwise immutable, and no model events need to fire on a view.
+        // forceFill + saveQuietly leaves `updated_at` untouched - viewing mutates
+        // nothing else, and no model events need to fire on a view.
         $sharedBuild->forceFill(['last_viewed_at' => now()])->saveQuietly();
 
         // Resolve once and cache; the JSON endpoint shares this exact entry, so a
         // build is built at most once however it is first opened, then served from
-        // cache forever. A never-opened build is never resolved. The plain array is
-        // cached (a value object doesn't survive Redis unserialize) and rebuilt.
+        // cache until the next edit invalidates it. A never-opened build is never
+        // resolved. The plain array is cached (a value object doesn't survive Redis
+        // unserialize) and rebuilt.
         $document = BuildDocument::fromArray($cache->rememberForever(
             $this->documentKey($sharedBuild->slug),
             fn (): array => $builder->build($sharedBuild->build)->toArray(),
@@ -80,8 +104,10 @@ class SharedBuildController extends Controller
 
         return Inertia::render('tree/shared', [
             'build' => $sharedBuild->build,
-            // Lets the viewer link back into the editable planner (/tree?from=slug).
             'slug' => $sharedBuild->slug,
+            // Legacy pre-token rows have no edit flow, so the viewer hides its
+            // Edit entry for them.
+            'editable' => $sharedBuild->isEditable(),
             // Head metadata (app.blade.php): a digest and the JSON link.
             'meta' => [
                 'title' => $document->title(),
@@ -103,8 +129,127 @@ class SharedBuildController extends Controller
     }
 
     /**
+     * The editor for an existing shared tree. Reachable only once the session has
+     * been unlocked with the secret token (via {@see unlock()}); otherwise it shows
+     * the unlock form instead of the editor, so the public slug alone can't reach it.
+     * Legacy token-less rows have no editor at all and bounce to the viewer.
+     */
+    public function edit(SharedBuild $sharedBuild, Request $request): Response|RedirectResponse
+    {
+        if (! $sharedBuild->isEditable()) {
+            return to_route('shared.show', ['sharedBuild' => $sharedBuild->slug]);
+        }
+
+        if (! $sharedBuild->isUnlockedIn($request->session())) {
+            return Inertia::render('tree/unlock', [
+                'slug' => $sharedBuild->slug,
+                'className' => $sharedBuild->build['className'],
+            ]);
+        }
+
+        return Inertia::render('tree', [
+            'mode' => 'edit',
+            'slug' => $sharedBuild->slug,
+            'editToken' => $sharedBuild->edit_token,
+            'initialBuild' => $sharedBuild->build,
+        ]);
+    }
+
+    /**
+     * Verify the secret token submitted through the unlock form and, on success,
+     * remember it in the session before sending the author into the editor. The token
+     * travels only in this POST body - never a URL - and a wrong token bounces back
+     * with an error.
+     */
+    public function unlock(SharedBuild $sharedBuild, Request $request): RedirectResponse
+    {
+        abort_unless($sharedBuild->isEditable(), 404);
+
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+        ]);
+
+        // Hard lock after a few wrong tries. The 64-char token is unbruteforceable, so
+        // this is abuse/typo control rather than a real defence: three misses per
+        // build+IP buy a cool-off, and a correct unlock clears the counter.
+        $throttleKey = "tree-unlock:{$sharedBuild->slug}|".$request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::UNLOCK_MAX_ATTEMPTS)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return back()->withErrors([
+                'token' => "Too many attempts. Try again in {$seconds} seconds.",
+            ]);
+        }
+
+        if (! $sharedBuild->matchesEditToken($validated['token'])) {
+            RateLimiter::hit($throttleKey, self::UNLOCK_LOCK_SECONDS);
+
+            return back()->withErrors(['token' => 'That edit token is not valid for this build.']);
+        }
+
+        RateLimiter::clear($throttleKey);
+        $request->session()->put($sharedBuild->unlockSessionKey(), $validated['token']);
+
+        return to_route('shared.edit', ['sharedBuild' => $sharedBuild->slug]);
+    }
+
+    /**
+     * Save an edit. The token is verified in {@see UpdateSharedBuildRequest::authorize()}
+     * (the session must be unlocked); the allocation shape and node integrity are the
+     * same checks a fresh share passes. The forever-cached resolved document is dropped
+     * so the viewer and JSON endpoint re-resolve the edited tree.
+     */
+    public function update(SharedBuild $sharedBuild, UpdateSharedBuildRequest $request, Cache $cache): RedirectResponse
+    {
+        $sharedBuild->update(['build' => $request->build()]);
+
+        $cache->forget($this->documentKey($sharedBuild->slug));
+
+        // No token in the redirect URL: the session is already unlocked
+        // (UpdateSharedBuildRequest required it).
+        return to_route('shared.edit', ['sharedBuild' => $sharedBuild->slug]);
+    }
+
+    /**
+     * Delete a shared tree for good. Double-gated: {@see DestroySharedBuildRequest::authorize()}
+     * requires the unlocked session, and the token re-typed into the delete form must
+     * match - timing-safe, rate-limited like {@see unlock()} so a lingering unlock
+     * can't be abused to guess a rotated token. The token arrives only in the request
+     * body and is never echoed, logged or flashed; the redirect carries none of it.
+     */
+    public function destroy(SharedBuild $sharedBuild, DestroySharedBuildRequest $request, Cache $cache): RedirectResponse
+    {
+        $throttleKey = "tree-destroy:{$sharedBuild->slug}|".$request->ip();
+
+        // Errors land back on the editor even when the Referer is stripped.
+        $fallback = route('shared.edit', ['sharedBuild' => $sharedBuild->slug]);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::UNLOCK_MAX_ATTEMPTS)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return back(fallback: $fallback)->withErrors([
+                'token' => "Too many attempts. Try again in {$seconds} seconds.",
+            ]);
+        }
+
+        if (! $sharedBuild->matchesEditToken($request->string('token')->toString())) {
+            RateLimiter::hit($throttleKey, self::UNLOCK_LOCK_SECONDS);
+
+            return back(fallback: $fallback)->withErrors(['token' => 'That edit token is not valid for this build.']);
+        }
+
+        RateLimiter::clear($throttleKey);
+        $request->session()->forget($sharedBuild->unlockSessionKey());
+        $cache->forget($this->documentKey($sharedBuild->slug));
+        $sharedBuild->delete();
+
+        return to_route('tree');
+    }
+
+    /**
      * The machine-readable build document, resolved through {@see BuildDocumentBuilder}
-     * and cached forever (a shared build is immutable). Shares its cache entry with
+     * and cached until the next edit invalidates it. Shares its cache entry with
      * the page view, so on a hit neither the builder runs nor the DB is read.
      */
     public function showJson(string $slug, BuildDocumentBuilder $builder, Cache $cache): JsonResponse

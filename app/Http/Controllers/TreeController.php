@@ -29,6 +29,9 @@ class TreeController extends Controller
             : null;
 
         return Inertia::render('tree', [
+            'mode' => 'create',
+            'slug' => null,
+            'editToken' => null,
             'initialBuild' => $initialBuild,
         ]);
     }

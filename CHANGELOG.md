@@ -3,6 +3,10 @@
 Key changes, newest first. Built in the open; the full history lives in git.
 
 ## 2026-07-12
+- Saved passive trees are now editable, the same way build-planner guides are: saving a tree mints its public link and a secret edit token, and the tree can be reopened, changed and saved again at its own edit page, unlocked by the token. The token travels only in form bodies - never a URL - wrong tokens are rate-limited, and every save is its own build with its own link.
+- The editor's new link panel lists the public link, the edit link and the token in one place, each with a copy button that gives clear feedback - this also fixes the share link's copy button, which did nothing in some browsers. The token stays masked until revealed, and the panel works comfortably on a phone.
+- A saved tree can be deleted from its editor: the token is re-typed to confirm, and the build, its public page and its machine-readable document all go at once.
+- On a shared tree's page, "Open in planner" is replaced by "Edit", which leads to the build's own editor. Editing changes the build behind the existing link, so a shared route stays one link even as it evolves. Trees shared before today have no edit token, so they stay exactly as shared - read-only, at the same URLs.
 - The passive tree now paints weapon sets in the game's own colours: weapon set I is red and weapon set II green, on the node frames, the lit rails, the point counters and the paint toggle alike. The delete preview - the path a click would remove - moves from red to magenta, so it can no longer be mistaken for a weapon set I path. The palette is also a public contract of the tree renderer now: any consumer of the toolkit can retint both sets and the removal preview.
 
 ## 2026-07-11

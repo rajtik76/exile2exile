@@ -17,13 +17,21 @@ const httpForm = {
     setData: vi.fn((key: string, value: string) => {
         httpForm.data[key as 'code'] = value;
     }),
-    transform: vi.fn(),
     post: vi.fn(),
     processing: false,
 };
 
+/** Router stub for the save flow: create POSTs, edit PUTs; callbacks are manual. */
+// vi.hoisted: the mock factory below is hoisted above this file's const
+// declarations, so the stub must be created in a hoisted block too.
+const routerMock = vi.hoisted(() => ({
+    post: vi.fn(),
+    put: vi.fn(),
+}));
+
 vi.mock('@inertiajs/react', () => ({
     useHttp: () => httpForm,
+    router: routerMock,
 }));
 
 // Resolve a class name to the live id, the same join classCatalog does, but
@@ -76,9 +84,10 @@ describe('usePlannerState', () => {
     beforeEach(() => {
         httpForm.data = { code: '' };
         httpForm.setData.mockClear();
-        httpForm.transform.mockClear();
         httpForm.post.mockReset();
         httpForm.processing = false;
+        routerMock.post.mockReset();
+        routerMock.put.mockReset();
     });
 
     it('defaults to the first playable class once the tree loads', () => {
@@ -232,151 +241,257 @@ describe('usePlannerState', () => {
         expect(result.current.allocation?.allocated).toEqual([100, 200]);
     });
 
-    it('shares the current allocation and exposes the link', () => {
-        httpForm.post.mockImplementation((_url: string, options) => {
-            options.onSuccess({ slug: 'abc', url: 'https://x.test/t/abc' });
-        });
-
+    it('creates the build with a POST on first save', () => {
         const { result } = renderHook(() => usePlannerState(makeTreeData()));
 
         act(() => {
             result.current.applyAllocation({ classId: 0, allocated: [100] });
         });
 
-        expect(result.current.canShare).toBe(true);
+        expect(result.current.canSave).toBe(true);
 
         act(() => {
-            result.current.share();
+            result.current.save();
         });
 
-        expect(httpForm.transform).toHaveBeenCalled();
-        expect(result.current.shareUrl).toBe('https://x.test/t/abc');
+        expect(routerMock.post).toHaveBeenCalledTimes(1);
+        const [url, payload] = routerMock.post.mock.calls[0];
+        expect(url).toBe('/tree/share');
+        expect(payload).toMatchObject({
+            className: 'Warrior',
+            allocated: [100],
+        });
+        expect(routerMock.put).not.toHaveBeenCalled();
     });
 
-    it('reuses the link instead of re-sharing an unchanged tree', () => {
-        httpForm.post.mockImplementation((_url: string, options) => {
-            options.onSuccess({ slug: 'abc', url: 'https://x.test/t/abc' });
-        });
-
-        const { result } = renderHook(() => usePlannerState(makeTreeData()));
-
-        act(() => {
-            result.current.applyAllocation({ classId: 0, allocated: [100] });
-        });
-        act(() => {
-            result.current.share();
-        });
-        act(() => {
-            result.current.share();
-        });
-
-        // Second click on the same tree must not mint another row.
-        expect(httpForm.post).toHaveBeenCalledTimes(1);
-        expect(result.current.shareUrl).toBe('https://x.test/t/abc');
-    });
-
-    it('treats a share reply without a url as a failure', () => {
-        httpForm.post.mockImplementation((_url: string, options) => {
-            // The url field is missing.
-            options.onSuccess({ slug: 'abc' });
-        });
-
-        const { result } = renderHook(() => usePlannerState(makeTreeData()));
-
-        act(() => {
-            result.current.applyAllocation({ classId: 0, allocated: [100] });
-        });
-        act(() => {
-            result.current.share();
-        });
-
-        expect(result.current.shareUrl).toBeNull();
-        expect(result.current.shareError).toBe(
-            'Could not create a share link. Try again.',
+    it('updates the saved build with a PUT from the editor', () => {
+        const { result } = renderHook(() =>
+            usePlannerState(
+                makeTreeData(),
+                {
+                    className: 'Witch',
+                    ascendId: 'Infernalist',
+                    allocated: [100],
+                },
+                { mode: 'edit', slug: 'abc123' },
+            ),
         );
-    });
 
-    it('surfaces a share error when the request fails', () => {
-        httpForm.post.mockImplementation((_url: string, options) => {
-            options.onError();
-        });
-
-        const { result } = renderHook(() => usePlannerState(makeTreeData()));
-
-        act(() => {
-            result.current.applyAllocation({ classId: 0, allocated: [100] });
-        });
-        act(() => {
-            result.current.share();
-        });
-
-        expect(result.current.shareUrl).toBeNull();
-        expect(result.current.shareError).toBe(
-            'Could not create a share link. Try again.',
-        );
-    });
-
-    it('clears a share outcome on demand', () => {
-        httpForm.post.mockImplementation((_url: string, options) => {
-            options.onSuccess({ slug: 'abc', url: 'https://x.test/t/abc' });
-        });
-
-        const { result } = renderHook(() => usePlannerState(makeTreeData()));
-
-        act(() => {
-            result.current.applyAllocation({ classId: 0, allocated: [100] });
-        });
-        act(() => {
-            result.current.share();
-        });
-        act(() => {
-            result.current.clearShare();
-        });
-
-        expect(result.current.shareUrl).toBeNull();
-        expect(result.current.shareError).toBeNull();
-    });
-
-    it('does not share while a request is already in flight', () => {
-        httpForm.processing = true;
-
-        const { result } = renderHook(() => usePlannerState(makeTreeData()));
-
-        act(() => {
-            result.current.applyAllocation({ classId: 0, allocated: [100] });
-        });
-        act(() => {
-            result.current.share();
-        });
-
-        expect(httpForm.post).not.toHaveBeenCalled();
-    });
-
-    it('drops a stale share link once the tree is edited', () => {
-        httpForm.post.mockImplementation((_url: string, options) => {
-            options.onSuccess({ slug: 'abc', url: 'https://x.test/t/abc' });
-        });
-
-        const { result } = renderHook(() => usePlannerState(makeTreeData()));
-
-        act(() => {
-            result.current.applyAllocation({ classId: 0, allocated: [100] });
-        });
-        act(() => {
-            result.current.share();
-        });
-
-        expect(result.current.shareUrl).toBe('https://x.test/t/abc');
-
-        // A further edit produces a new allocation, so the old link no longer
-        // matches the tree and must disappear.
         act(() => {
             result.current.applyAllocation({
-                classId: 0,
+                classId: 1,
+                ascendId: 'Infernalist',
+                allocated: [100, 101],
+            });
+        });
+        act(() => {
+            result.current.save();
+        });
+
+        expect(routerMock.put).toHaveBeenCalledTimes(1);
+        const [url, payload] = routerMock.put.mock.calls[0];
+        expect(url).toBe('/t/abc123');
+        expect(payload).toMatchObject({ allocated: [100, 101] });
+        expect(routerMock.post).not.toHaveBeenCalled();
+    });
+
+    it('seeds the editor unlocked and clean, and a node edit marks it dirty', () => {
+        const { result } = renderHook(() =>
+            usePlannerState(
+                makeTreeData(),
+                {
+                    className: 'Witch',
+                    ascendId: 'Infernalist',
+                    allocated: [100],
+                },
+                { mode: 'edit', slug: 'abc123' },
+            ),
+        );
+
+        // The editor is the author's own build: pickers stay usable (no import
+        // lock) and the just-loaded tree matches its saved copy.
+        expect(result.current.imported).toBe(false);
+        expect(result.current.dirty).toBe(false);
+
+        act(() => {
+            result.current.applyAllocation({
+                classId: 1,
+                ascendId: 'Infernalist',
                 allocated: [100, 101],
             });
         });
 
-        expect(result.current.shareUrl).toBeNull();
+        expect(result.current.dirty).toBe(true);
+    });
+
+    it('marks the tree clean again after a successful update', () => {
+        routerMock.put.mockImplementation((_url, _payload, options) => {
+            options.onSuccess();
+            options.onFinish();
+        });
+
+        const { result } = renderHook(() =>
+            usePlannerState(
+                makeTreeData(),
+                { className: 'Witch', ascendId: null, allocated: [100] },
+                { mode: 'edit', slug: 'abc123' },
+            ),
+        );
+
+        act(() => {
+            result.current.applyAllocation({
+                classId: 1,
+                allocated: [100, 101],
+            });
+        });
+        act(() => {
+            result.current.save();
+        });
+
+        expect(result.current.dirty).toBe(false);
+        expect(result.current.saved).toBe(true);
+        expect(result.current.saving).toBe(false);
+    });
+
+    it('surfaces the first validation message when a save fails', () => {
+        routerMock.post.mockImplementation((_url, _payload, options) => {
+            options.onError({ allocated: 'That node does not exist.' });
+            options.onFinish();
+        });
+
+        const { result } = renderHook(() => usePlannerState(makeTreeData()));
+
+        act(() => {
+            result.current.applyAllocation({ classId: 0, allocated: [100] });
+        });
+        act(() => {
+            result.current.save();
+        });
+
+        expect(result.current.saveError).toBe('That node does not exist.');
+        expect(result.current.saving).toBe(false);
+    });
+
+    it('does not save while a request is already in flight', () => {
+        // post never calls onFinish, so the first save stays in flight.
+        const { result } = renderHook(() => usePlannerState(makeTreeData()));
+
+        act(() => {
+            result.current.applyAllocation({ classId: 0, allocated: [100] });
+        });
+        act(() => {
+            result.current.save();
+        });
+        act(() => {
+            result.current.save();
+        });
+
+        expect(routerMock.post).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not save an empty planner', () => {
+        const { result } = renderHook(() => usePlannerState(makeTreeData()));
+
+        expect(result.current.canSave).toBe(false);
+
+        act(() => {
+            result.current.save();
+        });
+
+        expect(routerMock.post).not.toHaveBeenCalled();
+        expect(routerMock.put).not.toHaveBeenCalled();
+    });
+
+    it('keeps the live allocation when the editor props arrive after a first save', () => {
+        // After the create POST the server redirects into edit mode; the same
+        // component re-renders with the saved build as initialBuild. The live
+        // allocation must not be overwritten (no canvas reframe), and it counts
+        // as the saved copy.
+        const initialProps: {
+            build: Parameters<typeof usePlannerState>[1];
+            options: Parameters<typeof usePlannerState>[2];
+        } = { build: null, options: { mode: 'create', slug: null } };
+
+        const { result, rerender } = renderHook(
+            ({ build, options }) =>
+                usePlannerState(makeTreeData(), build, options),
+            { initialProps },
+        );
+
+        act(() => {
+            result.current.applyAllocation({ classId: 0, allocated: [100] });
+        });
+        const liveAllocation = result.current.allocation;
+        const frameBefore = result.current.frameToken;
+
+        rerender({
+            build: { className: 'Warrior', ascendId: null, allocated: [100] },
+            options: { mode: 'edit', slug: 'abc123' },
+        });
+
+        expect(result.current.allocation).toBe(liveAllocation);
+        expect(result.current.frameToken).toBe(frameBefore);
+        expect(result.current.dirty).toBe(false);
+    });
+
+    it('keeps the picked class across the first-save redirect', () => {
+        // Before the save the class comes from the derived default (nothing was
+        // explicitly picked); once initialBuild appears that default yields to
+        // it, so the transition must pin the class - otherwise the picker falls
+        // back to "Choose a class" and the canvas centre goes blank.
+        const initialProps: {
+            build: Parameters<typeof usePlannerState>[1];
+            options: Parameters<typeof usePlannerState>[2];
+        } = { build: null, options: { mode: 'create', slug: null } };
+
+        const { result, rerender } = renderHook(
+            ({ build, options }) =>
+                usePlannerState(makeTreeData(), build, options),
+            { initialProps },
+        );
+
+        expect(result.current.classId).toBe(0);
+
+        act(() => {
+            result.current.applyAllocation({ classId: 0, allocated: [100] });
+        });
+
+        rerender({
+            build: { className: 'Warrior', ascendId: null, allocated: [100] },
+            options: { mode: 'edit', slug: 'abc123' },
+        });
+
+        expect(result.current.classId).toBe(0);
+    });
+
+    it('wipes the build when the editor navigates back to the blank planner', () => {
+        // A delete redirects to /tree on this same component: every trace of the
+        // dead build must leave with it, or it would keep haunting the canvas.
+        const initialProps: {
+            build: Parameters<typeof usePlannerState>[1];
+            options: Parameters<typeof usePlannerState>[2];
+        } = {
+            build: { className: 'Witch', ascendId: null, allocated: [100] },
+            options: { mode: 'edit', slug: 'abc123' },
+        };
+
+        const { result, rerender } = renderHook(
+            ({ build, options }) =>
+                usePlannerState(makeTreeData(), build, options),
+            { initialProps },
+        );
+
+        expect(result.current.allocation?.allocated).toEqual([100]);
+
+        rerender({
+            build: null,
+            options: { mode: 'create', slug: null },
+        });
+
+        expect(result.current.allocation).toBeNull();
+        // Back to the blank planner's derived default class.
+        expect(result.current.classId).toBe(0);
+        expect(result.current.ascendancy).toBeNull();
+        expect(result.current.imported).toBe(false);
     });
 });

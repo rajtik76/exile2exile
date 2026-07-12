@@ -1,13 +1,20 @@
 import type { AscendancyDef, ClassDef } from '@poe2-toolkit/tree-core';
 import { useEffect, useRef, useState } from 'react';
 import { ClassPortrait, classPortrait } from '@/components/build/classPortrait';
+import TreeSharePanel from '@/components/passive-tree/TreeSharePanel';
 import { ClearGlyph, Divider, INPUT_FONT, PANEL_FONT, PLAQUE } from './chrome';
 
 /**
  * The planner's control bar, sitting above the tree on the /tree page: the
- * class and ascendancy pickers and the Path of Building importer. Lifted out of
- * {@link PassiveTreeView} so the canvas component carries only what's bound to
- * it (zoom, search, the point gauge); this is the build chrome the page owns.
+ * class and ascendancy pickers, the Path of Building importer and the save
+ * action. Lifted out of {@link PassiveTreeView} so the canvas component carries
+ * only what's bound to it (zoom, search, the point gauge); this is the build
+ * chrome the page owns.
+ *
+ * In `edit` mode (the editor of a saved tree) the importer is dropped - the
+ * build already exists, so there is nothing to import into it - and the bar
+ * instead carries Save changes plus the link panel with the public/edit URLs,
+ * the edit token and the delete flow.
  *
  * The page hides the whole bar while the tree is fullscreen, so the pickers and
  * importer are a windowed-only affordance.
@@ -20,17 +27,23 @@ export function PlannerControls({
     activeAscendancy,
     onSelectAscendancy,
     locked,
+    mode,
     code,
     onCode,
     onLoad,
     loading,
     error,
-    canShare,
-    onShare,
-    onCloseShare,
-    sharing,
-    shareUrl,
-    shareError,
+    canSave,
+    dirty,
+    onSave,
+    saving,
+    saved,
+    saveError,
+    slug,
+    editToken,
+    panelOpen,
+    onTogglePanel,
+    onClosePanel,
 }: {
     classes: ClassDef[];
     activeClassId: number | null;
@@ -39,21 +52,27 @@ export function PlannerControls({
     activeAscendancy: string | null;
     onSelectAscendancy: (id: string | null) => void;
     locked: boolean;
+    mode: 'create' | 'edit';
     code: string;
     onCode: (value: string) => void;
     onLoad: () => void;
     loading: boolean;
     error: string | null;
-    canShare: boolean;
-    onShare: () => void;
-    onCloseShare: () => void;
-    sharing: boolean;
-    shareUrl: string | null;
-    shareError: string | null;
+    canSave: boolean;
+    dirty: boolean;
+    onSave: () => void;
+    saving: boolean;
+    saved: boolean;
+    saveError: string | null;
+    slug: string | null;
+    editToken: string | null;
+    panelOpen: boolean;
+    onTogglePanel: () => void;
+    onClosePanel: () => void;
 }) {
     // `relative z-20` gives the bar its own stacking context above the tree
-    // canvas below, so an open dropdown overhangs the tree instead of being
-    // painted over by it.
+    // canvas below, so an open dropdown (or the link panel) overhangs the tree
+    // instead of being painted over by it.
     return (
         <div
             className="relative z-20 flex w-full flex-wrap items-stretch gap-3 border-b border-[#40331a] bg-[#1e1409] px-3 py-3 sm:gap-4 sm:px-6 sm:py-4"
@@ -68,19 +87,96 @@ export function PlannerControls({
                 onSelectAscendancy={onSelectAscendancy}
                 locked={locked}
             />
-            <BuildImporter
-                code={code}
-                onCode={onCode}
-                onLoad={onLoad}
-                loading={loading}
-                error={error}
-                canShare={canShare}
-                onShare={onShare}
-                onCloseShare={onCloseShare}
-                sharing={sharing}
-                shareUrl={shareUrl}
-                shareError={shareError}
-            />
+            {mode === 'create' ? (
+                <BuildImporter
+                    code={code}
+                    onCode={onCode}
+                    onLoad={onLoad}
+                    loading={loading}
+                    error={error}
+                    canSave={canSave}
+                    onSave={onSave}
+                    saving={saving}
+                    saveError={saveError}
+                />
+            ) : (
+                <EditorActions
+                    canSave={canSave}
+                    dirty={dirty}
+                    onSave={onSave}
+                    saving={saving}
+                    saved={saved}
+                    saveError={saveError}
+                    panelOpen={panelOpen}
+                    onTogglePanel={onTogglePanel}
+                />
+            )}
+
+            {mode === 'edit' && panelOpen && slug && editToken && (
+                <TreeSharePanel
+                    slug={slug}
+                    editToken={editToken}
+                    onClose={onClosePanel}
+                />
+            )}
+        </div>
+    );
+}
+
+/**
+ * The saved-tree editor's action plaque: the link panel toggle and Save changes.
+ * Save is disabled while the tree matches its saved copy, and reads out the
+ * in-flight and just-saved states so the author always knows where they stand.
+ */
+function EditorActions({
+    canSave,
+    dirty,
+    onSave,
+    saving,
+    saved,
+    saveError,
+    panelOpen,
+    onTogglePanel,
+}: {
+    canSave: boolean;
+    dirty: boolean;
+    onSave: () => void;
+    saving: boolean;
+    saved: boolean;
+    saveError: string | null;
+    panelOpen: boolean;
+    onTogglePanel: () => void;
+}) {
+    return (
+        <div className="ml-auto flex items-center">
+            <div
+                className={`flex h-full items-center gap-1 px-1 py-1 ${PLAQUE}`}
+            >
+                <button
+                    type="button"
+                    onClick={onTogglePanel}
+                    aria-expanded={panelOpen}
+                    title="Public link, edit link and token"
+                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#b39a64] uppercase transition-colors hover:bg-[#f0c869]/12 hover:text-[#ecc878] focus-visible:bg-[#f0c869]/12 focus-visible:text-[#ecc878] focus-visible:outline-none"
+                >
+                    Links
+                </button>
+                <Divider />
+                <button
+                    type="button"
+                    onClick={onSave}
+                    disabled={saving || !canSave || (!dirty && !saveError)}
+                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/22 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/22 focus-visible:text-[#ffdf9a] focus-visible:outline-none disabled:text-[#5a4d30] disabled:hover:bg-transparent"
+                >
+                    {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save changes'}
+                </button>
+            </div>
+
+            {saveError && (
+                <p className="absolute top-full right-3.5 z-30 mt-1 rounded-full bg-[#1a0c0c]/80 px-3 py-1 text-xs text-[#e07a7a]">
+                    {saveError}
+                </p>
+            )}
         </div>
     );
 }
@@ -99,7 +195,9 @@ const SEGMENT_LOCKED =
 /**
  * The build importer: paste a PoB code or pobb.in link to read its allocation
  * in. It wears the same bronze {@link PLAQUE} shell as the pickers and stretches
- * to fill the rest of the bar.
+ * to fill the rest of the bar. Save & share persists the tree - the server
+ * answers by redirecting into the edit page with the fresh public link, edit
+ * link and token in its panel.
  */
 function BuildImporter({
     code,
@@ -107,24 +205,20 @@ function BuildImporter({
     onLoad,
     loading,
     error,
-    canShare,
-    onShare,
-    onCloseShare,
-    sharing,
-    shareUrl,
-    shareError,
+    canSave,
+    onSave,
+    saving,
+    saveError,
 }: {
     code: string;
     onCode: (value: string) => void;
     onLoad: () => void;
     loading: boolean;
     error: string | null;
-    canShare: boolean;
-    onShare: () => void;
-    onCloseShare: () => void;
-    sharing: boolean;
-    shareUrl: string | null;
-    shareError: string | null;
+    canSave: boolean;
+    onSave: () => void;
+    saving: boolean;
+    saveError: string | null;
 }) {
     return (
         <div className="relative w-full md:w-auto md:min-w-0 md:flex-1">
@@ -171,12 +265,12 @@ function BuildImporter({
                 <Divider />
                 <button
                     type="button"
-                    onClick={onShare}
-                    disabled={!canShare || sharing}
-                    title="Create a shareable link to this tree"
+                    onClick={onSave}
+                    disabled={!canSave || saving}
+                    title="Save this tree and get its public link and edit token"
                     className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/22 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/22 focus-visible:text-[#ffdf9a] focus-visible:outline-none disabled:text-[#5a4d30] disabled:hover:bg-transparent"
                 >
-                    {sharing ? 'Sharing…' : 'Share'}
+                    {saving ? 'Saving…' : 'Save & share'}
                 </button>
             </div>
 
@@ -186,86 +280,11 @@ function BuildImporter({
                 </p>
             )}
 
-            {shareError && !error && (
+            {saveError && !error && (
                 <p className="absolute top-full right-3.5 mt-1 rounded-full bg-[#1a0c0c]/80 px-3 py-1 text-xs text-[#e07a7a]">
-                    {shareError}
+                    {saveError}
                 </p>
             )}
-
-            {shareUrl && !shareError && (
-                <ShareLink url={shareUrl} onClose={onCloseShare} />
-            )}
-        </div>
-    );
-}
-
-/**
- * The freshly minted share URL with a one-click copy. Sits under the importer
- * once a share succeeds; copying falls back to selecting the field where the
- * clipboard API is unavailable (insecure origins).
- */
-function ShareLink({ url, onClose }: { url: string; onClose: () => void }) {
-    const [copied, setCopied] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    // Escape closes the read-out, matching the dropdowns' dismiss key.
-    useEffect(() => {
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                onClose();
-            }
-        };
-
-        window.addEventListener('keydown', onKey);
-
-        return () => window.removeEventListener('keydown', onKey);
-    }, [onClose]);
-
-    const copy = () => {
-        inputRef.current?.select();
-        navigator.clipboard?.writeText(url).then(
-            () => {
-                setCopied(true);
-                window.setTimeout(() => setCopied(false), 2000);
-            },
-            () => {},
-        );
-    };
-
-    return (
-        <div
-            className={`absolute top-full right-0 left-0 z-30 mt-2 flex items-center gap-1 py-1 pr-1 pl-3.5 ${PLAQUE}`}
-        >
-            <span className="shrink-0 text-[10px] font-semibold tracking-[0.16em] text-[#8a7850] uppercase">
-                Link
-            </span>
-            <input
-                ref={inputRef}
-                value={url}
-                readOnly
-                onFocus={(event) => event.target.select()}
-                // Plain Fontin like the import field - a URL must read literally,
-                // not in the bar's SmallCaps.
-                style={INPUT_FONT}
-                className="h-full min-w-0 flex-1 bg-transparent text-base font-medium tracking-wide text-[#f5ecd8] outline-none"
-            />
-            <button
-                type="button"
-                onClick={copy}
-                className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/22 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/22 focus-visible:text-[#ffdf9a] focus-visible:outline-none"
-            >
-                {copied ? 'Copied' : 'Copy'}
-            </button>
-            <Divider />
-            <button
-                type="button"
-                onClick={onClose}
-                title="Close"
-                aria-label="Close share link"
-                className="grid size-7 shrink-0 place-items-center rounded-full text-[#8a7850] transition-colors hover:bg-[#f0c869]/10 hover:text-[#ecc878] focus-visible:text-[#ecc878] focus-visible:outline-none"
-            >
-                <ClearGlyph />
-            </button>
         </div>
     );
 }

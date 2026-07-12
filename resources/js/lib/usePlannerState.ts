@@ -1,4 +1,5 @@
-import { useHttp } from '@inertiajs/react';
+import type { RequestPayload } from '@inertiajs/core';
+import { router, useHttp } from '@inertiajs/react';
 import {
     clearAscendancyAllocation,
     freshAllocation,
@@ -15,12 +16,14 @@ import type {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { resolveClassId } from '@/lib/classCatalog';
 import { isNumberArray, isRecord } from '@/lib/guards';
+import shared from '@/routes/shared';
 
 /**
  * A shared build's allocation as the server stores and replays it: the class by
  * *name* (the import's numeric id is not stable across versions), the ascendancy
  * id, allocated nodes, attribute choices, jewels and the tree version. Seeds the
- * editable planner when /tree opens with `?from={slug}`.
+ * editable planner when /tree opens with `?from={slug}` and when the editor for
+ * a saved tree (/t/{slug}/edit) loads its build.
  */
 export interface SharedTreeBuild {
     className: string;
@@ -32,8 +35,8 @@ export interface SharedTreeBuild {
     treeVersion?: string | null;
 }
 
-/** The payload the share endpoint persists - the live canvas allocation. */
-interface SharePayload {
+/** The payload the save endpoints persist - the live canvas allocation. */
+interface SavePayload {
     className: string;
     ascendId: string | null;
     allocated: number[];
@@ -41,12 +44,6 @@ interface SharePayload {
     weaponSets: Record<number, WeaponSet>;
     jewels: Record<number, JewelInfo>;
     treeVersion: string | null;
-}
-
-/** The share endpoint's JSON reply: the new row's slug and its public URL. */
-interface ShareResponse {
-    slug: string;
-    url: string;
 }
 
 /**
@@ -59,6 +56,10 @@ interface ShareResponse {
  * Node-click editing (and the 123-point budget it enforces) stays in the
  * component, on the canvas where it happens; this hook owns everything the
  * surrounding chrome touches.
+ *
+ * Saving mirrors the build planner's guest model: a first save POSTs the tree
+ * and the server redirects into /t/{slug}/edit holding the freshly minted edit
+ * token; later saves PUT the same slug from the unlocked editor.
  */
 export interface PlannerState {
     allocation: BuildAllocation | null;
@@ -83,48 +84,46 @@ export interface PlannerState {
     clearBuild: () => void;
     /** Store an allocation the controlled component emitted from a node edit. */
     applyAllocation: (next: BuildAllocation) => void;
-    /** True once there is a class and an allocation worth sharing. */
-    canShare: boolean;
-    /** A share request is in flight. */
-    sharing: boolean;
-    /** Public URL of the most recent share, or null until one is created. */
-    shareUrl: string | null;
-    shareError: string | null;
-    /** Persist the current allocation as a public link and expose its URL. */
-    share: () => void;
-    /** Dismiss the share read-out (closes its row in the bar). */
-    clearShare: () => void;
+    /** True once there is a class and an allocation worth saving. */
+    canSave: boolean;
+    /** True while the tree differs from its last saved copy (always true unsaved). */
+    dirty: boolean;
+    /** A save request is in flight. */
+    saving: boolean;
+    /** Flashes true for a moment after a successful update. */
+    saved: boolean;
+    saveError: string | null;
+    /**
+     * Persist the tree: a first save creates the build and the server redirects
+     * to its edit page (minting the public link and edit token); from the edit
+     * page it updates the saved build in place.
+     */
+    save: () => void;
 }
 
 export function usePlannerState(
     data: TreeData | null,
     initialBuild: SharedTreeBuild | null = null,
+    options: { mode?: 'create' | 'edit'; slug?: string | null } = {},
 ): PlannerState {
+    const mode = options.mode ?? 'create';
+    const slug = options.slug ?? null;
+
     const [allocation, setAllocation] = useState<BuildAllocation | null>(null);
     const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
     const [ascendancy, setAscendancy] = useState<string | null>(null);
     const [imported, setImported] = useState(false);
     const [frameToken, setFrameToken] = useState(0);
     const [buildError, setBuildError] = useState<string | null>(null);
-    // The last share's outcome, pinned to the allocation it was made for. Any edit
-    // produces a new allocation object, so reference equality alone tells us the
-    // link is stale - no effect, no copying a URL that no longer matches the tree.
-    const [shareResult, setShareResult] = useState<{
-        for: BuildAllocation | null;
-        url: string | null;
-        error: string | null;
-    }>({ for: null, url: null, error: null });
+    // The allocation as last persisted, compared by reference: any node edit
+    // produces a new allocation object, so identity alone tells us the tree on
+    // screen has drifted from its saved copy.
+    const [lastSaved, setLastSaved] = useState<BuildAllocation | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     const buildForm = useHttp({ code: '' });
-    const shareForm = useHttp<SharePayload, ShareResponse>({
-        className: '',
-        ascendId: null,
-        allocated: [],
-        attributeChoices: {},
-        weaponSets: {},
-        jewels: {},
-        treeVersion: null,
-    });
 
     // Playable classes only - GGG's export also carries legacy classes with no
     // ascendancies (e.g. Marauder) and no portrait art, which must not appear in
@@ -147,19 +146,37 @@ export function usePlannerState(
         [classes, classId],
     );
 
-    // Seed the editable planner from a shared build (/tree?from={slug}) once the
-    // tree data is in. It adopts the allocation as a snapshot - tree only, no gems
-    // or items - and locks class/ascendancy like a PoB import does.
-    const seeded = useRef(false);
+    // Which page (create, or a build's editor) the seed below already ran for.
+    // Keying it this way lets a navigation to a *different* build's editor seed
+    // again on the same mounted component.
+    const seededFor = useRef<string | null>(null);
+    const identity =
+        mode === 'edit' && slug !== null ? `edit:${slug}` : 'create';
+
+    // Seed the planner from a server-provided build once the tree data is in:
+    // a shared snapshot (/tree?from={slug}) or the editor of a saved tree
+    // (/t/{slug}/edit). A snapshot locks class/ascendancy like a PoB import
+    // does; the editor keeps them pickable - it IS the author's own build.
+    //
+    // The seed is skipped when an allocation is already on screen: after a first
+    // save the server redirects back into edit mode with the same page component
+    // mounted, and overwriting the live allocation with its just-saved copy would
+    // only reframe the canvas.
     useEffect(() => {
-        if (seeded.current || !data || !initialBuild) {
+        if (seededFor.current === identity || !data || !initialBuild) {
+            return;
+        }
+
+        seededFor.current = identity;
+
+        if (allocation !== null) {
             return;
         }
 
         const resolvedClassId =
             resolveClassId(data, initialBuild.className) ?? undefined;
 
-        setAllocation({
+        const seededAllocation: BuildAllocation = {
             classId: resolvedClassId,
             ascendId: initialBuild.ascendId ?? undefined,
             allocated: initialBuild.allocated,
@@ -167,13 +184,61 @@ export function usePlannerState(
             weaponSets: initialBuild.weaponSets,
             jewels: initialBuild.jewels,
             treeVersion: initialBuild.treeVersion ?? undefined,
-        });
+        };
+
+        setAllocation(seededAllocation);
         setSelectedClassId(resolvedClassId ?? null);
         setAscendancy(initialBuild.ascendId ?? null);
-        setImported(true);
+        setImported(mode !== 'edit');
         setFrameToken((token) => token + 1);
-        seeded.current = true;
-    }, [data, initialBuild]);
+
+        if (mode === 'edit') {
+            setLastSaved(seededAllocation);
+        }
+        // The allocation guard is a mount-time condition, not a reactive dependency:
+        // re-running the seed on every node edit would immediately mark it done anyway.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data, initialBuild, mode, identity]);
+
+    // Inertia reuses this page component across navigations, so mode/slug changes
+    // arrive as prop changes on live state. React to the transitions with a
+    // render-phase state adjustment (not an effect - React re-renders immediately
+    // with the fixed state):
+    //
+    //  - create → edit (the redirect after a first save): the tree on screen IS
+    //    the saved copy - adopt it, and pin the picked class so the derived
+    //    default (which yields to a present initialBuild) doesn't blank the
+    //    pickers and the canvas centre.
+    //  - anything → create (a delete, or navigating to the blank /tree): wipe
+    //    everything, or the dead build would keep haunting the canvas.
+    //  - edit → a different edit: wipe and let the seed take the new build in.
+    const [lastIdentity, setLastIdentity] = useState(identity);
+
+    if (identity !== lastIdentity) {
+        const cameFromCreate = lastIdentity === 'create';
+
+        setLastIdentity(identity);
+
+        if (identity !== 'create' && cameFromCreate) {
+            if (allocation !== null && lastSaved === null) {
+                setLastSaved(allocation);
+            }
+
+            if (selectedClassId === null && data && initialBuild) {
+                setSelectedClassId(
+                    resolveClassId(data, initialBuild.className) ?? null,
+                );
+            }
+        } else {
+            setAllocation(null);
+            setSelectedClassId(null);
+            setAscendancy(null);
+            setImported(false);
+            setLastSaved(null);
+            setBuildError(null);
+            setSaveError(null);
+        }
+    }
 
     const selectClass = (nextClassId: number) => {
         setSelectedClassId(nextClassId);
@@ -250,66 +315,61 @@ export function usePlannerState(
     };
 
     const className = classes.find((cls) => cls.id === classId)?.name ?? null;
-    const canShare = allocation !== null && className !== null;
+    const canSave = allocation !== null && className !== null;
+    const dirty = allocation !== lastSaved;
 
-    const share = () => {
-        if (allocation === null || className === null || shareForm.processing) {
+    const save = () => {
+        if (allocation === null || className === null || saving) {
             return;
         }
 
-        // The current tree is already shared - reuse that link instead of minting
-        // a duplicate row on every click. An edit produces a new allocation object,
-        // so this only short-circuits while nothing has changed.
-        if (shareResult.for === allocation && shareResult.url !== null) {
-            return;
-        }
+        // Capture the allocation this save is for: on success it becomes the
+        // saved copy, even if the user kept editing while the request ran.
+        const savedAllocation = allocation;
 
-        // Capture the allocation this share is for, so its outcome is shown only
-        // while the tree on screen still matches it.
-        const sharedAllocation = allocation;
-
-        setShareResult({ for: sharedAllocation, url: null, error: null });
-        shareForm.transform(() => ({
+        // The typed shape is asserted here once; Inertia's RequestPayload wants
+        // index-signature compatibility the toolkit's interfaces can't declare.
+        const payload = {
             className,
-            ascendId: sharedAllocation.ascendId ?? null,
-            allocated: sharedAllocation.allocated,
-            attributeChoices: sharedAllocation.attributeChoices ?? {},
-            weaponSets: sharedAllocation.weaponSets ?? {},
-            jewels: sharedAllocation.jewels ?? {},
-            treeVersion: sharedAllocation.treeVersion ?? null,
-        }));
-        void shareForm.post('/tree/share', {
-            onSuccess: (response) => {
-                // Adopt the link only when the reply actually carries one.
-                const url =
-                    isRecord(response) && typeof response.url === 'string'
-                        ? response.url
-                        : null;
+            ascendId: savedAllocation.ascendId ?? null,
+            allocated: savedAllocation.allocated,
+            attributeChoices: savedAllocation.attributeChoices ?? {},
+            weaponSets: savedAllocation.weaponSets ?? {},
+            jewels: savedAllocation.jewels ?? {},
+            treeVersion: savedAllocation.treeVersion ?? null,
+        } satisfies SavePayload as unknown as RequestPayload;
 
-                setShareResult({
-                    for: sharedAllocation,
-                    url,
-                    error: url
-                        ? null
-                        : 'Could not create a share link. Try again.',
-                });
+        setSaveError(null);
+        setSaving(true);
+
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => {
+                setLastSaved(savedAllocation);
+                setSaved(true);
+                window.setTimeout(() => setSaved(false), 2000);
             },
-            onError: () => {
-                setShareResult({
-                    for: sharedAllocation,
-                    url: null,
-                    error: 'Could not create a share link. Try again.',
-                });
+            onError: (errors: Record<string, string>) => {
+                setSaveError(
+                    Object.values(errors)[0] ??
+                        'Could not save the build. Try again.',
+                );
             },
-        });
-    };
+            onFinish: () => setSaving(false),
+        };
 
-    const clearShare = () => {
-        setShareResult({ for: null, url: null, error: null });
+        // A first save creates the row; the server redirects into the edit page
+        // holding the fresh edit token. Later saves update the row in place.
+        if (mode === 'edit' && slug !== null) {
+            router.put(
+                shared.update.url({ sharedBuild: slug }),
+                payload,
+                options,
+            );
+        } else {
+            router.post(shared.store.url(), payload, options);
+        }
     };
-
-    // The share outcome is only current while its allocation is still on screen.
-    const shareIsFresh = shareResult.for === allocation;
 
     return {
         allocation,
@@ -328,11 +388,11 @@ export function usePlannerState(
         loadBuild,
         clearBuild,
         applyAllocation: setAllocation,
-        canShare,
-        sharing: shareForm.processing,
-        shareUrl: shareIsFresh ? shareResult.url : null,
-        shareError: shareIsFresh ? shareResult.error : null,
-        share,
-        clearShare,
+        canSave,
+        dirty,
+        saving,
+        saved,
+        saveError,
+        save,
     };
 }
