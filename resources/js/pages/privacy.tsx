@@ -1,7 +1,7 @@
 import { CONTACT_EMAIL, useAppName } from '@/components/brand';
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-const UPDATED = 'June 25, 2026';
+const UPDATED = 'July 12, 2026';
 
 export default function Privacy() {
     const appName = useAppName();
@@ -35,6 +35,17 @@ export default function Privacy() {
                     <strong className="text-[#d6dae2]">Basic logs.</strong> Our
                     server keeps standard request logs (such as your IP address
                     and browser) to keep the site secure and prevent abuse.
+                </p>
+                <p>
+                    <strong className="text-[#d6dae2]">Newsletter.</strong> If
+                    you subscribe to our newsletter, we store your email
+                    address, and only after you confirm the subscription via the
+                    link we email you (double opt-in). We use it solely to send
+                    the newsletter - never for anything else, and we never share
+                    it. Every email contains an unsubscribe link; unsubscribing
+                    deletes your address immediately. Emails are delivered
+                    through Resend, our email provider, which processes your
+                    address on our behalf.
                 </p>
             </LegalSection>
 

@@ -1,0 +1,125 @@
+import { Link, useForm } from '@inertiajs/react';
+import { useAppName } from '@/components/brand';
+import { LegalPage, LegalSection } from '@/components/legal-page';
+import newsletter from '@/routes/newsletter';
+
+type Status = 'pending' | 'confirmed' | 'unsubscribed' | null;
+
+/** Flash banner for the double opt-in flow states. */
+function StatusBanner({ status }: { status: Status }) {
+    if (!status) {
+        return null;
+    }
+
+    const copy: Record<NonNullable<Status>, { title: string; body: string }> = {
+        pending: {
+            title: 'Almost there - check your inbox',
+            body: 'We sent you a confirmation link. Click it and you are on the list; until then we will not send you anything.',
+        },
+        confirmed: {
+            title: 'Subscription confirmed',
+            body: 'You are on the list. The next newsletter will land in your inbox.',
+        },
+        unsubscribed: {
+            title: 'You are unsubscribed',
+            body: 'Your address has been removed and you will not receive any further newsletters. You can sign up again anytime.',
+        },
+    };
+
+    return (
+        <div
+            role="status"
+            className="rounded-sm border border-[#c9a24a]/25 bg-[#c9a24a]/10 p-4"
+        >
+            <p className="font-ui text-xs font-semibold tracking-[0.14em] text-[#ecd49a] uppercase">
+                {copy[status].title}
+            </p>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-[#a7acb8]">
+                {copy[status].body}
+            </p>
+        </div>
+    );
+}
+
+/**
+ * Public newsletter signup. Double opt-in: the form only creates an
+ * unconfirmed subscriber and triggers a confirmation email; the signed links
+ * in our emails bounce back to this page with a `status` flash prop.
+ */
+export default function Newsletter({ status = null }: { status?: Status }) {
+    const appName = useAppName();
+    const form = useForm({ email: '' });
+
+    function submit(event: React.FormEvent): void {
+        event.preventDefault();
+        form.post(newsletter.store.url(), { preserveScroll: true });
+    }
+
+    return (
+        <LegalPage title="Newsletter" eyebrow="Stay in the loop">
+            <StatusBanner status={status} />
+
+            <LegalSection heading="What you get">
+                <p>
+                    An occasional email about what's new in {appName}: new
+                    tools, data updates for fresh PoE2 patches, and notable
+                    fixes. No spam, no schedule pressure - we only write when
+                    there is something worth reading.
+                </p>
+                <p>
+                    Every email includes a one-click unsubscribe link, and we
+                    never share your address with anyone.
+                </p>
+            </LegalSection>
+
+            <LegalSection heading="Subscribe">
+                <form onSubmit={submit} className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <label htmlFor="newsletter-email" className="sr-only">
+                            Email address
+                        </label>
+                        <input
+                            id="newsletter-email"
+                            type="email"
+                            required
+                            autoComplete="email"
+                            value={form.data.email}
+                            onChange={(event) =>
+                                form.setData('email', event.target.value)
+                            }
+                            placeholder="you@example.com"
+                            className="w-full rounded-sm border border-[#c9a24a]/20 bg-[#0c0c12] px-3 py-2 text-sm text-[#e6ecf6] placeholder:text-[#787d8a] focus:border-[#c9a24a]/50 focus:outline-none"
+                        />
+                        <button
+                            type="submit"
+                            disabled={
+                                form.processing || form.data.email.trim() === ''
+                            }
+                            className="shrink-0 rounded-sm border border-[#c9a24a]/40 bg-[#c9a24a]/15 px-4 py-2 font-ui text-xs font-semibold tracking-[0.14em] text-[#ecd49a] uppercase transition hover:bg-[#c9a24a]/25 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {form.processing ? 'Subscribing…' : 'Subscribe'}
+                        </button>
+                    </div>
+
+                    {form.errors.email && (
+                        <p className="text-sm text-[#e0a04f]">
+                            {form.errors.email}
+                        </p>
+                    )}
+
+                    <p className="text-xs leading-relaxed text-[#787d8a]">
+                        Double opt-in: we first send you a confirmation link,
+                        and nothing else until you click it. See our{' '}
+                        <Link
+                            href="/privacy"
+                            className="text-[#a7acb8] underline decoration-dotted underline-offset-2 transition hover:text-[#ecd49a]"
+                        >
+                            privacy policy
+                        </Link>{' '}
+                        for how we handle your address.
+                    </p>
+                </form>
+            </LegalSection>
+        </LegalPage>
+    );
+}

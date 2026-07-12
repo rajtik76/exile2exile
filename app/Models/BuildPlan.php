@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Http\Controllers\PlannerController;
 use App\Support\Planner\PlanSchema;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -24,6 +25,24 @@ use Illuminate\Support\Carbon;
  * @property int $schema_version
  * @property array<string, mixed> $data
  * @property Carbon|null $last_viewed_at
+ * @property int $id
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan whereData($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan whereEditToken($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan whereLastViewedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan whereSchemaVersion($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan whereSlug($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan whereTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BuildPlan whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
  */
 class BuildPlan extends Model
 {

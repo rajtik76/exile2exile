@@ -459,6 +459,9 @@ function Footer() {
                         <FooterLink href="/changelog" spa>
                             Changelog
                         </FooterLink>
+                        <FooterLink href="/newsletter" spa>
+                            Newsletter
+                        </FooterLink>
                         <FooterLink href="/credits" spa>
                             Credits &amp; licenses
                         </FooterLink>

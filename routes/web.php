@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\FilterController;
+use App\Http\Controllers\NewsletterSubscriberController;
 use App\Http\Controllers\PlannerController;
 use App\Http\Controllers\PlannerReferenceController;
 use App\Http\Controllers\SeoController;
@@ -146,6 +147,22 @@ Route::delete('t/{sharedTree}', [SharedTreeController::class, 'destroy'])
     ->middleware('throttle:10,1')
     ->whereAlphaNumeric('sharedTree')
     ->name('shared.destroy');
+
+// Newsletter signup with double opt-in. Confirm and unsubscribe are signed,
+// per-subscriber links sent by email: GET for humans, and unsubscribe also
+// accepts POST for RFC 8058 one-click unsubscribe from mail providers. A link
+// used after the row is gone (double click) still lands on the status page.
+Route::get('newsletter', [NewsletterSubscriberController::class, 'create'])->name('newsletter.create');
+Route::post('newsletter', [NewsletterSubscriberController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('newsletter.store');
+Route::get('newsletter/confirm/{subscriber}', [NewsletterSubscriberController::class, 'confirm'])
+    ->middleware(['signed', 'throttle:30,1'])
+    ->name('newsletter.confirm');
+Route::match(['get', 'post'], 'newsletter/unsubscribe/{subscriber}', [NewsletterSubscriberController::class, 'unsubscribe'])
+    ->middleware(['signed', 'throttle:30,1'])
+    ->missing(fn () => redirect()->route('newsletter.create')->with('newsletter.status', 'unsubscribed'))
+    ->name('newsletter.unsubscribe');
 
 // Test-only harness for the class/ascendancy portrait snapshot test. Never
 // exposed in production.

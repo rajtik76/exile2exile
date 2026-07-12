@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Http\Controllers\SharedTreeController;
 use App\Tree\TreeSnapshot;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -25,6 +26,25 @@ use Illuminate\Support\Carbon;
  * @property string|null $edit_token
  * @property TreeSnapshot $build
  * @property Carbon|null $last_viewed_at
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree query()
+ *
+ * @property int $id
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree whereBuild($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree whereEditToken($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree whereHash($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree whereLastViewedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree whereSlug($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SharedTree whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
  */
 class SharedTree extends Model
 {

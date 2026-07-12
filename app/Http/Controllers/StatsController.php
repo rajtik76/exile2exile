@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BuildPlan;
+use App\Models\NewsletterSubscriber;
 use App\Models\PageView;
 use App\Models\PatchSubscriber;
 use App\Models\SharedTree;
@@ -29,6 +30,8 @@ class StatsController extends Controller
                 'viewsLast30Days' => PageView::query()->where('created_at', '>=', $since)->count(),
                 'webhooksTotal' => PatchSubscriber::query()->count(),
                 'webhooksVerified' => PatchSubscriber::query()->verified()->count(),
+                'newsletterTotal' => NewsletterSubscriber::query()->count(),
+                'newsletterConfirmed' => NewsletterSubscriber::query()->confirmed()->count(),
                 'treesStored' => SharedTree::query()->count(),
                 'plansStored' => BuildPlan::query()->count(),
             ],

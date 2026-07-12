@@ -19,9 +19,11 @@
         "laravel/framework": "^13.7",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
-        "predis/predis": "^3.5"
+        "predis/predis": "^3.5",
+        "resend/resend-laravel": "^1.4"
     },
     "require-dev": {
+        "barryvdh/laravel-ide-helper": "^3.7",
         "fakerphp/faker": "^1.24",
         "larastan/larastan": "^3.9",
         "laravel/boost": "^2.0",
@@ -59,7 +61,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve --host=localhost\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve --host=localhost\" \"php artisan queue:listen --tries=1 --timeout=0 --queue=default,mail\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
         ],
         "lint": [
             "pint --parallel"
@@ -100,13 +102,17 @@
             "@cache:clear",
             "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Contract"
         ],
+        "test:browser": [
+            "@cache:clear",
+            "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Browser"
+        ],
+        "test:browser:update-snapshots": [
+            "@cache:clear",
+            "@php ./vendor/bin/pest --parallel --update-snapshots --testsuite=Browser"
+        ],
         "test:exclude-snapshots": [
             "@cache:clear",
             "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Unit,Feature"
-        ],
-        "test:update-snapshots": [
-            "@cache:clear",
-            "@php ./vendor/bin/pest --parallel --update-snapshots --testsuite=Browser"
         ],
         "test:js": [
             "npm run test:js"
