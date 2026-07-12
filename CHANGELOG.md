@@ -2,6 +2,9 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-07-12
+- The passive tree now paints weapon sets in the game's own colours: weapon set I is red and weapon set II green, on the node frames, the lit rails, the point counters and the paint toggle alike. The delete preview - the path a click would remove - moves from red to magenta, so it can no longer be mistaken for a weapon set I path. The palette is also a public contract of the tree renderer now: any consumer of the toolkit can retint both sets and the removal preview.
+
 ## 2026-07-11
 - Exile to Exile is now open source: a GitHub menu in the top navigation and links in the footer point to both public repositories (the app and the toolkit), and the credits page gained a Source code section. The repository ships a contributing guide, a public architecture overview, a security policy and issue templates, with questions routed to the Discord.
 - Importing from Path of Building now resolves craft-only modifiers instead of dropping them: desecrated and essence-only affixes, boss-influence modifiers, the dedicated breach-desecration mods and tiers boosted past a slot's natural ceiling all land on the item as the real affix. Modifier lines the game shows added together are split back into the affixes behind them, catalyst quality folded into a jewellery modifier is matched through, and flask charges and regeneration shown per second import with the right numbers. Across 37 test builds, dropped lines fell from 184 to 48, and builds importing without losing a single line rose from 9 to 15.

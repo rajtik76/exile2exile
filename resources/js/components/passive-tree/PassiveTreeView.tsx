@@ -22,7 +22,7 @@ import type {
     WeaponSetAllocation,
     WorldRect,
 } from '@poe2-toolkit/tree-core';
-import { TreeView } from '@poe2-toolkit/tree-react';
+import { DEFAULT_TREE_COLORS, TreeView } from '@poe2-toolkit/tree-react';
 import type {
     AllocationPreview,
     HighlightStyle,
@@ -50,18 +50,22 @@ const FALLBACK_POINT_LIMIT = 123;
 const FALLBACK_WEAPON_SET_LIMIT = 24;
 
 /**
- * Weapon-set accent colours, mirroring the renderer's set tints (set I green, set
- * II blue) so the counters and paint toggle read as the same sets drawn on the
- * tree. The basic tree keeps the gold chrome.
+ * Weapon-set accent colours, derived from the renderer's default set tints (set
+ * I red, set II green, the in-game colours) so the counters and paint toggle
+ * always read as the same sets drawn on the tree. The basic tree keeps the gold
+ * chrome.
  */
+const hexColor = (color: number): string =>
+    `#${color.toString(16).padStart(6, '0')}`;
+
 const WEAPON_SET_HEX: Record<WeaponSet, string> = {
-    1: '#4fbf7a',
-    2: '#4fa8ff',
+    1: hexColor(DEFAULT_TREE_COLORS.weaponSet[1]),
+    2: hexColor(DEFAULT_TREE_COLORS.weaponSet[2]),
 };
 
 /**
  * Gauge tint for the ascendancy budget - a violet, distinct from the gold basic
- * gauge and the weapon-set green/blue, so the four budgets read as one family.
+ * gauge and the weapon-set red/green, so the four budgets read as one family.
  */
 const ASCENDANCY_HEX = '#b48ce0';
 

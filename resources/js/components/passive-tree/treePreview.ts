@@ -9,8 +9,8 @@ export function edgeKey(a: number, b: number): string {
 
 /**
  * The hover preview for a click on `target`: the gold path it would allocate,
- * or the red set it would remove. `null` when the target is already a source or
- * unreachable.
+ * or the removal-tinted set it would remove. `null` when the target is already
+ * a source or unreachable.
  *
  * `mode` and `weaponSets` mirror the actual allocation rules so the preview never
  * suggests a route the click would refuse: a weapon-set path roots only at the
