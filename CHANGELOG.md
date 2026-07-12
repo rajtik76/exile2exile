@@ -2,6 +2,17 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-07-11
+- Exile to Exile is now open source: a GitHub menu in the top navigation and links in the footer point to both public repositories (the app and the toolkit), and the credits page gained a Source code section. The repository ships a contributing guide, a public architecture overview, a security policy and issue templates, with questions routed to the Discord.
+- Importing from Path of Building now resolves craft-only modifiers instead of dropping them: desecrated and essence-only affixes, boss-influence modifiers, the dedicated breach-desecration mods and tiers boosted past a slot's natural ceiling all land on the item as the real affix. Modifier lines the game shows added together are split back into the affixes behind them, catalyst quality folded into a jewellery modifier is matched through, and flask charges and regeneration shown per second import with the right numbers. Across 37 test builds, dropped lines fell from 184 to 48, and builds importing without losing a single line rose from 9 to 15.
+- Item rules were relaxed to what the game really allows: a Vaal corruption can add an extra rune socket (up to four on uniques such as Greymake), bases with all three defences import, quality can stack up to 100, and "Corrupted" and "Mirrored" are read as item flags rather than modifiers.
+- Fixed the modifier picker hiding every tier of a modifier found by an out-of-order search (searching "to attack" found "+# to Level of all Attack Skills" but then no tier of it); each step of the picker now starts with its own blank search box, and modifiers with no readable effect no longer appear as empty rows.
+- A saved build can now be deleted from the editor. Deleting is deliberately strict: the editor must be unlocked and the secret edit token re-typed into the confirm, wrong tokens are rate-limited, and the token never appears in a URL. A successful delete also clears the local draft, so the dead build cannot resurface.
+- The share panel was redesigned around it: one row each for the public and edit links, the edit token masked until revealed, copy buttons with clear feedback, and the delete behind a danger-zone footer.
+- New logo: an E2E mark built from the wordmark's own letterforms now sits in the top navigation, the footer and the favicon.
+- The editor now checks data crossing its boundaries: a stale local draft, a misshapen server reply or broken tree data is rejected at the source instead of crashing the page mid-render.
+- For contributors: pull requests now run the full lint-and-test gate in CI, each quality check runs as its own step, every suite runs against a fresh database, and the default tree view is pinned to a visual snapshot so a renderer change that alters the drawn scene fails loudly.
+
 ## 2026-07-08
 - The build planner reads better on phones: buttons, pickers, toggles and the phase bar now scale down to the screen, the phase bar is more compact, and the build-name placeholder stays legible over the moving backdrop.
 - Changing an item modifier now opens straight on the current modifier's tiers, with a clear back button to every other affix; the picker is wider where there's room and shows each modifier in full instead of cutting it off.
