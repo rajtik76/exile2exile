@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Models\SharedBuild;
+use App\Models\SharedTree;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -16,16 +16,16 @@ use Illuminate\Foundation\Http\FormRequest;
  * or history), and it is excluded from the old-input session flash on a validation
  * failure, so the secret is never persisted anywhere on the way through.
  */
-class DestroySharedBuildRequest extends FormRequest
+class DestroySharedTreeRequest extends FormRequest
 {
     /** @var list<string> */
     protected $dontFlash = ['token'];
 
     public function authorize(): bool
     {
-        $build = $this->route('sharedBuild');
+        $build = $this->route('sharedTree');
 
-        return $build instanceof SharedBuild && $build->isUnlockedIn($this->session());
+        return $build instanceof SharedTree && $build->isUnlockedIn($this->session());
     }
 
     /**

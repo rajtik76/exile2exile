@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Build\CachedTreeIndex;
-use App\Build\TreeIndex;
 use App\Filter\Economy\EconomyFilterBuilder;
 use App\Filter\Economy\PriceTierPolicy;
 use App\Filter\Neversink\NeversinkFilterRepository;
@@ -17,6 +15,8 @@ use App\Pob\Reference\LeagueReference;
 use App\Pob\Source\BuildSourceRegistry;
 use App\Pob\Source\PobbinSource;
 use App\Pob\Source\RawPobCodeSource;
+use App\Tree\CachedTreeIndex;
+use App\Tree\TreeIndex;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Facades\Date;

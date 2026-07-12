@@ -6,45 +6,15 @@ import {
 } from '@poe2-toolkit/tree-core';
 import type {
     AscendancyDef,
-    AttributeChoice,
     BuildAllocation,
     ClassDef,
-    JewelInfo,
     TreeData,
-    WeaponSet,
 } from '@poe2-toolkit/tree-core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { resolveClassId } from '@/lib/classCatalog';
 import { isNumberArray, isRecord } from '@/lib/guards';
 import shared from '@/routes/shared';
-
-/**
- * A shared build's allocation as the server stores and replays it: the class by
- * *name* (the import's numeric id is not stable across versions), the ascendancy
- * id, allocated nodes, attribute choices, jewels and the tree version. Seeds the
- * editable planner when /tree opens with `?from={slug}` and when the editor for
- * a saved tree (/t/{slug}/edit) loads its build.
- */
-export interface SharedTreeBuild {
-    className: string;
-    ascendId: string | null;
-    allocated: number[];
-    attributeChoices?: Record<number, AttributeChoice>;
-    weaponSets?: Record<number, WeaponSet>;
-    jewels?: Record<number, JewelInfo>;
-    treeVersion?: string | null;
-}
-
-/** The payload the save endpoints persist - the live canvas allocation. */
-interface SavePayload {
-    className: string;
-    ascendId: string | null;
-    allocated: number[];
-    attributeChoices: Record<number, AttributeChoice>;
-    weaponSets: Record<number, WeaponSet>;
-    jewels: Record<number, JewelInfo>;
-    treeVersion: string | null;
-}
+import type { TreeSnapshot } from '@/types/tree';
 
 /**
  * The planner's build state, lifted out of {@link PassiveTreeView} so the page
@@ -103,7 +73,7 @@ export interface PlannerState {
 
 export function usePlannerState(
     data: TreeData | null,
-    initialBuild: SharedTreeBuild | null = null,
+    initialBuild: TreeSnapshot | null = null,
     options: { mode?: 'create' | 'edit'; slug?: string | null } = {},
 ): PlannerState {
     const mode = options.mode ?? 'create';
@@ -337,7 +307,7 @@ export function usePlannerState(
             weaponSets: savedAllocation.weaponSets ?? {},
             jewels: savedAllocation.jewels ?? {},
             treeVersion: savedAllocation.treeVersion ?? null,
-        } satisfies SavePayload as unknown as RequestPayload;
+        } satisfies TreeSnapshot as unknown as RequestPayload;
 
         setSaveError(null);
         setSaving(true);
@@ -362,7 +332,7 @@ export function usePlannerState(
         // holding the fresh edit token. Later saves update the row in place.
         if (mode === 'edit' && slug !== null) {
             router.put(
-                shared.update.url({ sharedBuild: slug }),
+                shared.update.url({ sharedTree: slug }),
                 payload,
                 options,
             );

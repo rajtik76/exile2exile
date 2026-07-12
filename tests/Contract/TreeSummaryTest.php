@@ -1,7 +1,8 @@
 <?php
 
-use App\Build\BuildDocumentBuilder;
-use App\Models\SharedBuild;
+use App\Models\SharedTree;
+use App\Tree\TreeSnapshot;
+use App\Tree\TreeSummaryBuilder;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -25,7 +26,7 @@ function aiBuild(array $overrides = []): array
 }
 
 test('the builder applies the class override to a notable name', function () {
-    $document = app(BuildDocumentBuilder::class)->build(aiBuild());
+    $document = app(TreeSummaryBuilder::class)->build(TreeSnapshot::fromArray(aiBuild()));
 
     // 51184 is "Raw Power" on the base tree but the Witch shows "Raw Destruction"
     // in its place - the summary must reflect what the class actually sees.
@@ -36,7 +37,7 @@ test('the builder applies the class override to a notable name', function () {
 });
 
 test('the builder resolves class, ascendancy, keystones and attribute split', function () {
-    $document = app(BuildDocumentBuilder::class)->build(aiBuild());
+    $document = app(TreeSummaryBuilder::class)->build(TreeSnapshot::fromArray(aiBuild()));
 
     expect($document->class)->toBe('Witch')
         ->and($document->ascendancy)->toBe('Infernalist')
@@ -48,26 +49,26 @@ test('the builder resolves class, ascendancy, keystones and attribute split', fu
 test('the ascendancy resolves whether stored as a name or a tree id', function () {
     // Real imported shares store the PoB enum value - the display name itself -
     // while a tree-native share may store the tree id. Both must resolve.
-    $byName = app(BuildDocumentBuilder::class)->build(aiBuild(['ascendId' => 'Blood Mage']));
-    $byId = app(BuildDocumentBuilder::class)->build(aiBuild(['ascendId' => 'Witch2']));
+    $byName = app(TreeSummaryBuilder::class)->build(TreeSnapshot::fromArray(aiBuild(['ascendId' => 'Blood Mage'])));
+    $byId = app(TreeSummaryBuilder::class)->build(TreeSnapshot::fromArray(aiBuild(['ascendId' => 'Witch2'])));
 
     expect($byName->ascendancy)->toBe('Blood Mage')
         ->and($byId->ascendancy)->toBe('Blood Mage');
 });
 
 test('an attribute node without a recorded choice counts as unspecified', function () {
-    $document = app(BuildDocumentBuilder::class)->build(aiBuild([
+    $document = app(TreeSummaryBuilder::class)->build(TreeSnapshot::fromArray(aiBuild([
         'attributeChoices' => [22419 => 'int'],
-    ]));
+    ])));
 
     // 18407 is allocated but has no choice, so it lands in `unspecified`.
     expect($document->attributes)->toBe(['str' => 0, 'dex' => 0, 'int' => 1, 'unspecified' => 1]);
 });
 
 test('a node id absent from the current tree is skipped, not guessed', function () {
-    $document = app(BuildDocumentBuilder::class)->build(aiBuild([
+    $document = app(TreeSummaryBuilder::class)->build(TreeSnapshot::fromArray(aiBuild([
         'allocated' => [59636, 999999999],
-    ]));
+    ])));
 
     expect($document->pointsAllocated)->toBe(2)
         ->and($document->notables)->toHaveCount(1)
@@ -75,7 +76,7 @@ test('a node id absent from the current tree is skipped, not guessed', function 
 });
 
 test('the JSON endpoint serves a flat, versioned build document', function () {
-    $shared = SharedBuild::create(['slug' => 'aiDoc123XYZ0', 'build' => aiBuild()]);
+    $shared = SharedTree::create(['slug' => 'aiDoc123XYZ0', 'build' => aiBuild()]);
 
     $this->getJson(route('shared.json', $shared->slug))
         ->assertOk()
@@ -96,7 +97,7 @@ test('the JSON endpoint 404s for an unknown slug', function () {
 });
 
 test('the JSON endpoint is served from cache without re-reading the row', function () {
-    $shared = SharedBuild::create(['slug' => 'aiCache123XY', 'build' => aiBuild()]);
+    $shared = SharedTree::create(['slug' => 'aiCache123XY', 'build' => aiBuild()]);
 
     $first = $this->getJson(route('shared.json', $shared->slug))->assertOk();
 
@@ -116,7 +117,7 @@ test('the cached document survives a serializing cache store', function () {
     config(['cache.default' => 'file']);
     Cache::store('file')->flush();
 
-    $shared = SharedBuild::create(['slug' => 'aiSerialize12', 'build' => aiBuild()]);
+    $shared = SharedTree::create(['slug' => 'aiSerialize12', 'build' => aiBuild()]);
 
     $first = $this->getJson(route('shared.json', $shared->slug))->assertOk();
 
@@ -130,7 +131,7 @@ test('the cached document survives a serializing cache store', function () {
 });
 
 test('the shared page server-renders a machine-readable summary a raw fetch can read', function () {
-    $shared = SharedBuild::create(['slug' => 'aiHead123XYZ', 'build' => aiBuild()]);
+    $shared = SharedTree::create(['slug' => 'aiHead123XYZ', 'build' => aiBuild()]);
 
     $html = $this->get(route('shared.show', $shared->slug))->assertOk()->getContent();
 

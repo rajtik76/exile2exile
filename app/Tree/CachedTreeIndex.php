@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Build;
+namespace App\Tree;
 
 use App\Pob\Reference\LeagueReference;
 use Illuminate\Contracts\Cache\Repository as Cache;

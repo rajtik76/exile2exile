@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\SharedBuild;
+use App\Models\SharedTree;
 use Illuminate\Support\Str;
 
 /**
@@ -12,9 +12,9 @@ use Illuminate\Support\Str;
  * the user-visible "Copied ✓" feedback and the exact strings handed to the
  * clipboard, without depending on headless clipboard support.
  */
-function makeEditableTree(): SharedBuild
+function makeEditableTree(): SharedTree
 {
-    return SharedBuild::create([
+    return SharedTree::create([
         'slug' => Str::random(12),
         'edit_token' => Str::random(64),
         'build' => [
@@ -32,7 +32,7 @@ test('the editor panel copies the public link, the edit link and the token', fun
     $shared = makeEditableTree();
 
     // The edit URL is gated: unlock with the real token first, like the author would.
-    $page = visit(route('shared.edit', ['sharedBuild' => $shared->slug]));
+    $page = visit(route('shared.edit', ['sharedTree' => $shared->slug]));
 
     $page->assertSee('Unlock to edit')
         ->assertDontSee($shared->edit_token)

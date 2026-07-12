@@ -3,7 +3,8 @@ import { memo, useMemo } from 'react';
 import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
 import { resolveAscendancyName, resolveClassId } from '@/lib/classCatalog';
 import { useTreeData } from '@/lib/useTreeData';
-import type { PlanBuild, PlanTreeAllocation } from '@/types/planner';
+import type { PlanBuild } from '@/types/planner';
+import type { TreeAllocation } from '@/types/tree';
 
 /**
  * The planner's visual passive tree: a bounded, controlled {@link PassiveTreeView}
@@ -18,9 +19,9 @@ function PlannerTree({
     onAllocationChange,
 }: {
     build: PlanBuild;
-    allocation: PlanTreeAllocation;
+    allocation: TreeAllocation;
     editable: boolean;
-    onAllocationChange?: (allocation: PlanTreeAllocation) => void;
+    onAllocationChange?: (allocation: TreeAllocation) => void;
 }) {
     const { data } = useTreeData();
 
@@ -82,7 +83,7 @@ function PlannerTree({
             allocated: next.allocated,
             attributeChoices: next.attributeChoices ?? {},
             weaponSets: next.weaponSets ?? {},
-            jewels: (next.jewels ?? {}) as PlanTreeAllocation['jewels'],
+            jewels: (next.jewels ?? {}) as TreeAllocation['jewels'],
             treeVersion: next.treeVersion ?? null,
         });
     }

@@ -50,9 +50,9 @@ import type {
     PlanMode,
     PlanSection,
     PlanTab,
-    PlanTreeAllocation,
     SectionKey,
 } from '@/types/planner';
+import type { TreeAllocation } from '@/types/tree';
 
 /**
  * The build-plan editor, used for both a fresh plan (mode "create") and an existing
@@ -375,7 +375,7 @@ export default function PlannerEdit({
     // the author types elsewhere. The functional state update touches only the active
     // phase's tree, leaving every other branch's reference intact.
     const handleTreeAllocationChange = useCallback(
-        (allocation: PlanTreeAllocation) => {
+        (allocation: TreeAllocation) => {
             setPlanData((previous) => {
                 const key = sectionKeyRef.current;
                 const section = previous.sections[key] ?? emptySection();

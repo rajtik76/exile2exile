@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Build;
+namespace App\Tree;
 
 use Illuminate\Support\Str;
 
 /**
- * A shared build resolved into an AI- and human-readable summary: the class,
- * ascendancy and the allocated passives already named and classified, so a
- * reader never has to map node ids or apply per-class overrides itself.
+ * A shared passive tree resolved into an AI- and human-readable summary: the
+ * class, ascendancy and the allocated passives already named and classified, so
+ * a reader never has to map node ids or apply per-class overrides itself.
  *
  * The single source both the on-page summary/head and the `/t/{slug}.json`
  * endpoint render from, so the two can never drift.
  */
-final readonly class BuildDocument
+final readonly class TreeSummary
 {
     /**
      * @param  array{str: int, dex: int, int: int, unspecified: int}  $attributes

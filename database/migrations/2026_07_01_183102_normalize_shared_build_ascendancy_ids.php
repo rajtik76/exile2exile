@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Build\TreeIndex;
-use App\Models\SharedBuild;
-use App\Support\BuildHash;
+use App\Models\SharedTree;
+use App\Support\TreeHash;
+use App\Tree\TreeIndex;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -18,12 +19,20 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // On a fresh migration chain the model's table (shared_trees) does not exist
+        // yet - it is renamed from shared_builds in a later migration - and a fresh
+        // database holds no legacy rows to rewrite anyway. Production already ran
+        // this migration before the rename, against the old table name.
+        if (! Schema::hasTable(new SharedTree()->getTable())) {
+            return;
+        }
+
         // ascendancies[className] is keyed by internal id -> display name.
         $classes = app(TreeIndex::class)->classes();
 
-        SharedBuild::query()->chunkById(200, function ($builds) use ($classes): void {
+        SharedTree::query()->chunkById(200, function ($builds) use ($classes): void {
             foreach ($builds as $shared) {
-                $build = $shared->build;
+                $build = $shared->build->toArray();
                 $ascendId = $build['ascendId'] ?? null;
 
                 if (! is_string($ascendId)) {
@@ -42,7 +51,7 @@ return new class extends Migration
 
                 $shared->forceFill([
                     'build' => $build,
-                    'hash' => BuildHash::canonical($build),
+                    'hash' => TreeHash::canonical($build),
                 ])->saveQuietly();
             }
         });

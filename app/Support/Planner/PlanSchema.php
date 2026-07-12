@@ -6,6 +6,7 @@ namespace App\Support\Planner;
 
 use App\Models\BuildPlan;
 use App\Pob\ModCatalogue;
+use App\Tree\TreeAllocation;
 
 /**
  * The single source of truth for a build plan's stored JSON shape.
@@ -70,7 +71,7 @@ final class PlanSchema
     /**
      * @var list<string>
      */
-    public const array ATTRIBUTES = ['str', 'dex', 'int'];
+    public const array ATTRIBUTES = TreeAllocation::ATTRIBUTES;
 
     /**
      * Rarities an equipment item may have (a unique carries a unique ref, the rest a
@@ -163,7 +164,7 @@ final class PlanSchema
     ];
 
     /** Upper bound on allocated passive nodes stored per phase tree. */
-    private const int MAX_ALLOCATED = 600;
+    private const int MAX_ALLOCATED = TreeAllocation::MAX_NODES;
 
     /** A build runs at most 12 skill gems (one per group). */
     private const int MAX_GEM_GROUPS = 12;
@@ -615,46 +616,16 @@ final class PlanSchema
     }
 
     /**
-     * A phase's passive-tree allocation: the allocated node ids plus the choices the
-     * renderer replays (per-node attributes, weapon sets, jewels) and the tree
-     * version. Ids are coerced to clean integer lists; unknown extras are dropped.
+     * A phase's passive-tree allocation: the same shape every tree surface uses,
+     * repaired by {@see TreeAllocation::fromArray()} (integer node ids, whitelisted
+     * attribute choices and weapon sets, unknown extras dropped).
      *
      * @param  array<int|string, mixed>  $allocation
      * @return array{allocated: list<int>, attributeChoices: array<int, string>, weaponSets: array<int, int>, jewels: array<int|string, mixed>, treeVersion: ?string}
      */
     private static function canonicalAllocation(array $allocation): array
     {
-        $allocated = is_array($allocation['allocated'] ?? null)
-            ? array_values(array_slice(array_map(intval(...), $allocation['allocated']), 0, self::MAX_ALLOCATED))
-            : [];
-
-        $attributeChoices = [];
-
-        if (is_array($allocation['attributeChoices'] ?? null)) {
-            foreach ($allocation['attributeChoices'] as $node => $attribute) {
-                if (in_array($attribute, self::ATTRIBUTES, true)) {
-                    $attributeChoices[(int) $node] = (string) $attribute;
-                }
-            }
-        }
-
-        $weaponSets = [];
-
-        if (is_array($allocation['weaponSets'] ?? null)) {
-            foreach ($allocation['weaponSets'] as $node => $set) {
-                if (in_array((int) $set, [1, 2], true)) {
-                    $weaponSets[(int) $node] = (int) $set;
-                }
-            }
-        }
-
-        return [
-            'allocated' => $allocated,
-            'attributeChoices' => $attributeChoices,
-            'weaponSets' => $weaponSets,
-            'jewels' => is_array($allocation['jewels'] ?? null) ? $allocation['jewels'] : [],
-            'treeVersion' => is_string($allocation['treeVersion'] ?? null) && $allocation['treeVersion'] !== '' ? $allocation['treeVersion'] : null,
-        ];
+        return TreeAllocation::fromArray($allocation)->toArray();
     }
 
     /**

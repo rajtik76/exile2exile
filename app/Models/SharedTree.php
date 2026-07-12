@@ -4,28 +4,29 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Http\Controllers\SharedBuildController;
+use App\Http\Controllers\SharedTreeController;
+use App\Tree\TreeSnapshot;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 /**
- * A passive-tree build shared by a guest through a public, unguessable link.
+ * A passive-tree allocation shared by a guest through a public, unguessable link.
  *
  * We persist the rendered allocation (not a PoB code), so the viewer can draw it
  * without decoding and a hand-edited tree shares exactly like an imported one.
- * A share is read through its public {@see $slug} and edited only with the secret
+ * A tree is read through its public {@see $slug} and edited only with the secret
  * {@see $edit_token} minted at creation - the same account-less guest model as
  * {@see BuildPlan}. Rows shared before editing existed carry no token and stay
- * read-only (see {@see SharedBuildController}).
+ * read-only (see {@see SharedTreeController}).
  *
  * @property string $slug
  * @property string|null $hash
  * @property string|null $edit_token
- * @property array{className: string, ascendId: ?string, allocated: list<int>, attributeChoices?: array<int|string, string>, weaponSets?: array<int|string, int>, jewels?: array<int|string, mixed>, treeVersion?: ?string} $build
+ * @property TreeSnapshot $build
  * @property Carbon|null $last_viewed_at
  */
-class SharedBuild extends Model
+class SharedTree extends Model
 {
     /**
      * Resolve route-model bindings by the public slug, not the numeric id.
@@ -94,7 +95,7 @@ class SharedBuild extends Model
     protected function casts(): array
     {
         return [
-            'build' => 'array',
+            'build' => TreeSnapshot::class,
             'last_viewed_at' => 'datetime',
         ];
     }

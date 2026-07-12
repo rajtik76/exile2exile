@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BuildPlan;
 use App\Models\PageView;
 use App\Models\PatchSubscriber;
-use App\Models\SharedBuild;
+use App\Models\SharedTree;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -29,7 +29,7 @@ class StatsController extends Controller
                 'viewsLast30Days' => PageView::query()->where('created_at', '>=', $since)->count(),
                 'webhooksTotal' => PatchSubscriber::query()->count(),
                 'webhooksVerified' => PatchSubscriber::query()->verified()->count(),
-                'buildsStored' => SharedBuild::query()->count(),
+                'treesStored' => SharedTree::query()->count(),
                 'plansStored' => BuildPlan::query()->count(),
             ],
             'topPaths' => $this->topPaths(),

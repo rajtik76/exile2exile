@@ -3,8 +3,8 @@ import { useState } from 'react';
 import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
 import { PlannerControls } from '@/components/passive-tree/PlannerControls';
 import { usePlannerState } from '@/lib/usePlannerState';
-import type { SharedTreeBuild } from '@/lib/usePlannerState';
 import { useTreeData } from '@/lib/useTreeData';
+import type { TreeSnapshot } from '@/types/tree';
 
 /**
  * The passive-tree planner. The page owns the build (class, ascendancy,
@@ -32,7 +32,7 @@ export default function Tree({
     /** Secret edit token of the saved build, present only in `edit` mode. */
     editToken?: string | null;
     /** Allocation to seed from: /tree?from={slug} or the saved build's own tree. */
-    initialBuild?: SharedTreeBuild | null;
+    initialBuild?: TreeSnapshot | null;
 }) {
     const { data } = useTreeData();
     const planner = usePlannerState(data, initialBuild, { mode, slug });

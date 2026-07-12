@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Support;
 
-use App\Http\Controllers\SharedBuildController;
+use App\Http\Controllers\SharedTreeController;
 
-final class BuildHash
+final class TreeHash
 {
     /**
      * A stable sha256 of an allocation, order-independent: node lists are sorted
@@ -15,7 +15,7 @@ final class BuildHash
      * omitted when empty so a build with no set assignments hashes exactly like one
      * shared before weapon sets existed.
      *
-     * The single hasher shared by {@see SharedBuildController}
+     * The single hasher shared by {@see SharedTreeController}
      * (on create) and any data fix that re-hashes a row (e.g. the ascendancy-id
      * normalisation migration), so a rewritten build still dedups to its own row.
      * Null-safe for older rows that predate a field.

@@ -28,7 +28,7 @@ use Inertia\Response;
  * The build planner: a guest authors a build guide (a description, plus per-phase
  * items/gems/tree lists with priorities and notes) and saves it under a public
  * slug. Editing is gated by a secret token handed back at creation - same
- * account-less guest model as {@see SharedBuildController}. The stored JSON shape
+ * account-less guest model as {@see SharedTreeController}. The stored JSON shape
  * and all its rules live in {@see PlanSchema}.
  */
 class PlannerController extends Controller

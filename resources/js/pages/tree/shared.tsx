@@ -6,8 +6,8 @@ import { ClassPortrait, classPortrait } from '@/components/build/classPortrait';
 import { INPUT_FONT } from '@/components/passive-tree/chrome';
 import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
 import { resolveClassId } from '@/lib/classCatalog';
-import type { SharedTreeBuild } from '@/lib/usePlannerState';
 import { useTreeData } from '@/lib/useTreeData';
+import type { TreeSnapshot } from '@/types/tree';
 
 /**
  * The read-only viewer for a shared passive tree (/t/{slug}). It drops the
@@ -20,7 +20,7 @@ export default function SharedTree({
     build,
     meta,
 }: {
-    build: SharedTreeBuild;
+    build: TreeSnapshot;
     meta?: { title: string; description: string; alternateJson: string };
 }) {
     const { data } = useTreeData();

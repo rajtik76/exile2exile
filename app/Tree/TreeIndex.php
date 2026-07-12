@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Build;
+namespace App\Tree;
 
 /**
  * Read access to the current league's passive tree, resolved to the pieces a

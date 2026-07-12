@@ -21,7 +21,7 @@ export default function TreeUnlock({
 
     function submit(event: React.FormEvent): void {
         event.preventDefault();
-        form.post(shared.unlock.url({ sharedBuild: slug }), {
+        form.post(shared.unlock.url({ sharedTree: slug }), {
             preserveScroll: true,
         });
     }
@@ -103,7 +103,7 @@ export default function TreeUnlock({
                             {form.processing ? 'Unlocking…' : 'Unlock'}
                         </button>
                         <a
-                            href={shared.show.url({ sharedBuild: slug })}
+                            href={shared.show.url({ sharedTree: slug })}
                             className="text-sm text-[#8a7850] transition-colors hover:text-[#ecc878]"
                         >
                             Back to the build

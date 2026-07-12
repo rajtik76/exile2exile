@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Build\BuildDocument;
+use App\Tree\TreeSummary;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * The machine-readable shape of a shared build served at `/t/{slug}.json`. A flat,
+ * The machine-readable shape of a shared tree served at `/t/{slug}.json`. A flat,
  * versioned document (no `data` envelope) so an AI reading the page gets the build
  * on a plate: class, ascendancy and the passives already named and classified.
  *
  * `passives` mirrors the planned per-section shape, so items, gems and multiple
  * build sections slot in around it later without reshaping what exists.
  *
- * @property BuildDocument $resource
+ * @property TreeSummary $resource
  */
-final class BuildDocumentResource extends JsonResource
+final class TreeSummaryResource extends JsonResource
 {
     /**
      * Served as a canonical document, not a collection item - no `data` wrapper.

@@ -12,9 +12,9 @@ import type {
     PlanGroup,
     PlanSection,
     PlanTab,
-    PlanTreeAllocation,
     SectionKey,
 } from '@/types/planner';
+import type { TreeAllocation } from '@/types/tree';
 
 /** A short, collision-resistant id for a new entry or custom tab (client-only). */
 function uid(prefix: string): string {
@@ -40,7 +40,7 @@ export function emptyGroup(): PlanGroup {
     return { notes: '', entries: [] };
 }
 
-export function emptyAllocation(): PlanTreeAllocation {
+export function emptyAllocation(): TreeAllocation {
     return {
         allocated: [],
         attributeChoices: {},

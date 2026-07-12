@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SharedBuild;
+use App\Models\SharedTree;
 use App\Pob\Source\BuildSourceRegistry;
 use App\Pob\Validation\BuildValidator;
+use App\Tree\TreeAllocation;
+use App\Tree\TreeSnapshot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -25,7 +27,7 @@ class TreeController extends Controller
         $from = $request->query('from');
 
         $initialBuild = is_string($from)
-            ? SharedBuild::where('slug', $from)->value('build')
+            ? SharedTree::where('slug', $from)->value('build')
             : null;
 
         return Inertia::render('tree', [
@@ -73,24 +75,23 @@ class TreeController extends Controller
 
         $build = $validity->snapshot;
 
-        return response()->json([
-            // The build is identified by class *name*: PoB's numeric classId is
-            // not stable across versions (an older Mercenary exports as classId
-            // 3, which is Duelist in the live tree). The frontend resolves the
-            // name to the live GGG class id against the loaded tree.
-            'className' => $build->class->value,
-            'ascendId' => $build->ascendancy?->value,
-            'allocated' => $build->passiveNodes,
-            'attributeChoices' => $this->attributeChoices($build->attributeNodes),
-            // Node id -> weapon set (1 or 2). Cast to object so an empty set
-            // encodes as `{}` and the renderer looks it up by node id.
-            'weaponSets' => (object) $build->weaponSets,
-            // Socketed tree jewels, keyed by socket node id. Cast to object so an
-            // empty set encodes as `{}` (not a JSON array) and the renderer can
-            // always look it up by node id.
-            'jewels' => (object) $build->jewels,
-            'treeVersion' => $build->treeVersion,
-        ]);
+        // The build is identified by class *name*: PoB's numeric classId is
+        // not stable across versions (an older Mercenary exports as classId
+        // 3, which is Duelist in the live tree). The frontend resolves the
+        // name to the live GGG class id against the loaded tree. The snapshot's
+        // JSON form encodes the node-id-keyed maps as `{}` even when empty, the
+        // form the renderer looks up by node id.
+        return response()->json(new TreeSnapshot(
+            className: $build->class->value,
+            ascendId: $build->ascendancy?->value,
+            allocation: new TreeAllocation(
+                allocated: $build->passiveNodes,
+                attributeChoices: $this->attributeChoices($build->attributeNodes),
+                weaponSets: $build->weaponSets,
+                jewels: $build->jewels,
+                treeVersion: $build->treeVersion,
+            ),
+        ));
     }
 
     /**

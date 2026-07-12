@@ -7,7 +7,7 @@ type Totals = {
     viewsLast30Days: number;
     webhooksTotal: number;
     webhooksVerified: number;
-    buildsStored: number;
+    treesStored: number;
     plansStored: number;
 };
 
@@ -72,7 +72,7 @@ export default function Stats({
                         value={totals.webhooksTotal}
                         hint={`${nf.format(totals.webhooksVerified)} verified`}
                     />
-                    <Metric label="Builds stored" value={totals.buildsStored} />
+                    <Metric label="Trees stored" value={totals.treesStored} />
                     <Metric label="Plan builds" value={totals.plansStored} />
                 </div>
 

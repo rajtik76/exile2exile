@@ -4,13 +4,12 @@
  * the stored shape is a new schema version there and an update here.
  */
 
-import type { JewelInfo } from '@poe2-toolkit/tree-core';
+import type { TreeAllocation } from '@/types/tree';
 
 export type PlanMode = 'phases' | 'single';
 export type TabKind = 'base' | 'custom';
 export type SectionKey = 'items' | 'gems' | 'tree';
 export type GemKind = 'active' | 'support';
-export type PlanAttribute = 'str' | 'dex' | 'int';
 export type ReferenceType = 'gem' | 'rune' | 'unique' | 'base';
 
 /** A gem reference sitting in a gem group (resolved live, never persisted). */
@@ -103,15 +102,6 @@ export interface PlanBuild {
     ascendId: string | null;
 }
 
-/** A phase's passive-tree allocation (only the tree group carries one). */
-export interface PlanTreeAllocation {
-    allocated: number[];
-    attributeChoices: Record<number, PlanAttribute>;
-    weaponSets: Record<number, 1 | 2>;
-    jewels: Record<number, JewelInfo>;
-    treeVersion: string | null;
-}
-
 export interface PlanTab {
     id: string;
     label: string;
@@ -131,7 +121,7 @@ export interface PlanGroup {
     notes: string;
     entries: PlanEntry[];
     /** Present only on the tree group: the phase's visual passive-tree allocation. */
-    allocation?: PlanTreeAllocation;
+    allocation?: TreeAllocation;
     /** Present only on the tree group: notable/keystone skill ids in the order the
      * author allocated them - the "take this first" priority, built from tree clicks. */
     notablePriority?: number[];

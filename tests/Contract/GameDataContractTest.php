@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Build\TreeIndex;
 use App\Pob\IconResolver;
+use App\Tree\TreeIndex;
 use Illuminate\Support\Facades\Storage;
 
 /**

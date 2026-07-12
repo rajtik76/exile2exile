@@ -3,7 +3,7 @@
 use App\Models\BuildPlan;
 use App\Models\PageView;
 use App\Models\PatchSubscriber;
-use App\Models\SharedBuild;
+use App\Models\SharedTree;
 use App\Support\Planner\PlanSchema;
 use Inertia\Testing\AssertableInertia;
 
@@ -36,8 +36,8 @@ test('the dashboard renders aggregates with valid basic auth', function () {
     PageView::factory()->create(['path' => 'tree', 'visitor' => 'b']);
     PatchSubscriber::factory()->create(['verified_at' => now()]);
     PatchSubscriber::factory()->create(['verified_at' => null]);
-    SharedBuild::create(['slug' => 'a', 'build' => ['className' => 'Witch', 'ascendId' => null, 'allocated' => []]]);
-    SharedBuild::create(['slug' => 'b', 'build' => ['className' => 'Witch', 'ascendId' => null, 'allocated' => []]]);
+    SharedTree::create(['slug' => 'a', 'build' => ['className' => 'Witch', 'ascendId' => null, 'allocated' => []]]);
+    SharedTree::create(['slug' => 'b', 'build' => ['className' => 'Witch', 'ascendId' => null, 'allocated' => []]]);
 
     foreach (['p1', 'p2', 'p3'] as $slug) {
         BuildPlan::create([
@@ -58,7 +58,7 @@ test('the dashboard renders aggregates with valid basic auth', function () {
             ->where('totals.visitors', 2)
             ->where('totals.webhooksTotal', 2)
             ->where('totals.webhooksVerified', 1)
-            ->where('totals.buildsStored', 2)
+            ->where('totals.treesStored', 2)
             ->where('totals.plansStored', 3)
             ->where('topPaths.0.path', 'tree')
             ->where('topPaths.0.views', 4)

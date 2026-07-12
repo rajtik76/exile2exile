@@ -2,27 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Build;
+namespace App\Tree;
 
 /**
- * Turns a stored share allocation into a {@see BuildDocument}: resolves node ids
- * to names (applying the build's class overrides exactly as the renderer does),
+ * Turns a stored tree snapshot into a {@see TreeSummary}: resolves node ids
+ * to names (applying the class overrides exactly as the renderer does),
  * classifies notables and keystones, and breaks the attribute nodes down by
- * STR/DEX/INT. Unknown node ids (a build shared against a since-changed tree)
- * are skipped rather than guessed at.
+ * STR/DEX/INT. Unknown node ids (a tree shared against a since-changed tree
+ * export) are skipped rather than guessed at.
  */
-final readonly class BuildDocumentBuilder
+final readonly class TreeSummaryBuilder
 {
     public function __construct(private TreeIndex $tree) {}
 
-    /**
-     * @param  array{className?: string, ascendId?: ?string, allocated?: list<int>, attributeChoices?: array<int|string, string>, treeVersion?: ?string}  $build
-     */
-    public function build(array $build): BuildDocument
+    public function build(TreeSnapshot $snapshot): TreeSummary
     {
-        $className = (string) ($build['className'] ?? '');
-        $allocated = array_map(intval(...), $build['allocated'] ?? []);
-        $attributeChoices = $build['attributeChoices'] ?? [];
+        $className = $snapshot->className;
+        $allocated = $snapshot->allocation->allocated;
+        $attributeChoices = $snapshot->allocation->attributeChoices;
 
         $nodes = $this->tree->nodes();
         $class = $this->tree->classes()[$className] ?? null;
@@ -49,10 +46,10 @@ final readonly class BuildDocumentBuilder
             };
         }
 
-        return new BuildDocument(
+        return new TreeSummary(
             class: $className,
-            ascendancy: $this->resolveAscendancy($class, $build['ascendId'] ?? null),
-            treeVersion: $build['treeVersion'] ?? null,
+            ascendancy: $this->resolveAscendancy($class, $snapshot->ascendId),
+            treeVersion: $snapshot->allocation->treeVersion,
             pointsAllocated: count($allocated),
             attributes: $this->attributeBreakdown($attributeNodeIds, $attributeChoices),
             notables: $notables,

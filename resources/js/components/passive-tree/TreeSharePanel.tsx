@@ -30,8 +30,8 @@ export default function TreeSharePanel({
     const pageErrors = usePage().props.errors as Record<string, string>;
     const [deleting, setDeleting] = useState(() => Boolean(pageErrors?.token));
 
-    const publicUrl = resolve(shared.show.url({ sharedBuild: slug }));
-    const editUrl = resolve(shared.edit.url({ sharedBuild: slug }));
+    const publicUrl = resolve(shared.show.url({ sharedTree: slug }));
+    const editUrl = resolve(shared.edit.url({ sharedTree: slug }));
 
     return (
         <div className="absolute top-full right-3 left-3 z-30 mt-2 max-h-[calc(100dvh-160px)] overflow-y-auto rounded-xl border border-[#6e5526] bg-gradient-to-b from-[#15100a] to-[#0b0805] opacity-[0.97] shadow-lg shadow-black/45 backdrop-blur-sm sm:left-auto sm:w-[36rem] sm:max-w-[calc(100%-3rem)]">
@@ -296,7 +296,7 @@ function DeleteConfirm({
             return;
         }
 
-        form.delete(shared.destroy.url({ sharedBuild: slug }), {
+        form.delete(shared.destroy.url({ sharedTree: slug }), {
             preserveScroll: true,
         });
     }

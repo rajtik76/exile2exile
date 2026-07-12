@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Build\BuildDocument;
-use App\Build\BuildDocumentBuilder;
-use App\Http\Requests\DestroySharedBuildRequest;
-use App\Http\Requests\ShareBuildRequest;
-use App\Http\Requests\UpdateSharedBuildRequest;
-use App\Http\Resources\BuildDocumentResource;
-use App\Models\SharedBuild;
+use App\Http\Requests\DestroySharedTreeRequest;
+use App\Http\Requests\ShareTreeRequest;
+use App\Http\Requests\UpdateSharedTreeRequest;
+use App\Http\Resources\TreeSummaryResource;
+use App\Models\SharedTree;
+use App\Tree\TreeSummary;
+use App\Tree\TreeSummaryBuilder;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +26,7 @@ use Inertia\Response;
  * guest model as {@see PlannerController}. Rows shared before the edit flow carry no
  * token and stay read-only forever.
  */
-class SharedBuildController extends Controller
+class SharedTreeController extends Controller
 {
     /**
      * Length of the generated public slug. 12 base62 chars ≈ 71 bits - long
@@ -47,12 +47,14 @@ class SharedBuildController extends Controller
     private const int UNLOCK_LOCK_SECONDS = 900;
 
     /**
-     * Bumped whenever {@see BuildDocumentBuilder}'s output shape or resolution
-     * logic changes, so the forever-cached documents are re-resolved instead of
+     * Bumped whenever {@see TreeSummaryBuilder}'s output shape or resolution
+     * logic changes, so the forever-cached summaries are re-resolved instead of
      * served from a stale entry. v2: ascendancy name-vs-id fix. v4: cache holds the
-     * document's plain array (a value object failed to unserialize from Redis).
+     * summary's plain array (a value object failed to unserialize from Redis).
+     * v5: the key prefix moved from `ai.build.doc` to `tree.summary` (the
+     * BuildDocument -> TreeSummary rename); v4 entries are orphaned, not read.
      */
-    private const int DOCUMENT_VERSION = 4;
+    private const int SUMMARY_VERSION = 5;
 
     /**
      * Persist a guest's passive-tree allocation under a fresh public slug, mint its
@@ -65,11 +67,11 @@ class SharedBuildController extends Controller
      * trees collapsed to one row), but an editable row is owned by whoever holds
      * its token, so two authors must never converge on the same link.
      */
-    public function store(ShareBuildRequest $request): RedirectResponse
+    public function store(ShareTreeRequest $request): RedirectResponse
     {
         $token = Str::random(self::TOKEN_LENGTH);
 
-        $shared = SharedBuild::create([
+        $shared = SharedTree::create([
             'slug' => $this->freshSlug(),
             'edit_token' => $token,
             'build' => $request->build(),
@@ -77,7 +79,7 @@ class SharedBuildController extends Controller
 
         $request->session()->put($shared->unlockSessionKey(), $token);
 
-        return to_route('shared.edit', ['sharedBuild' => $shared->slug]);
+        return to_route('shared.edit', ['sharedTree' => $shared->slug]);
     }
 
     /**
@@ -85,42 +87,42 @@ class SharedBuildController extends Controller
      * plate over a full-screen, non-editable passive tree. The slug resolves the
      * row through route-model binding; an unknown slug 404s.
      */
-    public function show(SharedBuild $sharedBuild, BuildDocumentBuilder $builder, Cache $cache): Response
+    public function show(SharedTree $sharedTree, TreeSummaryBuilder $builder, Cache $cache): Response
     {
         // Record the visit so a future cleanup can prune links nobody opens.
         // forceFill + saveQuietly leaves `updated_at` untouched - viewing mutates
         // nothing else, and no model events need to fire on a view.
-        $sharedBuild->forceFill(['last_viewed_at' => now()])->saveQuietly();
+        $sharedTree->forceFill(['last_viewed_at' => now()])->saveQuietly();
 
         // Resolve once and cache; the JSON endpoint shares this exact entry, so a
         // build is built at most once however it is first opened, then served from
         // cache until the next edit invalidates it. A never-opened build is never
         // resolved. The plain array is cached (a value object doesn't survive Redis
         // unserialize) and rebuilt.
-        $document = BuildDocument::fromArray($cache->rememberForever(
-            $this->documentKey($sharedBuild->slug),
-            fn (): array => $builder->build($sharedBuild->build)->toArray(),
+        $summary = TreeSummary::fromArray($cache->rememberForever(
+            $this->summaryKey($sharedTree->slug),
+            fn (): array => $builder->build($sharedTree->build)->toArray(),
         ));
 
         return Inertia::render('tree/shared', [
-            'build' => $sharedBuild->build,
-            'slug' => $sharedBuild->slug,
+            'build' => $sharedTree->build,
+            'slug' => $sharedTree->slug,
             // Head metadata (app.blade.php): a digest and the JSON link.
             'meta' => [
-                'title' => $document->title(),
-                'description' => $document->description(),
-                'alternateJson' => route('shared.json', $sharedBuild->slug),
+                'title' => $summary->title(),
+                'description' => $summary->description(),
+                'alternateJson' => route('shared.json', $sharedTree->slug),
             ],
             // The resolved summary the blade template renders as visible (sr-only)
             // body text, so a plain HTML→markdown fetch - which strips head meta,
             // links and scripts and runs no JS - still reads the build off the page.
             'summary' => [
-                'class' => $document->class,
-                'ascendancy' => $document->ascendancy,
-                'pointsAllocated' => $document->pointsAllocated,
-                'attributes' => $document->attributes,
-                'notables' => array_column($document->notables, 'name'),
-                'keystones' => array_column($document->keystones, 'name'),
+                'class' => $summary->class,
+                'ascendancy' => $summary->ascendancy,
+                'pointsAllocated' => $summary->pointsAllocated,
+                'attributes' => $summary->attributes,
+                'notables' => array_column($summary->notables, 'name'),
+                'keystones' => array_column($summary->keystones, 'name'),
             ],
         ]);
     }
@@ -131,24 +133,24 @@ class SharedBuildController extends Controller
      * the unlock form instead of the editor, so the public slug alone can't reach it.
      * Legacy token-less rows have no editor at all and bounce to the viewer.
      */
-    public function edit(SharedBuild $sharedBuild, Request $request): Response|RedirectResponse
+    public function edit(SharedTree $sharedTree, Request $request): Response|RedirectResponse
     {
-        if (! $sharedBuild->isEditable()) {
-            return to_route('shared.show', ['sharedBuild' => $sharedBuild->slug]);
+        if (! $sharedTree->isEditable()) {
+            return to_route('shared.show', ['sharedTree' => $sharedTree->slug]);
         }
 
-        if (! $sharedBuild->isUnlockedIn($request->session())) {
+        if (! $sharedTree->isUnlockedIn($request->session())) {
             return Inertia::render('tree/unlock', [
-                'slug' => $sharedBuild->slug,
-                'className' => $sharedBuild->build['className'],
+                'slug' => $sharedTree->slug,
+                'className' => $sharedTree->build->className,
             ]);
         }
 
         return Inertia::render('tree', [
             'mode' => 'edit',
-            'slug' => $sharedBuild->slug,
-            'editToken' => $sharedBuild->edit_token,
-            'initialBuild' => $sharedBuild->build,
+            'slug' => $sharedTree->slug,
+            'editToken' => $sharedTree->edit_token,
+            'initialBuild' => $sharedTree->build,
         ]);
     }
 
@@ -158,9 +160,9 @@ class SharedBuildController extends Controller
      * travels only in this POST body - never a URL - and a wrong token bounces back
      * with an error.
      */
-    public function unlock(SharedBuild $sharedBuild, Request $request): RedirectResponse
+    public function unlock(SharedTree $sharedTree, Request $request): RedirectResponse
     {
-        abort_unless($sharedBuild->isEditable(), 404);
+        abort_unless($sharedTree->isEditable(), 404);
 
         $validated = $request->validate([
             'token' => ['required', 'string'],
@@ -169,7 +171,7 @@ class SharedBuildController extends Controller
         // Hard lock after a few wrong tries. The 64-char token is unbruteforceable, so
         // this is abuse/typo control rather than a real defence: three misses per
         // build+IP buy a cool-off, and a correct unlock clears the counter.
-        $throttleKey = "tree-unlock:{$sharedBuild->slug}|".$request->ip();
+        $throttleKey = "tree-unlock:{$sharedTree->slug}|".$request->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, self::UNLOCK_MAX_ATTEMPTS)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -179,48 +181,48 @@ class SharedBuildController extends Controller
             ]);
         }
 
-        if (! $sharedBuild->matchesEditToken($validated['token'])) {
+        if (! $sharedTree->matchesEditToken($validated['token'])) {
             RateLimiter::hit($throttleKey, self::UNLOCK_LOCK_SECONDS);
 
             return back()->withErrors(['token' => 'That edit token is not valid for this build.']);
         }
 
         RateLimiter::clear($throttleKey);
-        $request->session()->put($sharedBuild->unlockSessionKey(), $validated['token']);
+        $request->session()->put($sharedTree->unlockSessionKey(), $validated['token']);
 
-        return to_route('shared.edit', ['sharedBuild' => $sharedBuild->slug]);
+        return to_route('shared.edit', ['sharedTree' => $sharedTree->slug]);
     }
 
     /**
-     * Save an edit. The token is verified in {@see UpdateSharedBuildRequest::authorize()}
+     * Save an edit. The token is verified in {@see UpdateSharedTreeRequest::authorize()}
      * (the session must be unlocked); the allocation shape and node integrity are the
      * same checks a fresh share passes. The forever-cached resolved document is dropped
      * so the viewer and JSON endpoint re-resolve the edited tree.
      */
-    public function update(SharedBuild $sharedBuild, UpdateSharedBuildRequest $request, Cache $cache): RedirectResponse
+    public function update(SharedTree $sharedTree, UpdateSharedTreeRequest $request, Cache $cache): RedirectResponse
     {
-        $sharedBuild->update(['build' => $request->build()]);
+        $sharedTree->update(['build' => $request->build()]);
 
-        $cache->forget($this->documentKey($sharedBuild->slug));
+        $cache->forget($this->summaryKey($sharedTree->slug));
 
         // No token in the redirect URL: the session is already unlocked
-        // (UpdateSharedBuildRequest required it).
-        return to_route('shared.edit', ['sharedBuild' => $sharedBuild->slug]);
+        // (UpdateSharedTreeRequest required it).
+        return to_route('shared.edit', ['sharedTree' => $sharedTree->slug]);
     }
 
     /**
-     * Delete a shared tree for good. Double-gated: {@see DestroySharedBuildRequest::authorize()}
+     * Delete a shared tree for good. Double-gated: {@see DestroySharedTreeRequest::authorize()}
      * requires the unlocked session, and the token re-typed into the delete form must
      * match - timing-safe, rate-limited like {@see unlock()} so a lingering unlock
      * can't be abused to guess a rotated token. The token arrives only in the request
      * body and is never echoed, logged or flashed; the redirect carries none of it.
      */
-    public function destroy(SharedBuild $sharedBuild, DestroySharedBuildRequest $request, Cache $cache): RedirectResponse
+    public function destroy(SharedTree $sharedTree, DestroySharedTreeRequest $request, Cache $cache): RedirectResponse
     {
-        $throttleKey = "tree-destroy:{$sharedBuild->slug}|".$request->ip();
+        $throttleKey = "tree-destroy:{$sharedTree->slug}|".$request->ip();
 
         // Errors land back on the editor even when the Referer is stripped.
-        $fallback = route('shared.edit', ['sharedBuild' => $sharedBuild->slug]);
+        $fallback = route('shared.edit', ['sharedTree' => $sharedTree->slug]);
 
         if (RateLimiter::tooManyAttempts($throttleKey, self::UNLOCK_MAX_ATTEMPTS)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -230,50 +232,50 @@ class SharedBuildController extends Controller
             ]);
         }
 
-        if (! $sharedBuild->matchesEditToken($request->string('token')->toString())) {
+        if (! $sharedTree->matchesEditToken($request->string('token')->toString())) {
             RateLimiter::hit($throttleKey, self::UNLOCK_LOCK_SECONDS);
 
             return back(fallback: $fallback)->withErrors(['token' => 'That edit token is not valid for this build.']);
         }
 
         RateLimiter::clear($throttleKey);
-        $request->session()->forget($sharedBuild->unlockSessionKey());
-        $cache->forget($this->documentKey($sharedBuild->slug));
-        $sharedBuild->delete();
+        $request->session()->forget($sharedTree->unlockSessionKey());
+        $cache->forget($this->summaryKey($sharedTree->slug));
+        $sharedTree->delete();
 
         return to_route('tree');
     }
 
     /**
-     * The machine-readable build document, resolved through {@see BuildDocumentBuilder}
+     * The machine-readable tree summary, resolved through {@see TreeSummaryBuilder}
      * and cached until the next edit invalidates it. Shares its cache entry with
      * the page view, so on a hit neither the builder runs nor the DB is read.
      */
-    public function showJson(string $slug, BuildDocumentBuilder $builder, Cache $cache): JsonResponse
+    public function showJson(string $slug, TreeSummaryBuilder $builder, Cache $cache): JsonResponse
     {
-        $data = $cache->get($this->documentKey($slug));
+        $data = $cache->get($this->summaryKey($slug));
 
         if ($data === null) {
-            $build = SharedBuild::where('slug', $slug)->value('build');
+            $build = SharedTree::where('slug', $slug)->value('build');
 
             abort_if($build === null, 404);
 
             $data = $builder->build($build)->toArray();
 
-            $cache->forever($this->documentKey($slug), $data);
+            $cache->forever($this->summaryKey($slug), $data);
         }
 
-        return response()->json(new BuildDocumentResource(BuildDocument::fromArray($data))->resolve());
+        return response()->json(new TreeSummaryResource(TreeSummary::fromArray($data))->resolve());
     }
 
     /**
-     * Cache key for a build's resolved document. Carries the data version (a new
-     * league re-resolves node names) and {@see self::DOCUMENT_VERSION} (bumped when
+     * Cache key for a tree's resolved summary. Carries the data version (a new
+     * league re-resolves node names) and {@see self::SUMMARY_VERSION} (bumped when
      * the builder's output changes), so a stale entry is abandoned, never served.
      */
-    private function documentKey(string $slug): string
+    private function summaryKey(string $slug): string
     {
-        return 'ai.build.doc:v'.self::DOCUMENT_VERSION.':'.config()->string('poe.data_version').":{$slug}";
+        return 'tree.summary:v'.self::SUMMARY_VERSION.':'.config()->string('poe.data_version').":{$slug}";
     }
 
     /**
@@ -285,7 +287,7 @@ class SharedBuildController extends Controller
     {
         do {
             $slug = Str::random(self::SLUG_LENGTH);
-        } while (SharedBuild::where('slug', $slug)->exists());
+        } while (SharedTree::where('slug', $slug)->exists());
 
         return $slug;
     }

@@ -2,6 +2,7 @@ import type { TreeData } from '@poe2-toolkit/tree-core';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePlannerState } from '@/lib/usePlannerState';
+import type { TreeSnapshot } from '@/types/tree';
 
 /**
  * The planner build state was lifted out of PassiveTreeView so the page owns the
@@ -78,6 +79,20 @@ function makeTreeData(): TreeData {
     };
 
     return data as unknown as TreeData;
+}
+
+/** A full server-shaped snapshot; the server always emits every key. */
+function makeSnapshot(
+    build: Pick<TreeSnapshot, 'className' | 'ascendId' | 'allocated'> &
+        Partial<TreeSnapshot>,
+): TreeSnapshot {
+    return {
+        attributeChoices: {},
+        weaponSets: {},
+        jewels: {},
+        treeVersion: null,
+        ...build,
+    };
 }
 
 describe('usePlannerState', () => {
@@ -226,11 +241,14 @@ describe('usePlannerState', () => {
 
     it('seeds an editable snapshot from a shared build', () => {
         const { result } = renderHook(() =>
-            usePlannerState(makeTreeData(), {
-                className: 'Witch',
-                ascendId: 'Infernalist',
-                allocated: [100, 200],
-            }),
+            usePlannerState(
+                makeTreeData(),
+                makeSnapshot({
+                    className: 'Witch',
+                    ascendId: 'Infernalist',
+                    allocated: [100, 200],
+                }),
+            ),
         );
 
         // The shared build sets the class itself; the first-class default must
@@ -268,11 +286,11 @@ describe('usePlannerState', () => {
         const { result } = renderHook(() =>
             usePlannerState(
                 makeTreeData(),
-                {
+                makeSnapshot({
                     className: 'Witch',
                     ascendId: 'Infernalist',
                     allocated: [100],
-                },
+                }),
                 { mode: 'edit', slug: 'abc123' },
             ),
         );
@@ -299,11 +317,11 @@ describe('usePlannerState', () => {
         const { result } = renderHook(() =>
             usePlannerState(
                 makeTreeData(),
-                {
+                makeSnapshot({
                     className: 'Witch',
                     ascendId: 'Infernalist',
                     allocated: [100],
-                },
+                }),
                 { mode: 'edit', slug: 'abc123' },
             ),
         );
@@ -333,7 +351,11 @@ describe('usePlannerState', () => {
         const { result } = renderHook(() =>
             usePlannerState(
                 makeTreeData(),
-                { className: 'Witch', ascendId: null, allocated: [100] },
+                makeSnapshot({
+                    className: 'Witch',
+                    ascendId: null,
+                    allocated: [100],
+                }),
                 { mode: 'edit', slug: 'abc123' },
             ),
         );
@@ -425,7 +447,11 @@ describe('usePlannerState', () => {
         const frameBefore = result.current.frameToken;
 
         rerender({
-            build: { className: 'Warrior', ascendId: null, allocated: [100] },
+            build: makeSnapshot({
+                className: 'Warrior',
+                ascendId: null,
+                allocated: [100],
+            }),
             options: { mode: 'edit', slug: 'abc123' },
         });
 
@@ -457,7 +483,11 @@ describe('usePlannerState', () => {
         });
 
         rerender({
-            build: { className: 'Warrior', ascendId: null, allocated: [100] },
+            build: makeSnapshot({
+                className: 'Warrior',
+                ascendId: null,
+                allocated: [100],
+            }),
             options: { mode: 'edit', slug: 'abc123' },
         });
 
@@ -471,7 +501,11 @@ describe('usePlannerState', () => {
             build: Parameters<typeof usePlannerState>[1];
             options: Parameters<typeof usePlannerState>[2];
         } = {
-            build: { className: 'Witch', ascendId: null, allocated: [100] },
+            build: makeSnapshot({
+                className: 'Witch',
+                ascendId: null,
+                allocated: [100],
+            }),
             options: { mode: 'edit', slug: 'abc123' },
         };
 

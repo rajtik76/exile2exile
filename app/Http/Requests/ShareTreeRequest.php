@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Pob\Reference\BuildReference;
+use App\Tree\TreeAllocation;
+use App\Tree\TreeSnapshot;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -18,14 +20,13 @@ use Illuminate\Foundation\Http\FormRequest;
  *
  * No auth: sharing is a guest action, like the rest of the build tooling.
  */
-class ShareBuildRequest extends FormRequest
+class ShareTreeRequest extends FormRequest
 {
     /**
-     * Upper bound on allocated nodes. A full build spends ~123 points plus its
-     * ascendancy and any pathing; this leaves generous head-room while capping
-     * the payload so a junk request can't store an arbitrarily large blob.
+     * Upper bound on allocated nodes, shared with the stored shape so a request
+     * can never carry more than the allocation itself would keep.
      */
-    private const int MAX_NODES = 600;
+    private const int MAX_NODES = TreeAllocation::MAX_NODES;
 
     public function authorize(): bool
     {
@@ -81,22 +82,22 @@ class ShareBuildRequest extends FormRequest
     }
 
     /**
-     * The sanitised allocation to persist: only the keys the viewer renders, with
+     * The sanitised snapshot to persist: only the keys the viewer renders, with
      * the node ids cast to a clean integer list.
-     *
-     * @return array{className: string, ascendId: ?string, allocated: list<int>, attributeChoices: array<int, string>, weaponSets: array<int, int>, jewels: array<int|string, mixed>, treeVersion: ?string}
      */
-    public function build(): array
+    public function build(): TreeSnapshot
     {
-        return [
-            'className' => (string) $this->input('className'),
-            'ascendId' => $this->stringOrNull('ascendId'),
-            'allocated' => $this->integerArray('allocated'),
-            'attributeChoices' => $this->attributeChoices(),
-            'weaponSets' => $this->weaponSets(),
-            'jewels' => is_array($this->input('jewels')) ? $this->input('jewels') : [],
-            'treeVersion' => $this->stringOrNull('treeVersion'),
-        ];
+        return new TreeSnapshot(
+            className: (string) $this->input('className'),
+            ascendId: $this->stringOrNull('ascendId'),
+            allocation: new TreeAllocation(
+                allocated: $this->integerArray('allocated'),
+                attributeChoices: $this->attributeChoices(),
+                weaponSets: $this->weaponSets(),
+                jewels: is_array($this->input('jewels')) ? $this->input('jewels') : [],
+                treeVersion: $this->stringOrNull('treeVersion'),
+            ),
+        );
     }
 
     /**
