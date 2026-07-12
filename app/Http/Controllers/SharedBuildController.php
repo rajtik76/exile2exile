@@ -105,9 +105,6 @@ class SharedBuildController extends Controller
         return Inertia::render('tree/shared', [
             'build' => $sharedBuild->build,
             'slug' => $sharedBuild->slug,
-            // Legacy pre-token rows have no edit flow, so the viewer hides its
-            // Edit entry for them.
-            'editable' => $sharedBuild->isEditable(),
             // Head metadata (app.blade.php): a digest and the JSON link.
             'meta' => [
                 'title' => $document->title(),

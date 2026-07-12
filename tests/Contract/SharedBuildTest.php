@@ -120,7 +120,6 @@ test('the viewer renders a shared build by its slug and never exposes the edit t
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('tree/shared')
             ->where('slug', 'abc123XYZ789')
-            ->where('editable', true)
             ->where('build.className', 'Witch')
             ->where('build.ascendId', 'Witch1')
             ->missing('editToken')
@@ -129,14 +128,14 @@ test('the viewer renders a shared build by its slug and never exposes the edit t
         ->assertDontSee($shared->edit_token);
 });
 
-test('a legacy pre-token share renders read-only, with no edit entry', function () {
+test('a legacy pre-token share still renders in the viewer', function () {
     $shared = makeLegacyBuild();
 
     $this->get(route('shared.show', $shared))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('tree/shared')
-            ->where('editable', false)
+            ->where('build.className', 'Witch')
         );
 });
 

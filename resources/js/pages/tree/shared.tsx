@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import type { BuildAllocation } from '@poe2-toolkit/tree-core';
 import { useMemo } from 'react';
 import { ENGRAVED } from '@/components/brand';
@@ -8,24 +8,19 @@ import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
 import { resolveClassId } from '@/lib/classCatalog';
 import type { SharedTreeBuild } from '@/lib/usePlannerState';
 import { useTreeData } from '@/lib/useTreeData';
-import shared from '@/routes/shared';
 
 /**
  * The read-only viewer for a shared passive tree (/t/{slug}). It drops the
  * planner's class/ascendancy pickers and PoB importer entirely: a name plate
- * over a full-screen, non-editable tree. "Edit" leads to the build's edit page,
- * gated by the unlock form - shown only for builds that carry an edit token
- * (legacy shares are read-only forever).
+ * over a full-screen, non-editable tree. There is deliberately no way in: like
+ * a build-planner guide, editing starts from the edit link the author saved,
+ * never from the public page.
  */
 export default function SharedTree({
     build,
-    slug,
-    editable = false,
     meta,
 }: {
     build: SharedTreeBuild;
-    slug: string;
-    editable?: boolean;
     meta?: { title: string; description: string; alternateJson: string };
 }) {
     const { data } = useTreeData();
@@ -146,18 +141,6 @@ export default function SharedTree({
                                 JSON
                             </a>
                         ) : null}
-                        {editable && (
-                            <Link
-                                href={shared.edit.url({ sharedBuild: slug })}
-                                className="rounded-full px-3.5 py-2 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/22 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/22 focus-visible:text-[#ffdf9a] focus-visible:outline-none"
-                                style={{
-                                    border: '1px solid rgba(169,132,47,0.55)',
-                                    ...INPUT_FONT,
-                                }}
-                            >
-                                Edit
-                            </Link>
-                        )}
                     </div>
                 </div>
 
