@@ -53,6 +53,14 @@
             <link rel="alternate" type="application/json" href="{{ $meta['alternateJson'] }}" title="Machine-readable build data">
         @endisset
 
+        {{-- Loads the captchaapi.eu proof-of-work widget for the newsletter
+             form's useCaptcha() (see resources/js/pages/newsletter.tsx). Scoped
+             to that page so no other page pays for the script. Renders nothing
+             when CAPTCHAAPI_ENABLED=false. --}}
+        @if(($page['component'] ?? null) === 'newsletter')
+            <x-captchaapi::widget />
+        @endif
+
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>

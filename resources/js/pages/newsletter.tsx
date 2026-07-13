@@ -1,3 +1,4 @@
+import { useCaptcha } from '@captchaapi/react';
 import { Link, useForm } from '@inertiajs/react';
 import { useAppName } from '@/components/brand';
 import { LegalPage, LegalSection } from '@/components/legal-page';
@@ -109,15 +110,37 @@ function StatusBanner({ status }: { status: Status }) {
 export default function Newsletter({
     status = null,
     actionUrl,
+    captchaEnabled = false,
 }: {
     status?: Status;
     actionUrl?: string;
+    captchaEnabled?: boolean;
 }) {
     const appName = useAppName();
-    const form = useForm({ email: '' });
+    const form = useForm({ email: '', captchaapi_response: '' });
+    const { solve, solving, error: captchaError } = useCaptcha();
 
-    function submit(event: React.FormEvent): void {
+    async function submit(event: React.FormEvent): Promise<void> {
         event.preventDefault();
+
+        if (!captchaEnabled) {
+            form.post(newsletter.store.url(), { preserveScroll: true });
+
+            return;
+        }
+
+        let response: string;
+
+        try {
+            response = await solve();
+        } catch {
+            return; // captchaError is set by the hook and rendered below
+        }
+
+        // transform() injects the freshly solved response into this one
+        // submission without waiting on a setData() re-render, since the
+        // response is single-use and must not linger in persisted form state.
+        form.transform((data) => ({ ...data, captchaapi_response: response }));
         form.post(newsletter.store.url(), { preserveScroll: true });
     }
 
@@ -156,6 +179,7 @@ export default function Newsletter({
                         </label>
                         <input
                             id="newsletter-email"
+                            name="email"
                             type="email"
                             required
                             autoComplete="email"
@@ -167,19 +191,33 @@ export default function Newsletter({
                             className="w-full rounded-sm border border-[#c9a24a]/20 bg-[#0c0c12] px-3 py-2 text-sm text-[#e6ecf6] placeholder:text-[#787d8a] focus:border-[#c9a24a]/50 focus:outline-none"
                         />
                         <button
+                            id="newsletter-subscribe"
                             type="submit"
                             disabled={
-                                form.processing || form.data.email.trim() === ''
+                                form.processing ||
+                                solving ||
+                                form.data.email.trim() === ''
                             }
                             className="shrink-0 rounded-sm border border-[#c9a24a]/40 bg-[#c9a24a]/15 px-4 py-2 font-ui text-xs font-semibold tracking-[0.14em] text-[#ecd49a] uppercase transition hover:bg-[#c9a24a]/25 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {form.processing ? 'Subscribing…' : 'Subscribe'}
+                            {form.processing
+                                ? 'Subscribing…'
+                                : solving
+                                  ? 'Verifying…'
+                                  : 'Subscribe'}
                         </button>
                     </div>
 
                     {form.errors.email && (
                         <p className="text-sm text-[#e0a04f]">
                             {form.errors.email}
+                        </p>
+                    )}
+
+                    {(captchaError || form.errors.captchaapi_response) && (
+                        <p className="text-sm text-[#e0a04f]">
+                            {form.errors.captchaapi_response ??
+                                'Captcha verification failed, please try again.'}
                         </p>
                     )}
 
@@ -194,6 +232,26 @@ export default function Newsletter({
                         </Link>{' '}
                         for how we handle your address.
                     </p>
+
+                    {captchaEnabled && (
+                        <a
+                            href="https://captchaapi.eu"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-xs leading-relaxed text-[#787d8a] transition hover:text-[#ecd49a]"
+                        >
+                            <img
+                                src="/captchaapi-logo.svg"
+                                alt=""
+                                className="h-4 w-4 shrink-0 rounded-[3px]"
+                            />
+                            This form is protected by{' '}
+                            <span className="underline decoration-dotted underline-offset-2">
+                                captchaapi.eu
+                            </span>{' '}
+                            proof-of-work captcha - no cookies, no tracking.
+                        </a>
+                    )}
                 </form>
             </LegalSection>
         </LegalPage>

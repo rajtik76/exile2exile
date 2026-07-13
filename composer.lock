@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3a2b1add43e4d8f29ff190d70f6254c8",
+    "content-hash": "4bfae67ffe59915d44aba50161691878",
     "packages": [
         {
             "name": "brick/math",
@@ -64,6 +64,86 @@
                 }
             ],
             "time": "2026-06-14T18:21:03+00:00"
+        },
+        {
+            "name": "captchaapi/laravel",
+            "version": "v3.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/captchaapi/laravel.git",
+                "reference": "438efc58ca10a8ff247df059be3b9f310df0c206"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/captchaapi/laravel/zipball/438efc58ca10a8ff247df059be3b9f310df0c206",
+                "reference": "438efc58ca10a8ff247df059be3b9f310df0c206",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^12.0|^13.0",
+                "illuminate/http": "^12.0|^13.0",
+                "illuminate/support": "^12.0|^13.0",
+                "illuminate/validation": "^12.0|^13.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.0",
+                "livewire/livewire": "^4.0",
+                "orchestra/testbench": "^10.0|^11.0",
+                "pestphp/pest": "^3.0|^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0|^4.0",
+                "rector/rector": "^2.0"
+            },
+            "suggest": {
+                "livewire/livewire": "Required only if you use the WithCaptcha trait or <x-captchaapi::livewire-form> Blade component (^4.0)"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Captchaapi": "Captchaapi\\Laravel\\Facades\\Captchaapi"
+                    },
+                    "providers": [
+                        "Captchaapi\\Laravel\\CaptchaapiServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Captchaapi\\Laravel\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Vladislav Rajtmajer",
+                    "email": "rajtik@gmail.com",
+                    "homepage": "https://captchaapi.eu"
+                }
+            ],
+            "description": "Official Laravel SDK for captchaapi.eu — EU-hosted, GDPR-compliant proof-of-work CAPTCHA with native Livewire support.",
+            "homepage": "https://captchaapi.eu",
+            "keywords": [
+                "captcha",
+                "captchaapi",
+                "eu",
+                "gdpr",
+                "laravel",
+                "livewire",
+                "pow",
+                "proof-of-work",
+                "spam-protection"
+            ],
+            "support": {
+                "docs": "https://captchaapi.eu/docs",
+                "issues": "https://github.com/captchaapi/laravel/issues",
+                "source": "https://github.com/captchaapi/laravel"
+            },
+            "time": "2026-06-11T18:29:12+00:00"
         },
         {
             "name": "carbonphp/carbon-doctrine-types",

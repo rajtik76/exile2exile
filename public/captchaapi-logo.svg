@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" role="img">
+    <title>CAPTCHA API logo</title>
+    <desc>Eye icon with scan lines and CAPTCHA API wordmark in brand cyan on dark navy</desc>
+
+    <rect width="200" height="200" rx="16" fill="#0b1120"/>
+
+    <rect x="12" y="12" width="14" height="2" fill="none" stroke="#00e5c0" stroke-width="1.8" stroke-linecap="square"/>
+    <rect x="12" y="12" width="2" height="14" fill="none" stroke="#00e5c0" stroke-width="1.8" stroke-linecap="square"/>
+    <rect x="174" y="12" width="14" height="2" fill="none" stroke="#00e5c0" stroke-width="1.8" stroke-linecap="square"/>
+    <rect x="186" y="12" width="2" height="14" fill="none" stroke="#00e5c0" stroke-width="1.8" stroke-linecap="square"/>
+    <rect x="12" y="186" width="14" height="2" fill="none" stroke="#00e5c0" stroke-width="1.8" stroke-linecap="square"/>
+    <rect x="12" y="174" width="2" height="14" fill="none" stroke="#00e5c0" stroke-width="1.8" stroke-linecap="square"/>
+    <rect x="174" y="186" width="14" height="2" fill="none" stroke="#00e5c0" stroke-width="1.8" stroke-linecap="square"/>
+    <rect x="186" y="174" width="2" height="14" fill="none" stroke="#00e5c0" stroke-width="1.8" stroke-linecap="square"/>
+
+    <path d="M24,94 Q100,34 176,94 Q100,154 24,94 Z" fill="#0d1a2e"/>
+
+    <line x1="24" y1="78" x2="176" y2="78" stroke="#00e5c0" stroke-width="0.55" opacity="0.12"/>
+    <line x1="24" y1="86" x2="176" y2="86" stroke="#00e5c0" stroke-width="0.55" opacity="0.12"/>
+    <line x1="24" y1="94" x2="176" y2="94" stroke="#00e5c0" stroke-width="0.55" opacity="0.12"/>
+    <line x1="24" y1="102" x2="176" y2="102" stroke="#00e5c0" stroke-width="0.55" opacity="0.12"/>
+    <line x1="24" y1="110" x2="176" y2="110" stroke="#00e5c0" stroke-width="0.55" opacity="0.12"/>
+
+    <circle cx="100" cy="94" r="27" fill="#0d2a2a" stroke="#00e5c0" stroke-width="1.8"/>
+    <circle cx="100" cy="94" r="22" fill="#00e5c0" opacity="0.35"/>
+    <circle cx="100" cy="94" r="16" fill="#00e5c0" opacity="0.18"/>
+    <circle cx="100" cy="94" r="11" fill="#0b1120"/>
+    <circle cx="106" cy="89" r="3" fill="#ffffff" opacity="0.85"/>
+
+    <path d="M24,94 Q100,34 176,94 Q100,154 24,94 Z" fill="none" stroke="#00e5c0" stroke-width="2.5" stroke-linecap="round"/>
+
+    <line x1="42.5" y1="70.8" x2="36.6" y2="60.3" stroke="#00e5c0" stroke-width="1.4" stroke-linecap="round" opacity="0.45"/>
+    <line x1="61.4" y1="62.1" x2="57.3" y2="50.8" stroke="#00e5c0" stroke-width="1.4" stroke-linecap="round" opacity="0.45"/>
+    <line x1="80.6" y1="56.8" x2="78.5" y2="45.0" stroke="#00e5c0" stroke-width="1.4" stroke-linecap="round" opacity="0.45"/>
+    <line x1="100" y1="55" x2="100" y2="43" stroke="#00e5c0" stroke-width="1.4" stroke-linecap="round" opacity="0.45"/>
+    <line x1="119.4" y1="56.8" x2="121.6" y2="45.0" stroke="#00e5c0" stroke-width="1.4" stroke-linecap="round" opacity="0.45"/>
+    <line x1="138.6" y1="62.1" x2="142.7" y2="50.8" stroke="#00e5c0" stroke-width="1.4" stroke-linecap="round" opacity="0.45"/>
+    <line x1="157.6" y1="70.8" x2="163.4" y2="60.3" stroke="#00e5c0" stroke-width="1.4" stroke-linecap="round" opacity="0.45"/>
+
+    <line x1="36" y1="140" x2="164" y2="140" stroke="#00e5c0" stroke-width="0.7" opacity="0.28"/>
+
+    <text x="100" y="174" text-anchor="middle" font-family="ui-monospace, 'Courier New', monospace" font-size="24" font-weight="700"><tspan fill="#00e5c0">CAPTCHA</tspan><tspan fill="#ffffff" dx="7">API</tspan></text>
+</svg>

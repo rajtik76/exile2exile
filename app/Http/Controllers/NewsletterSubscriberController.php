@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Action\CreateNewsletterSubscriber;
 use App\Http\Requests\NewsletterSubscriberCreateRequest;
 use App\Models\NewsletterSubscriber;
+use Captchaapi\Laravel\Facades\Captchaapi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -28,6 +29,10 @@ class NewsletterSubscriberController extends Controller
     {
         return Inertia::render('newsletter', [
             'status' => session('newsletter.status'),
+            // Drives whether the signup form calls useCaptcha().solve() before
+            // posting. Mirrors the server-side ValidCaptcha rule in
+            // NewsletterSubscriberCreateRequest, so the two never disagree.
+            'captchaEnabled' => Captchaapi::enabled(),
         ]);
     }
 

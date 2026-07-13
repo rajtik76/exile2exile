@@ -2,6 +2,9 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-07-13
+- The newsletter signup form is now protected by [captchaapi.eu](https://captchaapi.eu), a proof-of-work captcha that solves itself invisibly in the background while you fill in the form - no puzzles, no cookies, no tracking. It's off by default in local development, so cloning the repo needs no extra setup to try the app.
+
 ## 2026-07-12
 - Saved passive trees are now editable, the same way build-planner guides are: saving a tree mints its public link and a secret edit token, and the tree can be reopened, changed and saved again at its own edit page, unlocked by the token. The token travels only in form bodies - never a URL - wrong tokens are rate-limited, and every save is its own build with its own link.
 - The editor's new link panel lists the public link, the edit link and the token in one place, each with a copy button that gives clear feedback - this also fixes the share link's copy button, which did nothing in some browsers. The token stays masked until revealed, and the panel works comfortably on a phone.

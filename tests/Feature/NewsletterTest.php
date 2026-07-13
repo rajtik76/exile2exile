@@ -10,6 +10,7 @@ use App\Mail\NewsletterConfirmationMail;
 use App\Mail\NewsletterMail;
 use App\Models\Newsletter;
 use App\Models\NewsletterSubscriber;
+use Captchaapi\Laravel\Facades\Captchaapi;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Mail\SendQueuedMailable;
 use Illuminate\Support\Facades\Mail;
@@ -23,6 +24,52 @@ it('renders the signup page with the flashed opt-in status', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('newsletter')
             ->where('status', 'pending'));
+});
+
+it('shares whether captchaapi is enabled with the signup page', function () {
+    config(['captchaapi.enabled' => true]);
+
+    $this->get('/newsletter')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('captchaEnabled', true));
+
+    config(['captchaapi.enabled' => false]);
+
+    $this->get('/newsletter')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('captchaEnabled', false));
+});
+
+it('rejects a signup missing captchaapi_response when captchaapi is enabled', function () {
+    config(['captchaapi.enabled' => true]);
+    Captchaapi::fake();
+    Captchaapi::enforceSingleUse();
+    Mail::fake();
+
+    $this->from('/newsletter')
+        ->post('/newsletter', ['email' => 'exile@example.com'])
+        ->assertRedirect('/newsletter')
+        ->assertSessionHasErrors('captchaapi_response');
+
+    expect(NewsletterSubscriber::query()->count())->toBe(0);
+    Mail::assertNothingQueued();
+});
+
+it('accepts a signup with a valid captchaapi_response when captchaapi is enabled', function () {
+    config(['captchaapi.enabled' => true]);
+    Captchaapi::fake();
+    Captchaapi::enforceSingleUse();
+    Mail::fake();
+
+    $this->post('/newsletter', [
+        'email' => 'exile@example.com',
+        'captchaapi_response' => 'test-token',
+    ])
+        ->assertRedirect(route('newsletter.create'))
+        ->assertSessionHasNoErrors();
+
+    expect(NewsletterSubscriber::query()->count())->toBe(1);
+    Mail::assertQueued(NewsletterConfirmationMail::class, 'exile@example.com');
 });
 
 it('renders the newsletter issue with markdown body, unsubscribe link and RFC 8058 headers', function () {

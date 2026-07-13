@@ -133,6 +133,15 @@ Then open the URL the dev command prints. The data extraction is needed once
 per patch; it writes the passive tree, icons and item/gem data the app serves
 (see "Game data" above).
 
+The newsletter signup's [captchaapi.eu](https://captchaapi.eu) captcha is off
+by default (`CAPTCHAAPI_ENABLED=false` in `.env.example`) - no site key needed
+to run the app locally. Set `CAPTCHAAPI_ENABLED=true` plus `CAPTCHAAPI_SITE_KEY`
+and `CAPTCHAAPI_SECRET_KEY` from your own
+[captchaapi.eu dashboard](https://captchaapi.eu/dashboard) to exercise it.  
+captchaapi.eu is a sibling project of mine, disclosed here for transparency;
+it was picked on its own merits (EU-hosted, no cookies, no tracking) and the
+integration is a plain HTTP call any captcha service could sit behind.
+
 ## Running tests
 
 The suites differ in what they need on your machine:
@@ -162,7 +171,9 @@ support it. If you want to contribute code, see [CONTRIBUTING.md](CONTRIBUTING.m
 ## License
 
 The code is released under the MIT License (see [`LICENSE`](LICENSE)). The bundled
-NeverSink filters are MIT (`resources/neversink/LICENSE`).
+NeverSink filters are MIT (`resources/neversink/LICENSE`). `public/captchaapi-logo.svg`
+is the captchaapi.eu brand mark, used with permission for attribution on the
+newsletter form; it is not covered by this repository's MIT license.
 
 Path of Exile 2 game data, text and art are &copy; Grinding Gear Games, used here
 under GGG's fan-content policy for a free, non-commercial community tool with no
