@@ -262,7 +262,7 @@ export function RuneBadge({
                     {rune.effects.length > 0 && (
                         <>
                             {rune.levelRequirement !== null && <TooltipRule />}
-                            <BulletList lines={rune.effects} color="#aab6ff" />
+                            <BulletList lines={rune.effects} color="#8888ff" />
                         </>
                     )}
                 </TooltipCard>
@@ -571,7 +571,7 @@ export function ItemCard({ item }: { item: Item }) {
             {hasMods && <TooltipRule />}
 
             {item.implicitMods.length > 0 && (
-                <BulletList lines={item.implicitMods} color="#d6ddff" />
+                <BulletList lines={item.implicitMods} color="#8888ff" />
             )}
 
             {item.implicitMods.length > 0 && item.explicitMods.length > 0 && (
@@ -582,7 +582,7 @@ export function ItemCard({ item }: { item: Item }) {
                 (showDetail ? (
                     <ModDetailList details={item.modDetails ?? []} />
                 ) : (
-                    <BulletList lines={item.explicitMods} color="#aab6ff" />
+                    <BulletList lines={item.explicitMods} color="#8888ff" />
                 ))}
 
             {(item.modDetails?.length ?? 0) > 0 && (
@@ -595,7 +595,7 @@ export function ItemCard({ item }: { item: Item }) {
                 <>
                     <TooltipRule />
                     <p
-                        className="text-[0.9375rem] leading-snug whitespace-pre-line italic"
+                        className="text-[0.9375rem] leading-tight whitespace-pre-line italic"
                         style={{ color: tone.text, opacity: 0.65 }}
                     >
                         {item.flavour}

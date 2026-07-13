@@ -23,16 +23,18 @@ export interface TooltipAccent {
 export function rarityTone(rarity: string): TooltipAccent {
     switch (rarity.toUpperCase()) {
         case 'MAGIC':
+            // The game's own magic-item blue.
             return {
-                text: '#8f9bff',
+                text: '#8888ff',
                 edge: '#6a74d0',
-                glow: 'rgba(120,135,255,0.30)',
+                glow: 'rgba(136,136,255,0.30)',
             };
         case 'RARE':
+            // The game's own rare-item yellow.
             return {
-                text: '#e9c95a',
+                text: '#ffff77',
                 edge: '#c2a23c',
-                glow: 'rgba(233,201,90,0.30)',
+                glow: 'rgba(255,255,119,0.30)',
             };
         case 'UNIQUE':
             // #af6025 is PoE1's burnt-orange unique; PoE2 overrides it to a
@@ -61,7 +63,7 @@ export function BulletList({
     color: string;
 }) {
     return (
-        <ul className="space-y-0.5">
+        <ul>
             {lines.map((line, j) => (
                 <li key={j} className="font-medium" style={{ color }}>
                     {line}
@@ -227,7 +229,7 @@ export function TooltipCard({
         <div
             className="overflow-hidden shadow-2xl backdrop-blur-sm"
             style={{
-                background: 'rgba(8,8,11,0.75)',
+                background: 'rgba(2,2,3,0.75)',
                 boxShadow: '0 12px 30px rgba(0,0,0,0.7)',
             }}
         >
@@ -311,7 +313,7 @@ export function TooltipCard({
 
             {children && (
                 <div
-                    className="px-5 py-3 text-center text-base leading-snug"
+                    className="px-5 py-3 text-center text-base leading-tight"
                     style={FONTIN}
                 >
                     {children}
