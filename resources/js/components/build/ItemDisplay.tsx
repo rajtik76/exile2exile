@@ -594,7 +594,10 @@ export function ItemCard({ item }: { item: Item }) {
             {item.flavour && (
                 <>
                     <TooltipRule />
-                    <p className="text-[0.9375rem] leading-snug whitespace-pre-line text-[#a08fd0] italic">
+                    <p
+                        className="text-[0.9375rem] leading-snug whitespace-pre-line italic"
+                        style={{ color: tone.text, opacity: 0.65 }}
+                    >
                         {item.flavour}
                     </p>
                 </>

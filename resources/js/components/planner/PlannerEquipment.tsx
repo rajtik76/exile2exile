@@ -169,7 +169,7 @@ export default function PlannerEquipment({
                 never painted under the strip's miniatures. */}
             <ScaleToFit className="z-10">
                 <div
-                    className="grid w-fit gap-1.5"
+                    className="grid w-fit gap-1.5 sm:gap-3"
                     style={{
                         gridTemplateColumns: 'repeat(10, 3.5rem)',
                         gridAutoRows: '3.5rem',
@@ -181,7 +181,7 @@ export default function PlannerEquipment({
 
                     {/* Charms: three squares centred on the bottom row, between the flasks. */}
                     <div
-                        className="flex items-center justify-center gap-1.5"
+                        className="flex items-center justify-center gap-1.5 sm:gap-3"
                         style={{
                             gridColumn: '4 / span 4',
                             gridRow: '7 / span 2',

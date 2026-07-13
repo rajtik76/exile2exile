@@ -52,7 +52,7 @@ export function rarityTone(rarity: string): TooltipAccent {
     }
 }
 
-/** Bulleted stat list with a hanging indent, so wrapped lines stay readable. */
+/** Centred stat list, one line per mod - matches the game's own tooltip layout. */
 export function BulletList({
     lines,
     color,
@@ -63,15 +63,8 @@ export function BulletList({
     return (
         <ul className="space-y-0.5">
             {lines.map((line, j) => (
-                <li key={j} className="flex gap-2 leading-tight">
-                    <span
-                        aria-hidden
-                        className="mt-[0.6em] size-1 shrink-0 rounded-full"
-                        style={{ background: color }}
-                    />
-                    <span className="font-medium" style={{ color }}>
-                        {line}
-                    </span>
+                <li key={j} className="font-medium" style={{ color }}>
+                    {line}
                 </li>
             ))}
         </ul>
@@ -239,7 +232,7 @@ export function TooltipCard({
             }}
         >
             <div
-                className={`relative flex items-center gap-3 px-4 py-3 ${frame ? 'justify-center' : ''}`}
+                className="relative flex items-center justify-center gap-3 px-4 py-3"
                 style={
                     frame
                         ? undefined
@@ -287,9 +280,7 @@ export function TooltipCard({
                                   className="relative size-10 shrink-0 rounded-sm object-contain"
                               />
                           ))}
-                <div
-                    className={`relative min-w-0 ${frame ? 'text-center' : 'text-left'}`}
-                >
+                <div className="relative min-w-0 text-center">
                     {/* Header in Fontin SmallCaps (the game's own tooltip face); the
                         second line smaller. The body below reads in the same face. */}
                     <p
@@ -320,7 +311,7 @@ export function TooltipCard({
 
             {children && (
                 <div
-                    className="px-5 py-3 text-left text-base leading-snug"
+                    className="px-5 py-3 text-center text-base leading-snug"
                     style={FONTIN}
                 >
                     {children}
