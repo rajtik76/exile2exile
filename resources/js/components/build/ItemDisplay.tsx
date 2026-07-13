@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Filigree } from '@/components/build/Panel';
 import {
     BulletList,
+    rarityFrame,
     rarityTone,
     TooltipBadge,
     TooltipCard,
@@ -145,7 +146,14 @@ export function HoverTooltip({
     return (
         <div
             ref={ref}
-            className={`absolute top-1/2 z-[60] hidden w-[26rem] max-w-[88vw] -translate-y-1/2 select-text ${pos} ${show}`}
+            // Pointer-transparent while merely hovered: the panel is wide enough to
+            // overlap neighbouring paper-doll slots, and without this the mouse can
+            // wander onto the floating panel itself and keep it (and the trigger's
+            // group-hover) open indefinitely, even over another item's tile. Once
+            // pinned open (a click focuses the trigger - group-focus-within, either
+            // the default group or the rune-scoped `group/rune`), it regains normal
+            // pointer events so its text can be selected/copied.
+            className={`pointer-events-none absolute top-1/2 z-[60] hidden w-[26rem] max-w-[88vw] -translate-y-1/2 select-text group-focus-within:pointer-events-auto group-focus-within/rune:pointer-events-auto ${pos} ${show}`}
         >
             {children}
         </div>
@@ -539,6 +547,7 @@ export function ItemCard({ item }: { item: Item }) {
             icon={item.icon}
             title={hasName ? item.name : item.baseType}
             subtitle={hasName ? item.baseType : undefined}
+            frame={rarityFrame(item.rarity)}
         >
             {item.itemClass && (
                 <p className="text-sm font-medium tracking-[0.08em] text-[#d6dae2]">
@@ -751,7 +760,7 @@ export function SlotTile({
                                 event.stopPropagation();
                                 onClear();
                             }}
-                            className="absolute top-0.5 right-0.5 z-[61] hidden size-4 items-center justify-center rounded-full bg-[#e0584f] text-[10px] text-white group-hover:flex"
+                            className="absolute top-1.5 right-1.5 z-[61] hidden size-4 items-center justify-center rounded-full bg-[#e0584f] text-[10px] text-white group-hover:flex"
                         >
                             ✕
                         </button>

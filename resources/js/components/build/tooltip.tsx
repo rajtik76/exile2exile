@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { DISPLAY, ENGRAVED } from '@/components/brand';
 import { withAssetVersion } from '@/lib/assetVersion';
 import type { ReferenceSprite } from '@/lib/planReferences';
 
@@ -9,6 +8,9 @@ import type { ReferenceSprite } from '@/lib/planReferences';
  * passive-tree node, ...) is composed from these same blocks and tokens
  * - never hand-roll a new tooltip or bespoke styles, just assemble these.
  */
+
+/** Fontin SmallCaps - the game's own tooltip typeface, self-hosted (see app.css). */
+const FONTIN = { fontFamily: "'Fontin SmallCaps', serif" } as const;
 
 /** Colour triplet tinting a card to its entity (rarity / socket / element). */
 export interface TooltipAccent {
@@ -33,10 +35,12 @@ export function rarityTone(rarity: string): TooltipAccent {
                 glow: 'rgba(233,201,90,0.30)',
             };
         case 'UNIQUE':
+            // #af6025 is PoE1's burnt-orange unique; PoE2 overrides it to a
+            // brighter, more saturated orange for the item name specifically.
             return {
-                text: '#cf8a4a',
-                edge: '#c4702e',
-                glow: 'rgba(207,138,74,0.32)',
+                text: '#ef6916',
+                edge: '#af6025',
+                glow: 'rgba(239,105,22,0.32)',
             };
         default:
             // NORMAL (white) - bright neutral so it reads clearly, never gilded.
@@ -150,8 +154,62 @@ export function TooltipRule() {
 }
 
 /**
+ * Which rarity banner {@link TooltipCard} draws behind its header, keyed to the
+ * game's own `ItemsHeader{Rarity}{Left,Middle,Right}` GGPK art (decoded by
+ * `tools/poe-data-extract` into `public/icons/poe2/ui/tooltip-header-*`). Left/right
+ * are the carved corner caps (a different motif per rarity - spearhead for Rare,
+ * a leaf scroll for Unique); middle tiles between them. Only items carry a rarity,
+ * so gems/runes/tree nodes render {@link TooltipCard} without this prop and get a
+ * plain header instead.
+ */
+export type TooltipRarityFrame = 'white' | 'magic' | 'rare' | 'unique';
+
+/** Maps an item rarity string to its {@link TooltipRarityFrame} banner. */
+export function rarityFrame(rarity: string): TooltipRarityFrame {
+    switch (rarity.toUpperCase()) {
+        case 'MAGIC':
+            return 'magic';
+        case 'RARE':
+            return 'rare';
+        case 'UNIQUE':
+            return 'unique';
+        default:
+            return 'white';
+    }
+}
+
+/**
+ * One end cap of the rarity banner (the game's own carved corner art - a
+ * spearhead for Rare, a leaf scroll for Unique, ...). A real `<img>`, not a
+ * background-image on a sized box: browsers size an `<img>` with `height: 100%`
+ * from its own intrinsic aspect ratio reliably, where a CSS `aspect-ratio` on an
+ * absolutely-positioned box does not.
+ */
+function HeaderCap({
+    frame,
+    side,
+}: {
+    frame: TooltipRarityFrame;
+    side: 'left' | 'right';
+}) {
+    return (
+        <img
+            aria-hidden
+            alt=""
+            src={withAssetVersion(
+                `/icons/poe2/ui/tooltip-header-${frame}-${side}.png`,
+            )}
+            className="pointer-events-none absolute top-0 h-full w-auto max-w-none"
+            style={{ [side]: 0 }}
+        />
+    );
+}
+
+/**
  * Shared tooltip card: a framed panel with an icon-led header and an optional
  * body. Every hover tooltip (item, gem, rune, tree node) is built from this.
+ * Pass `frame` (an item's rarity) to draw the game's own carved header banner;
+ * without it the header is a plain hairline (gems, runes, tree nodes).
  */
 export function TooltipCard({
     accent,
@@ -159,6 +217,7 @@ export function TooltipCard({
     iconNode,
     title,
     subtitle,
+    frame,
     children,
 }: {
     accent: TooltipAccent;
@@ -167,50 +226,89 @@ export function TooltipCard({
     iconNode?: React.ReactNode;
     title: string;
     subtitle?: string;
+    /** An item's rarity - draws the game's own carved banner behind the header. */
+    frame?: TooltipRarityFrame;
     children?: React.ReactNode;
 }) {
     return (
         <div
             className="overflow-hidden shadow-2xl backdrop-blur-sm"
             style={{
-                background: 'rgba(8,8,11,0.97)',
-                boxShadow: `inset 0 0 0 1px rgba(0,0,0,0.8), 0 0 0 1px ${accent.edge}, 0 12px 30px rgba(0,0,0,0.7)`,
+                background: 'rgba(8,8,11,0.75)',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.7)',
             }}
         >
             <div
-                className="flex items-center gap-3 px-4 py-3"
-                style={{
-                    background: `linear-gradient(180deg, ${accent.glow}, transparent)`,
-                    borderTop: `2px solid ${accent.edge}`,
-                    borderBottom: `1px solid ${accent.edge}`,
-                }}
+                className={`relative flex items-center gap-3 px-4 py-3 ${frame ? 'justify-center' : ''}`}
+                style={
+                    frame
+                        ? undefined
+                        : {
+                              background: `linear-gradient(180deg, ${accent.glow}, transparent)`,
+                              borderTop: `2px solid ${accent.edge}`,
+                              borderBottom: `1px solid ${accent.edge}`,
+                          }
+                }
             >
-                {iconNode
-                    ? iconNode
-                    : icon && (
-                          <img
-                              src={icon}
-                              alt=""
-                              aria-hidden
-                              loading="lazy"
-                              className="size-10 shrink-0 rounded-sm object-contain"
-                          />
-                      )}
-                <div className="min-w-0 text-left">
-                    {/* Header in the engraved display face (Marcellus SC); the second
-                        line smaller. The body below reads in Lexend. */}
+                {frame && (
+                    <>
+                        {/* Painted first (behind the caps): a later sibling with no
+                            z-index still wins the paint order in the same stacking
+                            context, so the caps must come after this or it covers them.
+                            Stretched to fill (not tiled): tiling this repeating strip
+                            at an arbitrary header width always leaves a visible seam
+                            at the tile boundary, since the header's width is never a
+                            whole multiple of the tile's native width. A single
+                            stretched copy has no boundary to seam at. */}
+                        <span
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0"
+                            style={{
+                                backgroundPosition: 'center',
+                                backgroundSize: '100% 100%',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundImage: `url(${withAssetVersion(`/icons/poe2/ui/tooltip-header-${frame}-middle.png`)})`,
+                            }}
+                        />
+                        <HeaderCap frame={frame} side="left" />
+                        <HeaderCap frame={frame} side="right" />
+                    </>
+                )}
+
+                {!frame &&
+                    (iconNode
+                        ? iconNode
+                        : icon && (
+                              <img
+                                  src={icon}
+                                  alt=""
+                                  aria-hidden
+                                  loading="lazy"
+                                  className="relative size-10 shrink-0 rounded-sm object-contain"
+                              />
+                          ))}
+                <div
+                    className={`relative min-w-0 ${frame ? 'text-center' : 'text-left'}`}
+                >
+                    {/* Header in Fontin SmallCaps (the game's own tooltip face); the
+                        second line smaller. The body below reads in the same face. */}
                     <p
-                        className="text-xl leading-tight font-bold tracking-wide"
-                        style={{ ...ENGRAVED, color: accent.text }}
+                        className="text-xl leading-tight tracking-wide"
+                        style={{
+                            ...FONTIN,
+                            color: accent.text,
+                            textShadow: '0 1px 2px rgba(0,0,0,0.9)',
+                        }}
                     >
                         {title}
                     </p>
                     {subtitle && (
                         <p
-                            className="mt-0.5 text-base leading-tight font-semibold tracking-wide"
+                            className="mt-0.5 text-base leading-tight tracking-wide"
                             style={{
-                                ...DISPLAY,
+                                ...FONTIN,
                                 color: accent.text,
+                                textShadow: '0 1px 2px rgba(0,0,0,0.9)',
                                 opacity: 0.85,
                             }}
                         >
@@ -223,7 +321,7 @@ export function TooltipCard({
             {children && (
                 <div
                     className="px-5 py-3 text-left text-base leading-snug"
-                    style={{ fontFamily: "'Lexend', sans-serif" }}
+                    style={FONTIN}
                 >
                     {children}
                 </div>
