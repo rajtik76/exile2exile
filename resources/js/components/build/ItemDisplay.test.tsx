@@ -9,11 +9,9 @@ function item(overrides: Partial<Item> = {}): Item {
         rarity: 'rare',
         name: 'Doom Shell',
         baseType: 'Expert Plate Vest',
-        itemLevel: 82,
         icon: null,
         twoHanded: false,
-        itemClass: 'Body Armour',
-        levelRequirement: null,
+        corrupted: false,
         runes: [],
         implicitMods: [],
         explicitMods: [],
@@ -86,4 +84,16 @@ test('holding Alt swaps the summed lines for the per-affix P/S-tier breakdown', 
 
     fireEvent.keyUp(window, { key: 'Alt' });
     expect(screen.queryByText('P7')).toBeNull();
+});
+
+test('a corrupted item shows the red Corrupted footer', () => {
+    render(<ItemCard item={item({ corrupted: true })} />);
+
+    expect(screen.getByText('Corrupted')).toBeTruthy();
+});
+
+test('a non-corrupted item shows no Corrupted footer', () => {
+    render(<ItemCard item={item({ corrupted: false })} />);
+
+    expect(screen.queryByText('Corrupted')).toBeNull();
 });

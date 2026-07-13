@@ -28,18 +28,20 @@ export default function PrioritySelector({
     const [open, setOpen] = useState(false);
     const tone = rarityTone(rarity);
 
-    // The corner square, flush with the frame and edged in the frame's border colour.
+    // A small floating badge inset from the corner (mirrors the clear button's own
+    // inset placement on the opposite corner), styled like the app's other tinted
+    // badges (TooltipBadge, CorruptedToggle): a soft colour-wash fill and a matching
+    // tinted border, rather than a solid frame-coloured square.
     // `data-priority` hides the item tooltip on hover via CSS `:has` (see ItemTooltip).
     const cornerStyle: React.CSSProperties = {
-        borderColor: tone.edge,
-        backgroundColor: 'var(--pl-panel)',
+        borderColor: `${tone.edge}66`,
+        backgroundColor: `${tone.edge}26`,
         color: tone.text,
+        fontFamily: "'Lexend', sans-serif",
     };
     const cornerClass =
         // Below the item tooltip (z-60) so a hover never shows the corner poking through.
-        // Border weight matches the item frame (1px); only the bottom-right corner is
-        // rounded, to sit flush inside the frame's own rounded-[2px] corner.
-        'group/prio pl-text-xs absolute right-0 bottom-0 z-[50] flex size-5 items-center justify-center rounded-br-[2px] border font-semibold tabular-nums shadow-[0_0_4px_rgba(0,0,0,0.7)]';
+        'group/prio pl-text-xs absolute right-1.5 bottom-1.5 z-[50] flex min-w-5 h-5 items-center justify-center rounded-[6px] border px-1 font-semibold leading-none tabular-nums backdrop-blur-sm';
 
     // The small hint shown while the pointer is over the square (the item card is hidden).
     const hint = (

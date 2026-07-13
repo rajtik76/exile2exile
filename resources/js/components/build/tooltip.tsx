@@ -63,7 +63,7 @@ export function BulletList({
     color: string;
 }) {
     return (
-        <ul>
+        <ul className="space-y-0.5">
             {lines.map((line, j) => (
                 <li key={j} className="font-medium" style={{ color }}>
                     {line}

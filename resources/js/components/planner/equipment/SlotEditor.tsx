@@ -1,6 +1,5 @@
 import { Fragment, useState } from 'react';
 import { SocketCluster } from '@/components/build/ItemDisplay';
-import { Filigree } from '@/components/build/Panel';
 import AddButton from '@/components/planner/AddButton';
 import Button from '@/components/planner/Button';
 import { resolveRunes } from '@/components/planner/equipment/displayItem';
@@ -12,6 +11,7 @@ import ModPicker from '@/components/planner/ModPicker';
 import { useMods } from '@/components/planner/ModsContext';
 import ReferencePicker from '@/components/planner/ReferencePicker';
 import { useReferences } from '@/components/planner/ReferencesContext';
+import { TextInput } from '@/components/planner/ui/Field';
 import { Modal } from '@/components/planner/ui/Overlay';
 import { Divider } from '@/components/planner/ui/Text';
 import { deriveRarity } from '@/lib/itemRarity';
@@ -21,20 +21,14 @@ import type { ModInfo, ModMap } from '@/lib/modLines';
 import { refKey } from '@/lib/planReferences';
 import type { PlanReference } from '@/lib/planReferences';
 import {
+    MAX_ITEM_NAME_LENGTH,
     MAX_ITEM_QUALITY,
     MAX_ITEM_SOCKETS,
     MODS_PER_RARITY,
     RARITY_COLOR,
     SLOT_MAX_SOCKETS,
 } from '@/types/planner';
-import type {
-    ItemPlan,
-    ItemProps,
-    ItemRarity,
-    ItemReq,
-    ItemStat,
-    RuneRef,
-} from '@/types/planner';
+import type { ItemPlan, ItemProps, ItemStat, RuneRef } from '@/types/planner';
 
 /** The item's defensive/quality property fields. Block is shields-only (see isShield). */
 const PROP_FIELDS: Array<{
@@ -83,22 +77,39 @@ function NumberField({
     );
 }
 
-/** A small pill showing the item's derived rarity, tinted its own game colour. */
-function RarityBadge({ rarity }: { rarity: ItemRarity }) {
-    const color = RARITY_COLOR[rarity];
-    const label = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+/** The game's own Corrupted red - matches the tooltip's footer line. */
+const CORRUPTED_COLOR = '#d20000';
 
+/** A toggle pill for the item's Corrupted flag, tinted the tooltip's own Corrupted
+ * red so it reads the same way in both places. */
+function CorruptedToggle({
+    active,
+    onToggle,
+}: {
+    active: boolean;
+    onToggle: (active: boolean) => void;
+}) {
     return (
-        <span
-            className="pl-text-xs rounded-[var(--pl-radius)] border px-2 py-0.5 font-semibold capitalize"
-            style={{
-                color,
-                borderColor: `${color}66`,
-                backgroundColor: `${color}1f`,
-            }}
+        <button
+            type="button"
+            onClick={() => onToggle(!active)}
+            aria-pressed={active}
+            className="pl-text-xs rounded-[var(--pl-radius)] border px-2 py-0.5 font-semibold transition"
+            style={
+                active
+                    ? {
+                          color: CORRUPTED_COLOR,
+                          borderColor: `${CORRUPTED_COLOR}66`,
+                          backgroundColor: `${CORRUPTED_COLOR}1f`,
+                      }
+                    : {
+                          color: 'var(--pl-muted)',
+                          borderColor: 'var(--pl-input-border)',
+                      }
+            }
         >
-            {label}
-        </span>
+            Corrupted
+        </button>
     );
 }
 
@@ -208,8 +219,12 @@ export default function SlotEditor({
         setPickerOpen(false);
     }
 
-    function setReq(key: keyof ItemReq, value: number): void {
-        commit({ ...item, req: { ...item.req, [key]: Math.max(0, value) } });
+    function setName(value: string): void {
+        commit({ ...item, name: value.slice(0, MAX_ITEM_NAME_LENGTH) });
+    }
+
+    function setCorrupted(value: boolean): void {
+        commit({ ...item, corrupted: value });
     }
 
     function setProp(key: keyof ItemProps, value: number): void {
@@ -324,43 +339,8 @@ export default function SlotEditor({
                 </div>
 
                 <div className="flex gap-4 p-4">
-                    {/* Left: base picker above the item's art, which fills the column. */}
+                    {/* Left: the item's art, which fills the column. */}
                     <div className="flex w-44 shrink-0 flex-col gap-2">
-                        <div className="relative">
-                            {item.base && !pickerOpen ? (
-                                <div className="flex items-center gap-1.5">
-                                    <span
-                                        className="pl-text-sm min-w-0 flex-1 truncate"
-                                        style={{ color: rarityColor }}
-                                    >
-                                        {reference?.name ?? item.base.id}
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setPickerOpen(true)}
-                                    >
-                                        Change
-                                    </Button>
-                                </div>
-                            ) : (
-                                <ReferencePicker
-                                    // "item" searches both craftable bases and uniques of
-                                    // the slot's categories in one list (picking a unique
-                                    // makes the item Unique; a base leaves rarity to derive
-                                    // from the mods you add). Categories keep a life-flask
-                                    // slot from ever listing a wand.
-                                    lockType="item"
-                                    categories={slot.categories}
-                                    placeholder={`Find a ${slot.label.toLowerCase()} (base or unique)…`}
-                                    onPick={pickBase}
-                                    onClose={() =>
-                                        item.base && setPickerOpen(false)
-                                    }
-                                />
-                            )}
-                        </div>
-
                         <div
                             className="relative flex flex-1 items-center justify-center rounded-[var(--pl-radius-lg)] border-2 bg-[var(--pl-input-bg)] p-2"
                             style={{
@@ -375,8 +355,17 @@ export default function SlotEditor({
                                     className="max-h-full max-w-full object-contain"
                                 />
                             ) : (
-                                <span className="size-10 opacity-30">
-                                    <Filigree />
+                                <span className="flex flex-col items-center gap-2 px-3 text-center">
+                                    <span
+                                        aria-hidden
+                                        className="text-6xl leading-none font-semibold text-[#3a3844]"
+                                    >
+                                        ?
+                                    </span>
+                                    <span className="pl-text-xs text-[#6b6878]">
+                                        Choose an item - rarity is detected
+                                        automatically
+                                    </span>
                                 </span>
                             )}
 
@@ -395,23 +384,67 @@ export default function SlotEditor({
                         </div>
                     </div>
 
-                    {/* Right: item-tooltip-style layout - requirements, implicits, mods, runes. */}
+                    {/* Right: item-tooltip-style layout - base picker, name, requirements,
+                    implicits, mods, runes. */}
                     <div className="flex min-w-0 flex-1 flex-col gap-3">
-                        <div>
-                            <p className={SECTION_LABEL}>Item level</p>
-                            <label className="flex items-center gap-2">
-                                <span className="pl-text-sm w-12 text-[var(--pl-muted)]">
-                                    Level
-                                </span>
-                                <NumberField
-                                    value={item.req.level}
-                                    onChange={(value) => setReq('level', value)}
-                                    className={`${NUMBER_INPUT} max-w-24`}
+                        <div className="relative">
+                            {/* Like a mod row's own Change picker: the title row (once a
+                            base is picked) stays put and toggles the picker above it,
+                            instead of the picker replacing the row outright. */}
+                            {(pickerOpen || !item.base) && (
+                                <ReferencePicker
+                                    // "item" searches both craftable bases and uniques of
+                                    // the slot's categories in one list (picking a unique
+                                    // makes the item Unique; a base leaves rarity to derive
+                                    // from the mods you add). Categories keep a life-flask
+                                    // slot from ever listing a wand.
+                                    lockType="item"
+                                    categories={slot.categories}
+                                    placeholder={`Find a ${slot.label.toLowerCase()} (base or unique)…`}
+                                    onPick={pickBase}
+                                    onClose={() =>
+                                        item.base && setPickerOpen(false)
+                                    }
                                 />
-                                {/* Rarity is derived from the base + mods, shown here. */}
-                                <span className="ml-auto">
-                                    <RarityBadge rarity={rarity} />
-                                </span>
+                            )}
+
+                            {item.base && (
+                                <div className="flex items-center gap-1.5">
+                                    <span
+                                        className="pl-text-sm min-w-0 flex-1 truncate"
+                                        style={{ color: rarityColor }}
+                                    >
+                                        {reference?.name ?? item.base.id}
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                            setPickerOpen((open) => !open)
+                                        }
+                                    >
+                                        Change
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <p className={SECTION_LABEL}>Name</p>
+                            <label className="flex items-center gap-2">
+                                <TextInput
+                                    value={item.name}
+                                    onChange={(event) =>
+                                        setName(event.target.value)
+                                    }
+                                    maxLength={MAX_ITEM_NAME_LENGTH}
+                                    placeholder="Optional custom name…"
+                                    className="flex-1"
+                                />
+                                <CorruptedToggle
+                                    active={item.corrupted}
+                                    onToggle={setCorrupted}
+                                />
                             </label>
                         </div>
 

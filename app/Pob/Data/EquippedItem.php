@@ -36,6 +36,7 @@ final readonly class EquippedItem
         public ?int $evasion = null,
         public ?int $energyShield = null,
         public ?int $block = null,
+        public bool $corrupted = false,
     ) {}
 
     /**
@@ -82,6 +83,7 @@ final readonly class EquippedItem
      *     evasion: ?int,
      *     energyShield: ?int,
      *     block: ?int,
+     *     corrupted: bool,
      *     runes: list<array{name: string, icon: ?string, levelRequirement: ?int, effects: list<string>}>,
      *     implicitMods: list<string>,
      *     explicitMods: list<string>,
@@ -107,6 +109,7 @@ final readonly class EquippedItem
             'evasion' => $this->evasion,
             'energyShield' => $this->energyShield,
             'block' => $this->block,
+            'corrupted' => $this->corrupted,
             'runes' => $this->runes,
             'implicitMods' => $this->implicitMods(),
             'explicitMods' => $this->explicitMods(),

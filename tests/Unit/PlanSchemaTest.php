@@ -244,7 +244,8 @@ test('canonicalize coerces equipment items and drops empty or unknown slots', fu
         ->and($slots['body'])->toBe([
             'rarity' => 'rare',
             'base' => ['type' => 'base', 'id' => 'Advanced Plate Vest'],
-            'req' => ['level' => 0],
+            'name' => '',
+            'corrupted' => false,
             'props' => ['quality' => 0, 'armour' => 0, 'evasion' => 0, 'energyShield' => 0, 'block' => 0],
             // The blank-id entry and the bare string are dropped; only a real mod ref stays.
             'stats' => [
@@ -286,7 +287,7 @@ test('canonicalize keeps mod references and coerces their values', function () {
     ]);
 });
 
-test('canonicalize coerces the level requirement, defensive properties and rune sockets', function () {
+test('canonicalize coerces the item name, defensive properties and rune sockets', function () {
     $data = PlanSchema::canonicalize([
         'tabs' => PlanSchema::baseTabs(),
         'sections' => [
@@ -296,7 +297,8 @@ test('canonicalize coerces the level requirement, defensive properties and rune 
                         'body' => [
                             'rarity' => 'rare',
                             'base' => ['type' => 'base', 'id' => 'Advanced Plate Vest'],
-                            'req' => ['level' => '65', 'str' => 67],
+                            'name' => '  Rift Pelt  ',
+                            'corrupted' => 'yes',
                             'props' => ['quality' => '20', 'armour' => 400, 'evasion' => -3, 'block' => 25],
                             'stats' => [],
                             'sockets' => [
@@ -314,9 +316,10 @@ test('canonicalize coerces the level requirement, defensive properties and rune 
 
     $item = $data['sections']['act-1']['items']['slots']['body'];
 
-    // Only the level requirement survives (str/dex/int are gone); string values coerce,
-    // negatives clamp to 0, and the defensive properties fill in every key.
-    expect($item['req'])->toBe(['level' => 65])
+    // The name is trimmed; any truthy value coerces "corrupted" to a real bool; string
+    // values coerce, negatives clamp to 0, and the defensive properties fill in every key.
+    expect($item['name'])->toBe('Rift Pelt')
+        ->and($item['corrupted'])->toBe(true)
         ->and($item['props'])->toBe([
             'quality' => 20,
             'armour' => 400,
@@ -330,6 +333,54 @@ test('canonicalize coerces the level requirement, defensive properties and rune 
             null,
             ['type' => 'rune', 'id' => 'Body Rune'],
         ]);
+});
+
+test('canonicalize caps an item name at the max length', function () {
+    $data = PlanSchema::canonicalize([
+        'tabs' => PlanSchema::baseTabs(),
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'rare',
+                            'base' => ['type' => 'base', 'id' => 'Advanced Plate Vest'],
+                            'name' => str_repeat('x', PlanSchema::MAX_ITEM_NAME_LENGTH + 20),
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    $name = $data['sections']['act-1']['items']['slots']['body']['name'];
+
+    expect(mb_strlen((string) $name))->toBe(PlanSchema::MAX_ITEM_NAME_LENGTH);
+});
+
+test('normalize v1 to v2 upgrader strips the retired req key from item slots', function () {
+    $data = PlanSchema::normalize([
+        'mode' => 'phases',
+        'tabs' => PlanSchema::baseTabs(),
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'rare',
+                            'base' => ['type' => 'base', 'id' => 'Advanced Plate Vest'],
+                            'req' => ['level' => 65],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ], 1);
+
+    $item = $data['sections']['act-1']['items']['slots']['body'];
+
+    expect($item)->not->toHaveKey('req')
+        ->and($item['name'])->toBe('');
 });
 
 test('canonicalize keeps a valid item priority and nulls an out-of-range one', function () {

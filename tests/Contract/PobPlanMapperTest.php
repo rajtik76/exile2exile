@@ -178,12 +178,14 @@ it('assigns an ambiguous mod the type that keeps the item legal', function () {
         ->and($ids)->toContain('ColdResist6');
 });
 
-it('imports the item level requirement and defensive properties from PoB', function () {
+it('imports the item name and defensive properties from PoB', function () {
     $gloves = mapFixture(MERC_BUILD)['sections'][PlanSchema::SINGLE_KEY]['items']['slots']['gloves'];
 
-    // The Cultist Gauntlets show Quality 20, Armour 276, Evasion 254, LevelReq 75 and no
-    // energy shield or block - carried onto the item as its properties, str/dex/int gone.
-    expect($gloves['req'])->toBe(['level' => 75])
+    // The rolled name ("Beast Knuckle", distinct from its "Cultist Gauntlets" base) comes
+    // across; Quality 20, Armour 276, Evasion 254 and no energy shield or block - carried
+    // onto the item as its properties, str/dex/int gone.
+    expect($gloves['name'])->toBe('Beast Knuckle')
+        ->and($gloves['corrupted'])->toBe(false)
         ->and($gloves['props'])->toBe([
             'quality' => 20,
             'armour' => 276,
@@ -203,6 +205,18 @@ function catalogueCarriesCraftOnlyMods(): bool
 {
     return new ModCatalogue()->resolve('AbyssModGenWeaponAmanamuSuffixSpiritReservationEfficiency') !== null;
 }
+
+it('imports the corrupted flag and rolled name from PoB', function () {
+    $slots = mapFixture(DESECRATED_BUILD)['sections'][PlanSchema::SINGLE_KEY]['items']['slots'];
+
+    // The body armour ("Rift Pelt", a "Slipstrike Vest") and boots are corrupted in this
+    // build; everything else on it is not.
+    expect($slots['body']['corrupted'])->toBe(true)
+        ->and($slots['body']['name'])->toBe('Rift Pelt')
+        ->and($slots['boots']['corrupted'])->toBe(true)
+        ->and($slots['helmet']['corrupted'])->toBe(false)
+        ->and($slots['helmet']['name'])->toBe('Constricting Command');
+});
 
 it('matches desecrated affixes that never roll naturally', function () {
     $slots = mapFixture(DESECRATED_BUILD)['sections'][PlanSchema::SINGLE_KEY]['items']['slots'];

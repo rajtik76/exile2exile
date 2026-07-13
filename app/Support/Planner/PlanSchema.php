@@ -27,7 +27,7 @@ final class PlanSchema
      * Current JSON schema version. Bump this (and add an upgrade step below) on any
      * change to the stored shape.
      */
-    public const int CURRENT_VERSION = 1;
+    public const int CURRENT_VERSION = 2;
 
     /**
      * The fixed base phases, in their immutable display order. A plan always opens
@@ -87,21 +87,8 @@ final class PlanSchema
     /** Most rune sockets an item may carry (a corrupted weapon/body: 3 natural + 1 Vaal). */
     private const int MAX_ITEM_SOCKETS = 4;
 
-    /**
-     * Highest item level the game produces - a character/monster tops out at 100, and
-     * PoB's PoE2 affix data bottoms out its highest tiers at required level 100. Item
-     * level (req.level) is validated against this on save and on editor close.
-     */
-    public const int MAX_ITEM_LEVEL = 100;
-
-    /**
-     * The requirement keys an item shows. Only the level requirement is authored now -
-     * an item's attribute cost isn't part of build planning, so str/dex/int were dropped
-     * in favour of the defensive {@see ITEM_PROP_KEYS} the paper-doll actually reasons about.
-     *
-     * @var list<string>
-     */
-    private const array ITEM_REQ_KEYS = ['level'];
+    /** Longest author-typed item name (e.g. a rare's rolled name, "Rift Pelt"). */
+    public const int MAX_ITEM_NAME_LENGTH = 60;
 
     /**
      * The item's own defensive/quality properties, as the game tooltip shows them (the
@@ -239,8 +226,7 @@ final class PlanSchema
         $upgraders = self::upgraders();
 
         // Step the blob forward one version at a time through whatever upgraders
-        // sit above its stored version. Empty today (v1 is current); each future
-        // schema bump adds one entry here.
+        // sit above its stored version.
         while (isset($upgraders[$version])) {
             $data = $upgraders[$version]($data);
             $version++;
@@ -258,11 +244,29 @@ final class PlanSchema
      */
     private static function upgraders(): array
     {
-        // Empty until the app ships and has real stored plans. The shape still evolves
-        // freely during development - canonicalize() fills any missing keys - so there
-        // is nothing to migrate yet. The first post-launch shape change adds a step
-        // here (and bumps CURRENT_VERSION) to migrate real production rows.
-        return [];
+        return [
+            // v1 -> v2: dropped the author-typed "item level" (req.level) - it never
+            // tracked anything real (no requirement/level distinction existed), and
+            // duplicated as a mislabeled "Item Level" line in the tooltip. Strip the
+            // retired key from every item slot; canonicalize() no longer reads it.
+            1 => function (array $data): array {
+                $sections = is_array($data['sections'] ?? null) ? $data['sections'] : [];
+
+                foreach ($sections as $sectionKey => $section) {
+                    $slots = is_array($section['items']['slots'] ?? null) ? $section['items']['slots'] : [];
+
+                    foreach ($slots as $slotKey => $slot) {
+                        if (is_array($slot)) {
+                            unset($sections[$sectionKey]['items']['slots'][$slotKey]['req']);
+                        }
+                    }
+                }
+
+                $data['sections'] = $sections;
+
+                return $data;
+            },
+        ];
     }
 
     /**
@@ -358,7 +362,7 @@ final class PlanSchema
      * slots are dropped.
      *
      * @param  array<int|string, mixed>  $slots
-     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, req: array{level: int}, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
+     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
      */
     private static function canonicalSlots(array $slots): array
     {
@@ -400,7 +404,7 @@ final class PlanSchema
      * no mod lines and no runes).
      *
      * @param  array<string, mixed>  $entry
-     * @return array{rarity: string, base: array{type: string, id: string}|null, req: array{level: int}, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
+     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
      */
     private static function canonicalItem(array $entry): ?array
     {
@@ -445,7 +449,8 @@ final class PlanSchema
         return [
             'rarity' => $rarity,
             'base' => $base,
-            'req' => self::canonicalReq(is_array($entry['req'] ?? null) ? $entry['req'] : []),
+            'name' => self::canonicalItemName($entry['name'] ?? null),
+            'corrupted' => (bool) ($entry['corrupted'] ?? false),
             'props' => $props,
             'stats' => $stats,
             'sockets' => $sockets,
@@ -457,10 +462,10 @@ final class PlanSchema
      * Shape-level validation messages for one authored equipment item, empty when it is
      * legal. These mirror the paper-doll's own limits so a forged payload can't bypass
      * what the UI already prevents: sockets within the slot's ceiling (jewellery/belts
-     * take none) and a unique carrying neither author-typed modifiers nor requirements
-     * (its real stats come from the GGPK unique it references). The affix rules that need
-     * the GGPK mod catalogue (per-rarity prefix/suffix counts, families, value ranges,
-     * base compatibility) live in {@see ModCatalogue::modErrors}.
+     * take none) and a unique carrying no author-typed modifiers (its real stats come
+     * from the GGPK unique it references). The affix rules that need the GGPK mod
+     * catalogue (per-rarity prefix/suffix counts, families, value ranges, base
+     * compatibility) live in {@see ModCatalogue::modErrors}.
      *
      * @param  array<string, mixed>  $item
      * @return list<string>
@@ -470,13 +475,12 @@ final class PlanSchema
         $errors = [];
         $stats = is_array($item['stats'] ?? null) ? array_values($item['stats']) : [];
         $sockets = is_array($item['sockets'] ?? null) ? $item['sockets'] : [];
-        $req = is_array($item['req'] ?? null) ? $item['req'] : [];
         $props = is_array($item['props'] ?? null) ? $item['props'] : [];
 
-        $level = $req['level'] ?? 0;
+        $name = $item['name'] ?? '';
 
-        if (is_numeric($level) && (int) $level > self::MAX_ITEM_LEVEL) {
-            $errors[] = 'Item level cannot exceed '.self::MAX_ITEM_LEVEL.'.';
+        if (is_string($name) && mb_strlen($name) > self::MAX_ITEM_NAME_LENGTH) {
+            $errors[] = 'Item name cannot exceed '.self::MAX_ITEM_NAME_LENGTH.' characters.';
         }
 
         $quality = $props['quality'] ?? 0;
@@ -515,21 +519,17 @@ final class PlanSchema
     }
 
     /**
-     * Coerce an item's level requirement: a non-negative int (0 = the line is hidden).
-     *
-     * @param  array<string, mixed>  $req
-     * @return array{level: int}
+     * Coerce an item's author-typed name: trimmed, capped at
+     * {@see MAX_ITEM_NAME_LENGTH}, empty string when absent or not a string (a blank
+     * name falls back to the base/unique's own name wherever the item is displayed).
      */
-    private static function canonicalReq(array $req): array
+    private static function canonicalItemName(mixed $name): string
     {
-        $result = [];
-
-        foreach (self::ITEM_REQ_KEYS as $key) {
-            $value = $req[$key] ?? 0;
-            $result[$key] = is_numeric($value) ? max(0, (int) $value) : 0;
+        if (! is_string($name)) {
+            return '';
         }
 
-        return $result;
+        return mb_substr(trim($name), 0, self::MAX_ITEM_NAME_LENGTH);
     }
 
     /**

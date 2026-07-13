@@ -230,10 +230,11 @@ final class PobPlanMapper
     /**
      * One equipped item in the planner's shape. A unique carries its own modifiers in
      * game, so its author-mod lines are left off; a base/magic/rare item keeps the
-     * reverse-matched affixes that resolve. Level requirement and defensive properties
-     * (quality, armour, evasion, energy shield, block) come across for every rarity.
+     * reverse-matched affixes that resolve. The item's own rolled name (e.g. "Rift
+     * Pelt" on a "Slipstrike Vest") and defensive properties (quality, armour, evasion,
+     * energy shield, block) come across for every rarity.
      *
-     * @return array{rarity: string, base: array{type: string, id: string}|null, req: array{level: int}, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}>}
+     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}>}
      */
     private function item(EquippedItem $item, string $slotKey): array
     {
@@ -244,7 +245,11 @@ final class PobPlanMapper
         return [
             'rarity' => $rarity,
             'base' => $base,
-            'req' => ['level' => $item->levelRequirement ?? 0],
+            // A unique's own name equals the reference it resolves through (the game's
+            // canonical unique name), so it never duplicates as a redundant subtitle;
+            // canonicalize() trims/caps this before storage.
+            'name' => $item->name,
+            'corrupted' => $item->corrupted,
             // The item's computed defensive properties as the game shows them; block is
             // only present on shields. Carried for every rarity - for a unique these are
             // the only way to record its defences (the planner holds no base defence data).

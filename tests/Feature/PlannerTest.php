@@ -681,26 +681,40 @@ test('an item modifier rolled inside its tier range is accepted', function () {
     expect($stats[0])->toBe(['modId' => 'FireResist1', 'values' => [8]]);
 });
 
-test('an item level above the game maximum is rejected', function () {
+test('an item name above the max length is rejected', function () {
     $this->post(route('planner.store'), planWithItem('body', [
         'rarity' => 'rare',
         'base' => ['type' => 'base', 'id' => 'Plate1'],
-        'req' => ['level' => PlanSchema::MAX_ITEM_LEVEL + 1, 'str' => 0, 'dex' => 0, 'int' => 0],
-    ]))->assertInvalid(['sections.act-1.items.slots.body.req.level']);
+        'name' => str_repeat('x', PlanSchema::MAX_ITEM_NAME_LENGTH + 1),
+    ]))->assertInvalid(['sections.act-1.items.slots.body.name']);
 
     expect(BuildPlan::count())->toBe(0);
 });
 
-test('an item level at the game maximum is accepted', function () {
+test('an item name at the max length is accepted', function () {
+    $name = str_repeat('x', PlanSchema::MAX_ITEM_NAME_LENGTH);
+
     $this->post(route('planner.store'), planWithItem('body', [
         'rarity' => 'rare',
         'base' => ['type' => 'base', 'id' => 'Plate1'],
-        'req' => ['level' => PlanSchema::MAX_ITEM_LEVEL, 'str' => 0, 'dex' => 0, 'int' => 0],
+        'name' => $name,
     ]))->assertRedirect();
 
     $body = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body'];
 
-    expect($body['req']['level'])->toBe(PlanSchema::MAX_ITEM_LEVEL);
+    expect($body['name'])->toBe($name);
+});
+
+test('an item can be marked corrupted', function () {
+    $this->post(route('planner.store'), planWithItem('body', [
+        'rarity' => 'rare',
+        'base' => ['type' => 'base', 'id' => 'Plate1'],
+        'corrupted' => true,
+    ]))->assertRedirect();
+
+    $body = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body'];
+
+    expect($body['corrupted'])->toBe(true);
 });
 
 test('a weapon accepts three rune sockets', function () {
@@ -822,17 +836,16 @@ test('an item with three defence types saves (triple-hybrid bases exist)', funct
     expect(BuildPlan::count())->toBe(1);
 });
 
-test('a unique item may carry an item level', function () {
-    // req.level is the item level, not an author requirement, so it is fine on a unique.
+test('a unique item may carry a corrupted flag', function () {
     $this->post(route('planner.store'), planWithItem('body', [
         'rarity' => 'unique',
         'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
-        'req' => ['level' => 82, 'str' => 0, 'dex' => 0, 'int' => 0],
+        'corrupted' => true,
     ]))->assertRedirect();
 
     $body = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body'];
 
-    expect($body['req']['level'])->toBe(82);
+    expect($body['corrupted'])->toBe(true);
 });
 
 test('a unique item with no author mods or requirements is accepted', function () {

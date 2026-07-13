@@ -1,14 +1,15 @@
 import { expect, test } from 'vitest';
 import { itemErrors } from '@/lib/itemRules';
 import type { ModInfo, ModMap } from '@/lib/modLines';
-import { MAX_ITEM_LEVEL } from '@/types/planner';
+import { MAX_ITEM_NAME_LENGTH } from '@/types/planner';
 import type { ItemPlan } from '@/types/planner';
 
 function item(overrides: Partial<ItemPlan> = {}): ItemPlan {
     return {
         rarity: 'rare',
         base: null,
-        req: { level: 0 },
+        name: '',
+        corrupted: false,
         props: { quality: 0, armour: 0, evasion: 0, energyShield: 0, block: 0 },
         stats: [],
         sockets: [],
@@ -74,16 +75,20 @@ test('a rare flask or charm is an error, a rare gear item is not', () => {
     );
 });
 
-test('an item level above the game maximum is an error', () => {
+test('an item name above the max length is an error', () => {
     const over = item({
-        req: { level: MAX_ITEM_LEVEL + 1 },
+        name: 'x'.repeat(MAX_ITEM_NAME_LENGTH + 1),
     });
 
     expect(itemErrors('body', over, {})).toContain(
-        `Item level cannot exceed ${MAX_ITEM_LEVEL}.`,
+        `Item name cannot exceed ${MAX_ITEM_NAME_LENGTH} characters.`,
     );
     expect(
-        itemErrors('body', item({ req: { level: MAX_ITEM_LEVEL } }), {}),
+        itemErrors(
+            'body',
+            item({ name: 'x'.repeat(MAX_ITEM_NAME_LENGTH) }),
+            {},
+        ),
     ).toEqual([]);
 });
 
@@ -202,12 +207,12 @@ test('a unique with author modifiers is an error, but its properties are allowed
         }),
         modMap(mod()),
     );
-    // A unique's defences and level are the only way to record them, so they're legal.
+    // A unique's defences are the only way to record them, so they're legal.
     const withProps = itemErrors(
         'body',
         item({
             rarity: 'unique',
-            req: { level: 65 },
+            name: 'Constricting Command',
             props: {
                 quality: 20,
                 armour: 500,

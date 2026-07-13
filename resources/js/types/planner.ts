@@ -1,6 +1,6 @@
 /**
  * Client-side mirror of the build-plan JSON shape owned by the server's
- * `App\Support\Planner\PlanSchema` (schema v5). Keep the two in step: a change to
+ * `App\Support\Planner\PlanSchema` (schema v2). Keep the two in step: a change to
  * the stored shape is a new schema version there and an update here.
  */
 
@@ -30,11 +30,6 @@ export interface ItemRef {
 export interface RuneRef {
     type: 'rune';
     id: string;
-}
-
-/** An item's requirement line (0 = hidden). Only the level requirement is authored. */
-export interface ItemReq {
-    level: number;
 }
 
 /**
@@ -78,7 +73,14 @@ export const MODS_PER_RARITY: Record<ItemRarity, number> = {
 export interface ItemPlan {
     rarity: ItemRarity;
     base: ItemRef | null;
-    req: ItemReq;
+    /**
+     * The item's own rolled name (e.g. "Rift Pelt" on a "Slipstrike Vest"), author-typed
+     * or carried over from a PoB import. Empty falls back to the base/unique's own name
+     * wherever the item is displayed - {@link MAX_ITEM_NAME_LENGTH} caps it.
+     */
+    name: string;
+    /** Whether the item is Corrupted (author-toggled or carried over from a PoB import). */
+    corrupted: boolean;
     props: ItemProps;
     stats: ItemStat[];
     sockets: (RuneRef | null)[];
@@ -339,11 +341,8 @@ export const NO_RARE_SLOTS = new Set(
     ),
 );
 
-/**
- * Highest item level the game produces - a character/monster tops out at 100. Item
- * level (req.level) is validated against this on the editor and on the server.
- */
-export const MAX_ITEM_LEVEL = 100;
+/** Longest author-typed item name (e.g. a rare's rolled name, "Rift Pelt"). */
+export const MAX_ITEM_NAME_LENGTH = 60;
 
 /**
  * Validation ceiling for item quality. Ordinary gear caps at 20%, but "+X% to Maximum

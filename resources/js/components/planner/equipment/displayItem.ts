@@ -17,7 +17,8 @@ export function emptyItem(): ItemPlan {
     return {
         rarity: 'normal',
         base: null,
-        req: { level: 0 },
+        name: '',
+        corrupted: false,
         props: {
             quality: 0,
             armour: 0,
@@ -89,13 +90,11 @@ export function toDisplayItem(
     return {
         slot: slot.key,
         rarity: item.rarity,
-        name: baseRef?.name ?? slot.label,
+        name: item.name || baseRef?.name || slot.label,
         baseType: baseRef?.name ?? slot.label,
         icon: baseRef?.icon ?? null,
         twoHanded: baseRef?.twoHanded ?? false,
-        itemClass: baseRef?.category ?? null,
-        itemLevel: item.req.level || null,
-        levelRequirement: null,
+        corrupted: item.corrupted,
         // The item's authored defensive/quality properties (0 = hidden in the tooltip).
         quality: item.props.quality || null,
         armour: item.props.armour || null,

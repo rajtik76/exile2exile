@@ -1,7 +1,7 @@
 import { modValuesValid } from '@/lib/modLines';
 import type { ModMap } from '@/lib/modLines';
 import {
-    MAX_ITEM_LEVEL,
+    MAX_ITEM_NAME_LENGTH,
     MAX_ITEM_QUALITY,
     MAX_ITEM_SOCKETS,
     MODS_PER_RARITY,
@@ -17,7 +17,7 @@ import type { ItemPlan, ItemRarity, ItemStat } from '@/types/planner';
  * is a UX gate, not the security boundary.
  *
  * Shape rules: sockets stay within the slot's ceiling (jewellery and belts take none), and
- * a unique carries neither author modifiers nor requirements. Affix rules (from the mod
+ * a unique carries no author modifiers. Affix rules (from the mod
  * catalogue): per-rarity prefix/suffix counts (normal 0, magic 1+1, rare 3+3), one mod per
  * mutual-exclusion family, and every value inside its tier's range.
  *
@@ -30,8 +30,10 @@ export function itemErrors(
 ): string[] {
     const errors: string[] = [];
 
-    if (item.req.level > MAX_ITEM_LEVEL) {
-        errors.push(`Item level cannot exceed ${MAX_ITEM_LEVEL}.`);
+    if (item.name.length > MAX_ITEM_NAME_LENGTH) {
+        errors.push(
+            `Item name cannot exceed ${MAX_ITEM_NAME_LENGTH} characters.`,
+        );
     }
 
     if (item.props.quality > MAX_ITEM_QUALITY) {
@@ -59,7 +61,7 @@ export function itemErrors(
     }
 
     // A unique's modifiers are fixed by the unique itself, so the author adds none; its
-    // level requirement and defensive properties (checked above) are legitimate to record.
+    // defensive properties (checked above) are legitimate to record.
     if (item.rarity === 'unique') {
         if (item.stats.length > 0) {
             errors.push(

@@ -403,20 +403,16 @@ class PlanSeeder extends Seeder
 
     /**
      * Build one rare item on a base: 3-6 real affixes rolled inside their tier ranges,
-     * one per mutual-exclusion family, capped at three prefixes and three suffixes. The
-     * item level requirement is the highest chosen affix's level.
+     * one per mutual-exclusion family, capped at three prefixes and three suffixes.
      *
      * @return array<string, mixed>
      */
     private function rareItem(IconResolver $icons, ModCatalogue $catalogue, string $base, int $priority): array
     {
-        [$stats, $level] = $this->rollAffixes($icons, $catalogue, $base);
-
         return [
             'rarity' => 'rare',
             'base' => ['type' => 'base', 'id' => $base],
-            'req' => ['level' => min($level, PlanSchema::MAX_ITEM_LEVEL), 'str' => 0, 'dex' => 0, 'int' => 0],
-            'stats' => $stats,
+            'stats' => $this->rollAffixes($icons, $catalogue, $base),
             'priority' => $priority,
         ];
     }
@@ -426,7 +422,7 @@ class PlanSeeder extends Seeder
      * a distinct family, valued at the midpoint of a mid tier so it always sits inside the
      * range {@see ModCatalogue::modErrors} enforces.
      *
-     * @return array{0: list<array{modId: string, values: list<int>}>, 1: int}
+     * @return list<array{modId: string, values: list<int>}>
      */
     private function rollAffixes(IconResolver $icons, ModCatalogue $catalogue, string $base): array
     {
@@ -444,7 +440,6 @@ class PlanSeeder extends Seeder
 
         $stats = [];
         $usedFamilies = [];
-        $maxLevel = 0;
 
         foreach (['prefix', 'suffix'] as $type) {
             $count = 0;
@@ -473,12 +468,11 @@ class PlanSeeder extends Seeder
 
                 $stats[] = ['modId' => $tier['id'], 'values' => $values];
                 $usedFamilies = [...$usedFamilies, ...$tier['families']];
-                $maxLevel = max($maxLevel, $tier['level']);
                 $count++;
             }
         }
 
-        return [$stats, $maxLevel];
+        return $stats;
     }
 
     /**

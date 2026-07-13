@@ -12,7 +12,8 @@ function item(priority: number | null): ItemPlan {
     return {
         rarity: 'rare',
         base: null,
-        req: { level: 0 },
+        name: '',
+        corrupted: false,
         props: { quality: 0, armour: 0, evasion: 0, energyShield: 0, block: 0 },
         stats: [],
         sockets: [],

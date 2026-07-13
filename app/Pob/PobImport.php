@@ -402,14 +402,17 @@ final class PobImport implements BuildDecoder
             }
         }
 
-        $mods = $modStart === null
+        $rawModLines = $modStart === null
             ? []
-            : array_values(array_filter(
-                array_map($this->stripModTags(...), array_slice($lines, $modStart)),
-                // "Corrupted"/"Mirrored" are item flags PoB appends after the mods,
-                // not modifier lines; they are trailing, so implicit counting is safe.
-                static fn (string $line): bool => ! in_array($line, ['Corrupted', 'Mirrored'], true),
-            ));
+            : array_map($this->stripModTags(...), array_slice($lines, $modStart));
+
+        // "Corrupted"/"Mirrored" are item flags PoB appends after the mods, not
+        // modifier lines; they are trailing, so implicit counting is safe.
+        $corrupted = in_array('Corrupted', $rawModLines, true);
+        $mods = array_values(array_filter(
+            $rawModLines,
+            static fn (string $line): bool => ! in_array($line, ['Corrupted', 'Mirrored'], true),
+        ));
 
         return new EquippedItem(
             slot: $slot,
@@ -434,6 +437,7 @@ final class PobImport implements BuildDecoder
             evasion: $this->intMeta($lines, 'Evasion:'),
             energyShield: $this->intMeta($lines, 'Energy Shield:'),
             block: $this->intMeta($lines, 'Block:'),
+            corrupted: $corrupted,
         );
     }
 

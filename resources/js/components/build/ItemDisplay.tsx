@@ -23,11 +23,10 @@ export interface Item {
     rarity: string;
     name: string;
     baseType: string;
-    itemLevel: number | null;
     icon: string | null;
     twoHanded: boolean;
-    itemClass: string | null;
-    levelRequirement: number | null;
+    /** Whether the item is Corrupted - shown as a red footer line in the tooltip. */
+    corrupted?: boolean;
     // Attribute requirements - optional; the planner does not author them, but an
     // imported item may carry them.
     requiredStrength?: number | null;
@@ -373,11 +372,11 @@ function Properties({ item }: { item: Item }) {
     }
 
     return (
-        <div className="mt-0.5">
+        <div className="mt-0.5 space-y-0.5">
             {lines.map((line) => (
-                <p key={line.key} className="text-sm text-[#a7acb8]">
+                <p key={line.key} className="text-[#a7acb8]">
                     {line.label}:{' '}
-                    <span className="font-medium text-[#f1f3f8]">
+                    <span className="font-medium text-[#8888ff]">
                         {line.value}
                     </span>
                 </p>
@@ -388,14 +387,6 @@ function Properties({ item }: { item: Item }) {
 
 function Requirements({ item }: { item: Item }) {
     const badges: Array<{ key: string; label: string; color: string }> = [];
-
-    if (item.levelRequirement !== null) {
-        badges.push({
-            key: 'lvl',
-            label: `Level ${item.levelRequirement}`,
-            color: '#f1f3f8',
-        });
-    }
 
     if (item.requiredStrength) {
         badges.push({
@@ -491,11 +482,11 @@ function detailBadge(detail: ItemModDetail): string {
 function ModDetailRow({ detail }: { detail: ItemModDetail }) {
     return (
         <div>
-            <span className="mr-2 text-xs font-semibold tracking-[0.08em] text-[#8a8f9c] uppercase">
+            <span className="mr-2 font-semibold tracking-[0.08em] text-[#a7acb8] uppercase">
                 {detailBadge(detail)}
             </span>
             {detail.lines.map((line, index) => (
-                <span key={index} className="text-sm text-[#aab6ff]">
+                <span key={index} className="font-medium text-[#8888ff]">
                     {line}
                     {index < detail.lines.length - 1 ? ', ' : ''}
                 </span>
@@ -507,14 +498,16 @@ function ModDetailRow({ detail }: { detail: ItemModDetail }) {
 /**
  * The Alt-held detailed view: each authored affix on its own showing `value(min-max)` -
  * the breakdown the game reveals under Alt. Prefixes are grouped on top and suffixes
- * below, split by a rule, each labelled `P<tier>` / `S<tier>`.
+ * below, split by a rule, each labelled `P<tier>` / `S<tier>`. Font size, line spacing
+ * and mod colour match the summed view (BulletList) exactly - same body text, just
+ * broken out per affix.
  */
 function ModDetailList({ details }: { details: ItemModDetail[] }) {
     const prefixes = details.filter((detail) => detail.type === 'prefix');
     const suffixes = details.filter((detail) => detail.type !== 'prefix');
 
     return (
-        <div className="flex flex-col gap-1.5">
+        <div className="space-y-0.5">
             {prefixes.map((detail, index) => (
                 <ModDetailRow key={`p${index}`} detail={detail} />
             ))}
@@ -549,21 +542,6 @@ export function ItemCard({ item }: { item: Item }) {
             subtitle={hasName ? item.baseType : undefined}
             frame={rarityFrame(item.rarity)}
         >
-            {item.itemClass && (
-                <p className="text-sm font-medium tracking-[0.08em] text-[#d6dae2]">
-                    {item.itemClass}
-                </p>
-            )}
-
-            {item.itemLevel !== null && (
-                <p className="mt-0.5 text-sm text-[#a7acb8]">
-                    Item Level:{' '}
-                    <span className="font-medium text-[#f1f3f8]">
-                        {item.itemLevel}
-                    </span>
-                </p>
-            )}
-
             <Properties item={item} />
 
             <Requirements item={item} />
@@ -600,6 +578,13 @@ export function ItemCard({ item }: { item: Item }) {
                     >
                         {item.flavour}
                     </p>
+                </>
+            )}
+
+            {item.corrupted && (
+                <>
+                    <TooltipRule />
+                    <p className="text-[#d20000]">Corrupted</p>
                 </>
             )}
         </TooltipCard>
@@ -694,19 +679,18 @@ export function SlotTile({
                 clear button and priority overlay all anchor to the item, not the wider
                 grid cell a left/right-justified flask leaves around it. */}
                 <div
-                    className={`relative flex h-full items-center justify-center rounded-[2px] ${flask ? 'w-[45%] min-w-[1.6rem]' : 'w-full'} ${highlighted ? 'ring-2 ring-[var(--pl-accent-lit)]' : ''}`}
+                    className={`relative flex h-full items-center justify-center rounded-[10px] ${flask ? 'w-[45%] min-w-[1.6rem]' : 'w-full'} ${highlighted ? 'ring-2 ring-[var(--pl-accent-lit)]' : ''}`}
                 >
                     <div
-                        className={`flex h-full w-full items-center justify-center overflow-hidden rounded-[2px] border bg-gradient-to-b from-[#0a0a10] to-[#0a0a10] transition ${onEdit && !item ? 'border-dashed hover:border-[#c9a24a]/80 hover:bg-[#c9a24a]/5' : ''}`}
+                        className={`flex h-full w-full items-center justify-center overflow-hidden rounded-[10px] border transition ${onEdit && !item ? 'hover:border-[#c9a24a]/70 hover:bg-[#c9a24a]/[0.06]' : ''}`}
                         style={{
-                            borderColor: tone
-                                ? tone.edge
-                                : onEdit && !item
-                                  ? 'rgba(201,162,74,0.45)'
-                                  : '#13131b',
+                            borderColor: tone ? tone.edge : '#1e1e26',
+                            background: item
+                                ? '#0a0a10'
+                                : 'radial-gradient(65% 65% at 50% 32%, rgba(201,162,74,0.06), transparent 72%), linear-gradient(180deg, #131319 0%, #0a0a0e 100%)',
                             boxShadow: tone
                                 ? `inset 0 0 26px -12px ${tone.glow}, 0 0 6px -3px ${tone.glow}`
-                                : 'inset 0 0 20px -14px rgba(0,0,0,0.9)',
+                                : 'inset 0 1px 0 rgba(255,255,255,0.04), inset 0 0 22px -14px rgba(0,0,0,0.85)',
                         }}
                     >
                         {item ? (
@@ -737,10 +721,25 @@ export function SlotTile({
                         ) : trinket ? (
                             <Filigree />
                         ) : (
-                            <span
-                                className={`px-1 text-center text-[8px] tracking-wide uppercase ${onEdit ? 'text-[#8a7a52] group-hover:text-[#c9a24a]' : 'text-[#4a4855]'}`}
-                            >
-                                {slot}
+                            <span className="flex flex-col items-center gap-1">
+                                {onEdit && (
+                                    <svg
+                                        aria-hidden
+                                        viewBox="0 0 16 16"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.6"
+                                        strokeLinecap="round"
+                                        className="size-3 text-[#4a4855] transition group-hover:text-[#c9a24a]"
+                                    >
+                                        <path d="M8 3.5 V12.5 M3.5 8 H12.5" />
+                                    </svg>
+                                )}
+                                <span
+                                    className={`px-1 text-center text-[8px] tracking-wide uppercase ${onEdit ? 'text-[#8a7a52] group-hover:text-[#c9a24a]' : 'text-[#4a4855]'}`}
+                                >
+                                    {slot}
+                                </span>
                             </span>
                         )}
                     </div>
@@ -763,7 +762,7 @@ export function SlotTile({
                                 event.stopPropagation();
                                 onClear();
                             }}
-                            className="absolute top-1.5 right-1.5 z-[61] hidden size-4 items-center justify-center rounded-full bg-[#e0584f] text-[10px] text-white group-hover:flex"
+                            className="absolute top-1.5 right-1.5 z-[61] hidden size-5 items-center justify-center rounded-full border border-[#e0584f] bg-[var(--pl-panel)] text-[11px] leading-none text-[#ff8a80] shadow-[0_1px_4px_rgba(0,0,0,0.6)] transition group-hover:flex hover:bg-[#e0584f] hover:text-white"
                         >
                             ✕
                         </button>

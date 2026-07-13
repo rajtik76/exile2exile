@@ -21,7 +21,8 @@ test('renders a filled slot with the resolved item icon', () => {
         body: {
             rarity: 'unique',
             base: { type: 'unique', id: 'Bramblejack' },
-            req: { level: 0 },
+            name: '',
+            corrupted: false,
             props: {
                 quality: 0,
                 armour: 0,
@@ -52,7 +53,8 @@ test('a unique item shows its flavour text in the tooltip', () => {
         body: {
             rarity: 'unique',
             base: { type: 'unique', id: 'Bramblejack' },
-            req: { level: 0 },
+            name: '',
+            corrupted: false,
             props: {
                 quality: 0,
                 armour: 0,
@@ -137,7 +139,8 @@ test('the editor refuses to close on an illegal item', () => {
         body: {
             rarity: 'unique',
             base: { type: 'unique', id: 'Bramblejack' },
-            req: { level: 0 },
+            name: '',
+            corrupted: false,
             props: {
                 quality: 0,
                 armour: 0,
@@ -178,7 +181,8 @@ test('the editor closes on a legal item', () => {
         body: {
             rarity: 'rare',
             base: { type: 'unique', id: 'Bramblejack' },
-            req: { level: 0 },
+            name: '',
+            corrupted: false,
             props: {
                 quality: 0,
                 armour: 0,
