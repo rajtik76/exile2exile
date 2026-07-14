@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { expect, test, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, expect, test, vi } from 'vitest';
 import SlotEditor from '@/components/planner/equipment/SlotEditor';
 import { ModsProvider } from '@/components/planner/ModsContext';
 import { ReferencesProvider } from '@/components/planner/ReferencesContext';
@@ -203,4 +203,79 @@ test('an unresolved/unique base shows every property field (no defensive data to
     expect(screen.getByText('Armour')).toBeTruthy();
     expect(screen.getByText('Evasion')).toBeTruthy();
     expect(screen.getByText('Energy Shield')).toBeTruthy();
+});
+
+afterEach(() => vi.unstubAllGlobals());
+
+test('switching to a pure-evasion base clears a stale Armour value the old base had, immediately - not just at save time', async () => {
+    // A defence value the new base doesn't have would otherwise survive as a stale,
+    // now-hidden number (propFields gates its input out, so there'd be no way to fix
+    // it in the editor) until the next save silently clamps it server-side - pickBase
+    // must clear it itself, the moment the base changes, so the editor never shows a
+    // wrong value even transiently.
+    vi.stubGlobal(
+        'fetch',
+        vi.fn(() =>
+            Promise.resolve({
+                ok: true,
+                json: () =>
+                    Promise.resolve({
+                        results: [
+                            {
+                                type: 'base',
+                                id: 'Strider Vest',
+                                name: 'Strider Vest',
+                                category: 'Body Armour',
+                                implicits: [],
+                                armour: {
+                                    armour: 0,
+                                    evasion: 366,
+                                    energyShield: 0,
+                                    ward: 0,
+                                    block: 0,
+                                },
+                            },
+                        ],
+                    }),
+            } as Response),
+        ),
+    );
+
+    const onChange = vi.fn();
+
+    renderEditor(
+        itemWith({
+            rarity: 'normal',
+            base: { type: 'base', id: 'Some Hybrid Base' },
+            uniqueMods: [],
+            props: {
+                quality: 0,
+                armour: 40,
+                evasion: 10,
+                energyShield: 0,
+                block: 0,
+            },
+        }),
+        { onChange },
+    );
+
+    fireEvent.click(screen.getByText('Change'));
+    fireEvent.change(screen.getByPlaceholderText(/find a/i), {
+        target: { value: 'Strider' },
+    });
+
+    const option = await screen.findByText('Strider Vest');
+    fireEvent.click(option);
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+
+    const committed = onChange.mock.calls.at(-1)![0] as ItemPlan;
+
+    expect(committed.props).toEqual({
+        quality: 0,
+        armour: 0,
+        evasion: 10,
+        energyShield: 0,
+        block: 0,
+    });
 });

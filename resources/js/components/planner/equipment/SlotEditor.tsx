@@ -32,17 +32,18 @@ import {
 import type { ItemPlan, ItemProps, ItemStat, RuneRef } from '@/types/planner';
 
 /**
- * The item's defensive/quality property fields. Block is shields-only (see isShield).
- * `defenceKey` gates a field against the resolved base's own GGPK defensive stats (see
- * `propFields` below): a base that's purely Evasion (e.g. a dex-armour body armour)
- * only shows the Evasion field, matching how the game's own tooltip never shows a
- * defence type the base doesn't have.
+ * The item's defensive/quality property fields. `defenceKey` gates a field against
+ * the resolved base's own GGPK defensive stats (see `propFields` below): a base
+ * that's purely Evasion (e.g. a dex-armour body armour) only shows the Evasion field,
+ * matching how the game's own tooltip never shows a defence type the base doesn't
+ * have. `shieldOnly` is the fallback for `block` when the base isn't resolved yet (no
+ * GGPK data to gate on at all) - `isShield`'s category-name heuristic.
  */
 const PROP_FIELDS: Array<{
     key: keyof ItemProps;
     label: string;
     shieldOnly?: boolean;
-    defenceKey?: 'armour' | 'evasion' | 'energyShield';
+    defenceKey?: 'armour' | 'evasion' | 'energyShield' | 'block';
 }> = [
     { key: 'quality', label: 'Quality' },
     { key: 'armour', label: 'Armour', defenceKey: 'armour' },
@@ -52,7 +53,7 @@ const PROP_FIELDS: Array<{
         label: 'Energy Shield',
         defenceKey: 'energyShield',
     },
-    { key: 'block', label: 'Block', shieldOnly: true },
+    { key: 'block', label: 'Block', shieldOnly: true, defenceKey: 'block' },
 ];
 
 const NUMBER_INPUT =
@@ -216,23 +217,21 @@ export default function SlotEditor({
     // data for a non-unique). See UniqueModRow.
     const uniqueImplicitLines = reference?.implicitLines ?? [];
     const uniqueExplicitLines = reference?.modLines ?? [];
-    // Block is a shield-only property (bucklers included); foci/quivers don't block.
+    // Fallback for block while the base isn't resolved yet (no GGPK armour data to gate
+    // on at all) - a category-name heuristic. Block is a shield-only property (bucklers
+    // included); foci/quivers don't block.
     const isShield = /shield|buckler/i.test(reference?.category ?? '');
-    // The resolved base's own defensive stats (null when unresolved, or for a unique -
-    // .dat has no unique-to-base-type link, so its defence can't be looked up this way).
-    // Without it every defence field stays visible, same as before this existed.
+    // The resolved base's own defensive stats - null when unresolved, or for a unique
+    // with no synced base type yet (see IconResolver::uniqueBaseType). Without it every
+    // defence field stays visible, same as before this existed.
     const baseArmour = reference?.armour ?? null;
     const propFields = PROP_FIELDS.filter((field) => {
-        if (field.shieldOnly && !isShield) {
-            return false;
+        if (field.defenceKey && baseArmour) {
+            return baseArmour[field.defenceKey] !== 0;
         }
 
-        if (
-            field.defenceKey &&
-            baseArmour &&
-            baseArmour[field.defenceKey] === 0
-        ) {
-            return false;
+        if (field.shieldOnly) {
+            return isShield;
         }
 
         return true;
@@ -298,6 +297,25 @@ export default function SlotEditor({
             base: nextBase,
             stats: picked.type === 'unique' ? [] : item.stats,
             uniqueMods: [],
+            // A defence value the new base doesn't have would otherwise survive as a
+            // stale, now-hidden number (propFields gates its input out) with no way to
+            // fix it in the editor - clear it the moment the base changes, same as
+            // stats/uniqueMods just above. Unresolved picks (no armour data yet) leave
+            // every value as-is, same as propFields itself does.
+            props: picked.armour
+                ? {
+                      ...item.props,
+                      armour:
+                          picked.armour.armour === 0 ? 0 : item.props.armour,
+                      evasion:
+                          picked.armour.evasion === 0 ? 0 : item.props.evasion,
+                      energyShield:
+                          picked.armour.energyShield === 0
+                              ? 0
+                              : item.props.energyShield,
+                      block: picked.armour.block === 0 ? 0 : item.props.block,
+                  }
+                : item.props,
         });
         setPickerOpen(false);
     }

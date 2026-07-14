@@ -165,7 +165,6 @@ abstract class PlanRequest extends FormRequest
                     ...PlanSchema::itemErrors((string) $slot, $item),
                     ...$catalogue->modErrors($rarity, $stats, self::baseModDomain($item, $icons), self::baseTags($item, $icons), self::baseItemClass($item, $icons)),
                     ...self::uniqueModErrors($item, $icons),
-                    ...self::propErrors($item, $icons),
                 ];
 
                 $priority = $item['priority'] ?? null;
@@ -342,25 +341,74 @@ abstract class PlanRequest extends FormRequest
     }
 
     /**
-     * An item's defensive/quality properties, checked against its resolved base's own
-     * GGPK defensive stats - the server-side counterpart to `SlotEditor`'s field gating
-     * (a pure-evasion base only shows an Evasion input): a base that GGPK knows has no
-     * Armour/Evasion/Energy Shield of a given type must not carry a nonzero value there
-     * either, closing off a direct-payload bypass of the UI-only gating. A unique looks
-     * this up via its own synced base type ({@see IconResolver::uniqueBaseType}) - .dat
-     * itself has no unique-to-base-type link, but the PoB-sourced name is a real GGPK
-     * base, so its stats still resolve. Unchecked only when the base/unique is unknown
-     * or unsynced (no defensive data to gate on at all), same as the UI.
+     * The canonicalised plan JSON to persist: base-tab prefix enforced, orphan
+     * sections dropped, every entry normalised, its priority reset to list order, and
+     * every item's defensive properties clamped against its resolved base's real GGPK
+     * defensive stats.
      *
-     * @param  array<string, mixed>  $item
-     * @return list<string>
+     * @return array<string, mixed>
      */
-    private static function propErrors(array $item, IconResolver $icons): array
+    public function planData(): array
     {
+        $canonical = PlanSchema::canonicalize([
+            'description' => (string) $this->input('description', ''),
+            'mode' => (string) $this->input('mode'),
+            'build' => is_array($this->input('build')) ? $this->input('build') : [],
+            'tabs' => is_array($this->input('tabs')) ? $this->input('tabs') : [],
+            'sections' => is_array($this->input('sections')) ? $this->input('sections') : [],
+        ]);
+
+        return self::clampDefenceProps($canonical, app(IconResolver::class));
+    }
+
+    /**
+     * Clamp every item's armour/evasion/energy shield/block to 0 for a defence type its
+     * resolved base (or, for a unique, its own synced base type - see
+     * {@see IconResolver::uniqueBaseType}) doesn't actually have. This is a silent
+     * correction, not a rejection: `props` was free-typed with no validation at all
+     * before this base defensive data existed, so a stored plan can already carry a
+     * value GGPK now says is impossible (a stale value left over from a base swap that
+     * never reset it, a typo, ...). Rejecting the whole save on an untouched slot would
+     * make an existing plan impossible to save again until the author found and fixed a
+     * field the editor may not even show anymore; clamping it here instead makes every
+     * save self-healing, with no dead end. Unresolved/unsynced items are left exactly
+     * as submitted - there's nothing to clamp against yet.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private static function clampDefenceProps(array $data, IconResolver $icons): array
+    {
+        $sections = is_array($data['sections'] ?? null) ? $data['sections'] : [];
+
+        foreach ($sections as $sectionKey => $section) {
+            $slots = is_array($section['items']['slots'] ?? null) ? $section['items']['slots'] : [];
+
+            foreach ($slots as $slotKey => $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                $data['sections'][$sectionKey]['items']['slots'][$slotKey]['props']
+                    = self::clampItemProps($item, $icons);
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     * @return array{quality: int, armour: int, evasion: int, energyShield: int, block: int}
+     */
+    private static function clampItemProps(array $item, IconResolver $icons): array
+    {
+        /** @var array{quality: int, armour: int, evasion: int, energyShield: int, block: int} $props */
+        $props = is_array($item['props'] ?? null) ? $item['props'] : [];
         $base = $item['base'] ?? null;
 
         if (! is_array($base) || ! is_string($base['id'] ?? null)) {
-            return [];
+            return $props;
         }
 
         $type = $base['type'] ?? null;
@@ -372,38 +420,16 @@ abstract class PlanRequest extends FormRequest
         };
 
         if ($armour === null) {
-            return [];
+            return $props;
         }
 
-        $props = is_array($item['props'] ?? null) ? $item['props'] : [];
-        $errors = [];
-
-        foreach (['armour' => 'Armour', 'evasion' => 'Evasion', 'energyShield' => 'Energy Shield'] as $key => $label) {
-            $value = $props[$key] ?? 0;
-
-            if ($armour[$key] === 0 && is_numeric($value) && (float) $value !== 0.0) {
-                $errors[] = "This base has no {$label} to plan.";
+        foreach (['armour', 'evasion', 'energyShield', 'block'] as $key) {
+            if ($armour[$key] === 0) {
+                $props[$key] = 0;
             }
         }
 
-        return $errors;
-    }
-
-    /**
-     * The canonicalised plan JSON to persist: base-tab prefix enforced, orphan
-     * sections dropped, every entry normalised and its priority reset to list order.
-     *
-     * @return array<string, mixed>
-     */
-    public function planData(): array
-    {
-        return PlanSchema::canonicalize([
-            'description' => (string) $this->input('description', ''),
-            'mode' => (string) $this->input('mode'),
-            'build' => is_array($this->input('build')) ? $this->input('build') : [],
-            'tabs' => is_array($this->input('tabs')) ? $this->input('tabs') : [],
-            'sections' => is_array($this->input('sections')) ? $this->input('sections') : [],
-        ]);
+        return $props;
     }
 
     public function title(): string

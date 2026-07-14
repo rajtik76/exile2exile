@@ -70,8 +70,9 @@ export interface PlanReference {
      * A base type's own defensive stats (GGPK `ArmourTypes`/`ShieldTypes`) - which of
      * Armour/Evasion/Energy Shield/Block it actually carries, each 0 when the base
      * doesn't have that defence type. Null/absent for a base GGPK has no defensive row
-     * for (weapons, jewellery, ...) and always absent for a unique - .dat has no
-     * unique-to-base-type link, so a unique's defence can't be looked up this way.
+     * for (weapons, jewellery, ...), or for a unique with no synced base type yet -
+     * .dat itself has no unique-to-base-type link, but a unique's own synced base name
+     * (see `baseType` above) is a real GGPK base, so its stats resolve the same way.
      */
     armour?: ReferenceArmour | null;
 }

@@ -349,8 +349,12 @@ test('a non-unique item cannot carry unique-modifier values', function () {
     ]))->assertInvalid(['sections.act-1.items.slots.body']);
 });
 
-test('a pure-evasion base cannot carry a nonzero Armour or Energy Shield value', function () {
-    $this->post(route('planner.store'), planPayload([
+test('a pure-evasion base has its Armour and Energy Shield silently clamped to 0, not rejected', function () {
+    // props was free-typed with zero validation before this base defensive data
+    // existed, so a stored/submitted value can already contradict it (a stale value
+    // left over from a base swap, a typo, ...) - clamping instead of rejecting means
+    // the save always succeeds and the plan is never left permanently unsaveable.
+    $response = $this->post(route('planner.store'), planPayload([
         'sections' => [
             'act-1' => [
                 'items' => [
@@ -360,13 +364,19 @@ test('a pure-evasion base cannot carry a nonzero Armour or Energy Shield value',
                         'body' => [
                             'rarity' => 'normal',
                             'base' => ['type' => 'base', 'id' => 'Leather Vest'],
-                            'props' => ['quality' => 0, 'armour' => 5, 'evasion' => 15, 'energyShield' => 0, 'block' => 0],
+                            'props' => ['quality' => 0, 'armour' => 5, 'evasion' => 15, 'energyShield' => 9, 'block' => 0],
                         ],
                     ],
                 ],
             ],
         ],
-    ]))->assertInvalid(['sections.act-1.items.slots.body']);
+    ]))->assertValid()->assertRedirect();
+
+    $response->assertSessionDoesntHaveErrors();
+
+    $props = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body']['props'];
+
+    expect($props)->toBe(['quality' => 0, 'armour' => 0, 'evasion' => 15, 'energyShield' => 0, 'block' => 0]);
 });
 
 test('a pure-evasion base can carry its own Evasion value', function () {
@@ -387,9 +397,13 @@ test('a pure-evasion base can carry its own Evasion value', function () {
             ],
         ],
     ]))->assertValid()->assertRedirect();
+
+    $props = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body']['props'];
+
+    expect($props)->toBe(['quality' => 0, 'armour' => 0, 'evasion' => 15, 'energyShield' => 0, 'block' => 0]);
 });
 
-test('a unique gates its defensive properties via its own synced base type', function () {
+test('a unique clamps its defensive properties via its own synced base type', function () {
     // Bramblejack syncs to base "Thornguard" - pure evasion (see the items.json fixture
     // above), same as a normal base would. A unique's own defence isn't in .dat either,
     // but the synced base name it resolves to is a real GGPK base, so the same rule
@@ -415,7 +429,11 @@ test('a unique gates its defensive properties via its own synced base type', fun
                 ],
             ],
         ],
-    ]))->assertInvalid(['sections.act-1.items.slots.body']);
+    ]))->assertValid()->assertRedirect();
+
+    $props = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body']['props'];
+
+    expect($props)->toBe(['quality' => 0, 'armour' => 0, 'evasion' => 40, 'energyShield' => 0, 'block' => 0]);
 });
 
 test('a unique can carry a defensive value its synced base actually has', function () {
@@ -441,12 +459,16 @@ test('a unique can carry a defensive value its synced base actually has', functi
             ],
         ],
     ]))->assertValid()->assertRedirect();
+
+    $props = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body']['props'];
+
+    expect($props)->toBe(['quality' => 0, 'armour' => 0, 'evasion' => 40, 'energyShield' => 0, 'block' => 0]);
 });
 
-test('an unsynced unique (no base type yet) stays unrestricted on defensive properties', function () {
+test('an unsynced unique (no base type yet) leaves defensive properties untouched', function () {
     // No seedBramblejackMods() call - Bramblejack has no synced entry, so its base type
-    // (and thus its defensive stats) are unknown. Same "nothing to gate on yet" rule as
-    // an unresolved normal base.
+    // (and thus its defensive stats) are unknown. Same "nothing to clamp against yet"
+    // rule as an unresolved normal base.
     $this->post(route('planner.store'), planPayload([
         'sections' => [
             'act-1' => [
@@ -464,6 +486,10 @@ test('an unsynced unique (no base type yet) stays unrestricted on defensive prop
             ],
         ],
     ]))->assertValid()->assertRedirect();
+
+    $props = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body']['props'];
+
+    expect($props)->toBe(['quality' => 0, 'armour' => 40, 'evasion' => 40, 'energyShield' => 40, 'block' => 0]);
 });
 
 test('a stored plan keeps distinct item priorities', function () {
