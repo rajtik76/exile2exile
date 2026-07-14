@@ -5,6 +5,8 @@ import {
     MOD_TEXT_COLOR,
     rarityFrame,
     rarityTone,
+    RUNE_TITLE_COLOR,
+    RuneTooltipBody,
     TooltipBadge,
     TooltipCard,
     TooltipRule,
@@ -125,7 +127,12 @@ export function HoverTooltip({
 
         const place = () => {
             const rect = trigger.getBoundingClientRect();
-            const tipWidth = Math.min(416, window.innerWidth * 0.88);
+            // The panel is hidden (display:none) until hover, so its real
+            // fit-content width can't be measured up front - use its widest
+            // possible width (the same ceiling the className below caps it at)
+            // as a conservative estimate, so this never picks 'right' only for
+            // the panel to then overflow the viewport.
+            const tipWidth = Math.min(512, window.innerWidth * 0.88);
 
             setAutoSide(
                 rect.right + 8 + tipWidth <= window.innerWidth
@@ -153,7 +160,7 @@ export function HoverTooltip({
             // pinned open (a click focuses the trigger - group-focus-within, either
             // the default group or the rune-scoped `group/rune`), it regains normal
             // pointer events so its text can be selected/copied.
-            className={`pointer-events-none absolute top-1/2 z-[60] hidden w-[26rem] max-w-[88vw] -translate-y-1/2 select-text group-focus-within:pointer-events-auto group-focus-within/rune:pointer-events-auto ${pos} ${show}`}
+            className={`pointer-events-none absolute top-1/2 z-[65] hidden w-max max-w-[min(32rem,88vw)] min-w-[26rem] -translate-y-1/2 select-text group-focus-within:pointer-events-auto group-focus-within/rune:pointer-events-auto ${pos} ${show}`}
         >
             {children}
         </div>
@@ -217,7 +224,7 @@ export function EmptySocketBadge() {
 }
 
 const RUNE_ACCENT: TooltipAccent = {
-    text: '#ecd49a',
+    text: RUNE_TITLE_COLOR,
     edge: '#7d6228',
     glow: 'rgba(201,162,74,0.18)',
 };
@@ -246,28 +253,14 @@ export function RuneBadge({
             <HoverTooltip show="group-focus-within/rune:block group-hover/rune:block">
                 <TooltipCard
                     accent={RUNE_ACCENT}
-                    icon={rune.icon}
                     title={rune.name}
-                    subtitle="Socketed Rune"
+                    frame="currency"
                 >
-                    {rune.levelRequirement !== null && (
-                        <p className="text-sm text-[#a7acb8]">
-                            Requires Level{' '}
-                            <span className="font-medium text-[#f1f3f8]">
-                                {rune.levelRequirement}
-                            </span>
-                        </p>
-                    )}
-
-                    {rune.effects.length > 0 && (
-                        <>
-                            {rune.levelRequirement !== null && <TooltipRule />}
-                            <BulletList
-                                lines={rune.effects}
-                                color={MOD_TEXT_COLOR}
-                            />
-                        </>
-                    )}
+                    <RuneTooltipBody
+                        category={isSoulCore(rune.name) ? 'Soul Core' : 'Rune'}
+                        levelRequirement={rune.levelRequirement}
+                        effects={rune.effects}
+                    />
                 </TooltipCard>
             </HoverTooltip>
         </div>
@@ -380,12 +373,7 @@ function Properties({ item }: { item: Item }) {
             {lines.map((line) => (
                 <p key={line.key} className="text-[#a7acb8]">
                     {line.label}:{' '}
-                    <span
-                        className="font-medium"
-                        style={{ color: MOD_TEXT_COLOR }}
-                    >
-                        {line.value}
-                    </span>
+                    <span style={{ color: MOD_TEXT_COLOR }}>{line.value}</span>
                 </p>
             ))}
         </div>
@@ -493,11 +481,7 @@ function ModDetailRow({ detail }: { detail: ItemModDetail }) {
                 {detailBadge(detail)}
             </span>
             {detail.lines.map((line, index) => (
-                <span
-                    key={index}
-                    className="font-medium"
-                    style={{ color: MOD_TEXT_COLOR }}
-                >
+                <span key={index} style={{ color: MOD_TEXT_COLOR }}>
                     {line}
                     {index < detail.lines.length - 1 ? ', ' : ''}
                 </span>

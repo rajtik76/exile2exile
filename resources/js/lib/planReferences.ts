@@ -75,6 +75,8 @@ export interface PlanReference {
      * (see `baseType` above) is a real GGPK base, so its stats resolve the same way.
      */
     armour?: ReferenceArmour | null;
+    /** A rune/soul core's level requirement, or null when it has none. Absent for anything that isn't a rune. */
+    levelRequirement?: number | null;
 }
 
 /** A base type's own defensive stats, mirroring the server's `IconResolver::itemArmour`. */

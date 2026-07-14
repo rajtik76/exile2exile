@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     BulletList,
     CursorTooltip,
@@ -6,6 +6,8 @@ import {
     GEM_TITLE_COLOR,
     GemTooltipBody,
     MOD_TEXT_COLOR,
+    RUNE_TITLE_COLOR,
+    RuneTooltipBody,
     SpriteIcon,
     TooltipBadge,
     TooltipCard,
@@ -59,6 +61,33 @@ export default function ReferenceTooltip({
     disabled?: boolean;
 }) {
     const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+    const triggerRef = useRef<HTMLSpanElement>(null);
+
+    const isOpen = cursor !== null;
+
+    // A wheel/trackpad scroll moves the content under a stationary cursor
+    // without firing mousemove/mouseleave - the trigger never learns the
+    // pointer left it, so the tooltip would otherwise stay stuck open over
+    // whatever ends up under the cursor. Capture phase so this fires for a
+    // scroll on any nested scrollable ancestor, not just the window. Depends
+    // on the open/closed boolean, not `cursor` itself - the coordinates
+    // change on every mousemove while open, which would otherwise tear down
+    // and re-add this listener on every pixel of movement.
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        const close = () => setCursor(null);
+
+        document.addEventListener('scroll', close, {
+            capture: true,
+            passive: true,
+        });
+
+        return () =>
+            document.removeEventListener('scroll', close, { capture: true });
+    }, [isOpen]);
 
     const type = reference?.type ?? 'gem';
     const name = reference?.name ?? '';
@@ -71,7 +100,9 @@ export default function ReferenceTooltip({
     const hoverImage = reference?.hoverImage ?? null;
     const scaling = reference?.scaling ?? null;
     const requires = reference?.requires ?? null;
+    const levelRequirement = reference?.levelRequirement ?? null;
     const isGem = type === 'gem';
+    const isRune = type === 'rune';
 
     // A gem's header shows its primary tag ("Spell", "Attack", "Warcry", ...) as
     // the subtitle, same as the game's own tooltip - the body's own tag list below
@@ -79,24 +110,46 @@ export default function ReferenceTooltip({
     const gemSubtitle = tags[0];
     const gemTags = tags.slice(1);
 
+    // A rune/soul core's own type ("Rune"/"Soul Core") moves into the body's own
+    // first line (see RuneTooltipBody) rather than the header subtitle, matching
+    // the game's own tooltip.
+    const runeEffects = (tooltip ?? '')
+        .split('\n')
+        .filter((line) => line.trim() !== '');
+
     const color = accentColor(type, reference?.color);
     const accent: TooltipAccent = {
-        // A gem's title is always the game's own fixed teal, not socket-tinted -
-        // pixel-matched against poe2db's `--gem-color`, not the socket ring colour
-        // used for the chip/badges elsewhere.
-        text: isGem ? GEM_TITLE_COLOR : color,
+        // A gem's title is always the game's own fixed teal, and a rune's the
+        // game's own tan - neither is socket-tinted, unlike the chip/badges
+        // elsewhere - pixel-matched against poe2db's reference tooltips, not the
+        // socket ring colour.
+        text: isGem ? GEM_TITLE_COLOR : isRune ? RUNE_TITLE_COLOR : color,
         edge: color,
         glow: `${color}28`,
     };
 
     const hasTooltip = Boolean(
         reference &&
-        (tooltip || tags.length || category || flavour || scaling || requires),
+        (tooltip ||
+            tags.length ||
+            category ||
+            flavour ||
+            scaling ||
+            requires ||
+            levelRequirement),
     );
 
     return (
         <span
+            ref={triggerRef}
             className={className}
+            // No hover on touch devices - a tap focuses the trigger instead, so
+            // this doubles as the mobile fallback (mirrors HoverTooltip's own
+            // group-focus-within pattern, just without a group/CSS-only trick
+            // since this tooltip follows the cursor rather than the trigger).
+            // Only a real tab stop when there's something to show - an
+            // unresolved reference has no popover, so it shouldn't eat a stop.
+            tabIndex={disabled || !hasTooltip ? -1 : 0}
             onMouseEnter={(event) =>
                 setCursor({ x: event.clientX, y: event.clientY })
             }
@@ -104,6 +157,27 @@ export default function ReferenceTooltip({
                 setCursor({ x: event.clientX, y: event.clientY })
             }
             onMouseLeave={() => setCursor(null)}
+            onFocus={() => {
+                // Clicking a focusable element also fires focus in most
+                // browsers - skip repositioning when the mouse already placed
+                // the cursor, or a click on an already-hovered trigger would
+                // make the tooltip visibly jump to the trigger's centre.
+                setCursor((prev) => {
+                    if (prev !== null) {
+                        return prev;
+                    }
+
+                    const rect = triggerRef.current?.getBoundingClientRect();
+
+                    return rect
+                        ? {
+                              x: rect.left + rect.width / 2,
+                              y: rect.top + rect.height / 2,
+                          }
+                        : prev;
+                });
+            }}
+            onBlur={() => setCursor(null)}
         >
             {children}
 
@@ -124,10 +198,14 @@ export default function ReferenceTooltip({
                             }
                             title={name}
                             subtitle={
-                                isGem ? gemSubtitle : (category ?? undefined)
+                                isGem
+                                    ? gemSubtitle
+                                    : isRune
+                                      ? undefined
+                                      : (category ?? undefined)
                             }
                             subtitleColor={isGem ? GEM_LABEL_COLOR : undefined}
-                            frame={type === 'rune' ? 'currency' : undefined}
+                            frame={isRune ? 'currency' : undefined}
                             backgroundImage={isGem ? hoverImage : undefined}
                             headerImage={isGem ? GEM_HEADER_IMAGE : undefined}
                         >
@@ -137,6 +215,12 @@ export default function ReferenceTooltip({
                                     description={tooltip}
                                     scaling={scaling}
                                     requires={requires}
+                                />
+                            ) : isRune ? (
+                                <RuneTooltipBody
+                                    category={category ?? 'Rune'}
+                                    levelRequirement={levelRequirement}
+                                    effects={runeEffects}
                                 />
                             ) : (
                                 <>
@@ -153,36 +237,30 @@ export default function ReferenceTooltip({
                                         </div>
                                     )}
 
-                                    {tooltip &&
-                                        (type === 'rune' ||
-                                            type === 'notable') && (
-                                            <BulletList
-                                                lines={tooltip
-                                                    .split('\n')
-                                                    .filter(
-                                                        (line) =>
-                                                            line.trim() !== '',
-                                                    )}
-                                                color={color}
-                                            />
-                                        )}
-
-                                    {tooltip &&
-                                        type !== 'rune' &&
-                                        type !== 'notable' && (
-                                            <>
-                                                {tags.length > 0 && (
-                                                    <TooltipRule />
+                                    {tooltip && type === 'notable' && (
+                                        <BulletList
+                                            lines={tooltip
+                                                .split('\n')
+                                                .filter(
+                                                    (line) =>
+                                                        line.trim() !== '',
                                                 )}
-                                                <p
-                                                    style={{
-                                                        color: MOD_TEXT_COLOR,
-                                                    }}
-                                                >
-                                                    {tooltip}
-                                                </p>
-                                            </>
-                                        )}
+                                            color={color}
+                                        />
+                                    )}
+
+                                    {tooltip && type !== 'notable' && (
+                                        <>
+                                            {tags.length > 0 && <TooltipRule />}
+                                            <p
+                                                style={{
+                                                    color: MOD_TEXT_COLOR,
+                                                }}
+                                            >
+                                                {tooltip}
+                                            </p>
+                                        </>
+                                    )}
 
                                     {flavour && (
                                         <p className="text-[15px] leading-snug whitespace-pre-line text-[#a08fd0] italic">

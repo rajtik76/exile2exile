@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
  * {@see EquippedItem::$icon} fields are filled straight from a signed `icon` URL
  * when a build arrives via the GGG OAuth API instead of a PoB export.
  *
- * @phpstan-type ReferenceEntry array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null}
+ * @phpstan-type ReferenceEntry array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null, levelRequirement?: ?int}
  */
 final class IconResolver
 {
@@ -899,7 +899,7 @@ final class IconResolver
 
     /**
      * @param  array{levelRequirement: ?int, effects: list<string>}  $data
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, levelRequirement?: ?int}
      */
     private function runeReference(string $name, array $data): array
     {
@@ -920,6 +920,7 @@ final class IconResolver
             'twoHanded' => false,
             'implicits' => [],
             'sprite' => null,
+            'levelRequirement' => $data['levelRequirement'],
         ];
     }
 

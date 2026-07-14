@@ -34,8 +34,14 @@ const FONTIN_REGULAR = { fontFamily: "'Fontin', serif" } as const;
 export const GEM_TITLE_COLOR = '#1ba29b';
 /** Subtitle ("Spell") and every stat row's label (e.g. "Cost:") - all but "Requires:". */
 export const GEM_LABEL_COLOR = '#6e9a97';
-/** Category tags, the "Requires:" label specifically, and the dash inside a range. */
-const GEM_GRAY = '#7f7f7f';
+/** A rune/soul core's title colour - pixel-matched the same way as the gem palette. */
+export const RUNE_TITLE_COLOR = '#aa9e82';
+/**
+ * Muted grey shared across tooltip bodies: a gem's category tags and its
+ * "Requires:" label, the dash inside a numeric range, and a rune's type line
+ * ("Rune"/"Soul Core") plus its own "Requires:" label.
+ */
+export const MUTED_TEXT_COLOR = '#7f7f7f';
 /** The gem's flavour/description text (italic). */
 const GEM_DESC_COLOR = '#baad85';
 
@@ -101,7 +107,7 @@ export function BulletList({
     return (
         <ul className="space-y-0.5">
             {lines.map((line, j) => (
-                <li key={j} className="font-medium" style={{ color }}>
+                <li key={j} style={{ color }}>
                     {line}
                 </li>
             ))}
@@ -304,7 +310,7 @@ export function TooltipCard({
         <div
             className="relative overflow-hidden shadow-2xl backdrop-blur-sm"
             style={{
-                background: 'rgba(2,2,3,0.75)',
+                background: 'rgba(0,0,0,0.75)',
                 boxShadow: '0 12px 30px rgba(0,0,0,0.7)',
             }}
         >
@@ -322,7 +328,7 @@ export function TooltipCard({
             )}
 
             <div
-                className={`relative flex items-center gap-3 px-4 py-3 ${leftAlign ? 'justify-start' : 'justify-center'}`}
+                className={`relative flex items-center gap-3 py-3 ${frame && !headerImage ? 'px-14' : 'px-4'} ${leftAlign ? 'justify-start' : 'justify-center'}`}
                 style={
                     frame || headerImage
                         ? headerImage
@@ -456,7 +462,7 @@ function renderNumberedText(text: string): React.ReactNode {
             nodes.push(
                 <Fragment key={key++}>
                     <span style={{ color: '#fff' }}>({low}</span>
-                    <span style={{ color: GEM_GRAY }}>—</span>
+                    <span style={{ color: MUTED_TEXT_COLOR }}>—</span>
                     <span style={{ color: '#fff' }}>{high})</span>
                 </Fragment>,
             );
@@ -628,7 +634,7 @@ export function GemTooltipBody({
             {tags.length > 0 && (
                 <div
                     className="mb-2"
-                    style={{ ...FONTIN_REGULAR, color: GEM_GRAY }}
+                    style={{ ...FONTIN_REGULAR, color: MUTED_TEXT_COLOR }}
                 >
                     {tags.join(', ')}
                 </div>
@@ -700,7 +706,7 @@ export function GemTooltipBody({
             )}
 
             {requires && (
-                <GemStatRow label="Requires:" labelColor={GEM_GRAY}>
+                <GemStatRow label="Requires:" labelColor={MUTED_TEXT_COLOR}>
                     {renderNumberedText(
                         `Level (${requires.level[0]}—${requires.level[1]})`,
                     )}
@@ -783,6 +789,56 @@ export function GemTooltipBody({
 }
 
 /**
+ * A rune/soul-core tooltip's full body: its type line, an optional level
+ * requirement, and its effect lines - everything below {@link TooltipCard}'s
+ * header. Pixel-matched against a reference tooltip, same as {@link GemTooltipBody}.
+ */
+export function RuneTooltipBody({
+    category,
+    levelRequirement,
+    effects,
+}: {
+    category: string;
+    levelRequirement: number | null;
+    effects: string[];
+}) {
+    return (
+        <>
+            <div style={{ color: MUTED_TEXT_COLOR }}>{category}</div>
+
+            {(levelRequirement !== null || effects.length > 0) && (
+                <TooltipRule color={MUTED_TEXT_COLOR} />
+            )}
+
+            {levelRequirement !== null && (
+                <>
+                    <div>
+                        <span style={{ color: MUTED_TEXT_COLOR }}>
+                            REQUIRES:{' '}
+                        </span>
+                        <span style={{ color: '#fff' }}>
+                            LEVEL {levelRequirement}
+                        </span>
+                    </div>
+
+                    {effects.length > 0 && (
+                        <TooltipRule color={MUTED_TEXT_COLOR} />
+                    )}
+                </>
+            )}
+
+            {effects.length > 0 && (
+                <div className="space-y-0.5" style={{ color: MOD_TEXT_COLOR }}>
+                    {effects.map((line, i) => (
+                        <div key={i}>{renderNumberedText(line)}</div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
+
+/**
  * Cursor-following tooltip wrapper: fixed beside the pointer, to its right when
  * it fits else to its left, clamped vertically into the viewport. Portalled to
  * the body so no panel clips it, and pointer-transparent so it never steals the
@@ -799,19 +855,29 @@ export function CursorTooltip({
 }) {
     const ref = useRef<HTMLDivElement>(null);
     const [height, setHeight] = useState(0);
+    const [width, setWidth] = useState(0);
 
-    // Measure after layout so the vertical clamp uses the real card height.
-    // Intentionally runs every render (content height changes with the hovered
-    // entity); the prev-equals guard makes setState a no-op when unchanged, so
+    // Measure after layout so the vertical clamp uses the real card height, and
+    // the horizontal placement below uses the card's real (fit-content) width -
+    // it's no longer a fixed 26rem, it grows to keep a title on one line where
+    // it fits. Intentionally runs every render (both change with the hovered
+    // entity); the prev-equals guards make setState a no-op when unchanged, so
     // it can never loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useLayoutEffect(() => {
         const h = ref.current?.offsetHeight ?? 0;
         setHeight((prev) => (prev === h ? prev : h));
+        const w = ref.current?.offsetWidth ?? 0;
+        setWidth((prev) => (prev === w ? prev : w));
     });
 
     const gap = 16;
-    const tipWidth = Math.min(416, window.innerWidth * 0.88); // 26rem cap
+    // Before the first measured render, fall back to the card's own max-width
+    // (see the className below) - the conservative upper bound, not the
+    // min-width - so a title that grows the card past the min never gets
+    // placed against a too-small estimate and overflows the viewport for a
+    // frame before the real measurement corrects it.
+    const tipWidth = width || Math.min(512, window.innerWidth * 0.88);
     const fitsRight = x + gap + tipWidth <= window.innerWidth;
     const left = fitsRight ? x + gap : x - gap - tipWidth;
 
@@ -824,7 +890,7 @@ export function CursorTooltip({
     return createPortal(
         <div
             ref={ref}
-            className="pointer-events-none fixed z-[120] w-[26rem] max-w-[88vw]"
+            className="pointer-events-none fixed z-[120] w-max max-w-[min(32rem,88vw)] min-w-[26rem]"
             style={{ left, top }}
         >
             {children}
