@@ -116,7 +116,8 @@ return [
 
         'path' => env('POB_UNIQUES_PATH', 'src/Data/Uniques'),
 
-        'ref' => env('POB_UNIQUES_REF', 'main'),
+        // PathOfBuildingCommunity/PathOfBuilding-PoE2's default branch is "dev", not "main".
+        'ref' => env('POB_UNIQUES_REF', 'dev'),
 
         // Outside storage/game-data/releases and its `current` symlink on purpose:
         // a patch release swap must never touch this. Same persistent volume, own

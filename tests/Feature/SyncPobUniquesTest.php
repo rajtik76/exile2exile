@@ -126,7 +126,7 @@ test('a failed commit-sha lookup falls back to the ref label instead of aborting
     $this->artisan('poe2:sync-pob-uniques')->assertSuccessful();
 
     expect(app(PobUniqueStore::class)->read()['sourceRef'])
-        ->toBe('PathOfBuildingCommunity/PathOfBuilding-PoE2@main');
+        ->toBe('PathOfBuildingCommunity/PathOfBuilding-PoE2@dev');
 });
 
 test('a large drop in unique count vs the last snapshot aborts without overwriting', function () {
