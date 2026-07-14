@@ -1,5 +1,6 @@
-import { ItemTooltip } from '@/components/build/ItemDisplay';
-import { SpriteIcon } from '@/components/build/tooltip';
+import { useState } from 'react';
+import { ItemCard } from '@/components/build/ItemDisplay';
+import { CursorTooltip, SpriteIcon } from '@/components/build/tooltip';
 import { referenceToDisplayItem } from '@/components/planner/equipment/displayItem';
 import { useReferences } from '@/components/planner/ReferencesContext';
 import ReferenceTooltip, {
@@ -12,12 +13,18 @@ import { refKey } from '@/lib/planReferences';
  * catalogue name in the entity's colour (no box). Hovering shows the shared build
  * tooltip. Falls back to the token's embedded name when the reference is unresolved.
  *
- * A unique is the one reference type that is also a full gear item, so it reuses
- * {@link ItemTooltip} - the exact same tooltip an equipped unique shows on the
+ * A unique is the one reference type that is also a full gear item, so its tooltip
+ * body reuses {@link ItemCard} - the exact same card an equipped unique shows on the
  * paper-doll ({@link referenceToDisplayItem} adapts the bare reference, which carries
  * no props/sockets/corrupted/rolled-value context, to the same display shape) - rather
- * than the generic {@link ReferenceTooltip} gem/rune/notable share. One unique, one
- * tooltip, no matter where it's mentioned.
+ * than the generic {@link ReferenceTooltip} gem/rune/notable share. It is positioned
+ * with {@link CursorTooltip} (portalled to `document.body`), not the paper-doll's own
+ * `HoverTooltip`: this chip renders inside `RichText`'s `.planner-md` prose wrapper
+ * (`resources/css/app.css`), whose `ul`/`li`/`p` descendant selectors would otherwise
+ * bleed bullet markers and its 1.6 line-height into the card, and `HoverTooltip`'s
+ * `position: absolute` is anchored to this chip's own (inline) box, which clips against
+ * the notes panel and sizes unreliably. Portalling sidesteps both - same as every other
+ * reference type here already does. One unique, one *look*, wherever it's mentioned.
  */
 export default function RefChip({
     node,
@@ -31,6 +38,10 @@ export default function RefChip({
 
     const { map } = useReferences();
     const reference = map[refKey(type, id)];
+
+    // Mirrors ReferenceTooltip's own cursor-tracking (see the class doc for why a
+    // unique can't use HoverTooltip's in-place, non-portalled positioning here).
+    const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
 
     const name = reference?.name ?? fallbackName;
     const icon = reference?.icon ?? null;
@@ -76,11 +87,22 @@ export default function RefChip({
     if (type === 'unique' && reference) {
         return (
             <span
-                className="group relative font-medium whitespace-nowrap"
-                tabIndex={0}
+                className="font-medium whitespace-nowrap"
+                onMouseEnter={(event) =>
+                    setCursor({ x: event.clientX, y: event.clientY })
+                }
+                onMouseMove={(event) =>
+                    setCursor({ x: event.clientX, y: event.clientY })
+                }
+                onMouseLeave={() => setCursor(null)}
             >
                 {label}
-                <ItemTooltip item={referenceToDisplayItem(reference)} />
+
+                {cursor && (
+                    <CursorTooltip x={cursor.x} y={cursor.y}>
+                        <ItemCard item={referenceToDisplayItem(reference)} />
+                    </CursorTooltip>
+                )}
             </span>
         );
     }
