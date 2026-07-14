@@ -5,7 +5,13 @@
  * ones. The catalogue behind them is GGPK-only (see the server IconResolver).
  */
 
-export type RefType = 'gem' | 'rune' | 'unique' | 'notable';
+/**
+ * `base` never appears in an inline `{{type:id|name}}` text token - only an equipped
+ * slot's own base pick resolves to one (see `IconResolver::baseReference`) - but it's
+ * still a real value of a `PlanReference.type` the `ReferenceMap` server-side can
+ * return, so it has to be part of the same union.
+ */
+export type RefType = 'gem' | 'rune' | 'unique' | 'notable' | 'base';
 
 export interface PlanReference {
     type: RefType;
@@ -42,6 +48,74 @@ export interface PlanReference {
      * icon (notable passives, whose art lives only in the tree atlas). Null otherwise.
      */
     sprite?: ReferenceSprite | null;
+    /**
+     * A gem's hover-art background (the game's own SmartHover/GemHoverImage art,
+     * painted behind the tooltip header). Coverage is genuinely sparse in the game's
+     * own data - null/absent for most gems is expected, not a missing-asset bug.
+     * Absent for anything that isn't a gem.
+     */
+    hoverImage?: string | null;
+    /** A gem's per-level tooltip scaling (cost, cast time, crit, stat lines, quality). Absent for anything that isn't a gem. */
+    scaling?: GemScaling | null;
+    /**
+     * A gem's level/attribute requirement range, as the game's own tooltip shows it -
+     * capped at the game's character level cap (a gem level needing more is
+     * unreachable through normal play). `str`/`dex`/`int` are null when the gem
+     * never needs that attribute (weight 0 throughout), matching the in-game
+     * "Requires:" line, which omits an attribute the gem doesn't need. Absent for
+     * anything that isn't a gem.
+     */
+    requires?: GemRequires | null;
+    /**
+     * A base type's own defensive stats (GGPK `ArmourTypes`/`ShieldTypes`) - which of
+     * Armour/Evasion/Energy Shield/Block it actually carries, each 0 when the base
+     * doesn't have that defence type. Null/absent for a base GGPK has no defensive row
+     * for (weapons, jewellery, ...) and always absent for a unique - .dat has no
+     * unique-to-base-type link, so a unique's defence can't be looked up this way.
+     */
+    armour?: ReferenceArmour | null;
+}
+
+/** A base type's own defensive stats, mirroring the server's `IconResolver::itemArmour`. */
+export interface ReferenceArmour {
+    armour: number;
+    evasion: number;
+    energyShield: number;
+    ward: number;
+    block: number;
+}
+
+/** Per-level tooltip scaling for a gem, mirroring the server's `IconResolver::gemScaling`. */
+export interface GemScaling {
+    name: string;
+    levels: GemScalingLevel[];
+    qualityStats: GemScalingStat[];
+}
+
+export interface GemScalingLevel {
+    level: number;
+    cost: number | null;
+    castTime: number | null;
+    cooldown: number | null;
+    reservation: number | null;
+    spellCritChance: number | null;
+    attackCritChance: number | null;
+    stats: GemScalingStat[];
+}
+
+/** One scaling stat line, already translated to text; `min`/`max` are the raw values a level-scaling slider needs. */
+export interface GemScalingStat {
+    text: string;
+    min: number;
+    max: number;
+}
+
+/** A gem's level/attribute requirement range, mirroring the server's `IconResolver::gemRequires`. */
+export interface GemRequires {
+    level: [number, number];
+    str: [number, number] | null;
+    dex: [number, number] | null;
+    int: [number, number] | null;
 }
 
 /**

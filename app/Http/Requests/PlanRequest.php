@@ -165,6 +165,7 @@ abstract class PlanRequest extends FormRequest
                     ...PlanSchema::itemErrors((string) $slot, $item),
                     ...$catalogue->modErrors($rarity, $stats, self::baseModDomain($item, $icons), self::baseTags($item, $icons), self::baseItemClass($item, $icons)),
                     ...self::uniqueModErrors($item, $icons),
+                    ...self::propErrors($item, $icons),
                 ];
 
                 $priority = $item['priority'] ?? null;
@@ -334,6 +335,54 @@ abstract class PlanRequest extends FormRequest
 
                     break;
                 }
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * An item's defensive/quality properties, checked against its resolved base's own
+     * GGPK defensive stats - the server-side counterpart to `SlotEditor`'s field gating
+     * (a pure-evasion base only shows an Evasion input): a base that GGPK knows has no
+     * Armour/Evasion/Energy Shield of a given type must not carry a nonzero value there
+     * either, closing off a direct-payload bypass of the UI-only gating. A unique looks
+     * this up via its own synced base type ({@see IconResolver::uniqueBaseType}) - .dat
+     * itself has no unique-to-base-type link, but the PoB-sourced name is a real GGPK
+     * base, so its stats still resolve. Unchecked only when the base/unique is unknown
+     * or unsynced (no defensive data to gate on at all), same as the UI.
+     *
+     * @param  array<string, mixed>  $item
+     * @return list<string>
+     */
+    private static function propErrors(array $item, IconResolver $icons): array
+    {
+        $base = $item['base'] ?? null;
+
+        if (! is_array($base) || ! is_string($base['id'] ?? null)) {
+            return [];
+        }
+
+        $type = $base['type'] ?? null;
+
+        $armour = match ($type) {
+            'base' => $icons->itemArmour($base['id']),
+            'unique' => $icons->itemArmour($icons->uniqueBaseType($base['id'])),
+            default => null,
+        };
+
+        if ($armour === null) {
+            return [];
+        }
+
+        $props = is_array($item['props'] ?? null) ? $item['props'] : [];
+        $errors = [];
+
+        foreach (['armour' => 'Armour', 'evasion' => 'Evasion', 'energyShield' => 'Energy Shield'] as $key => $label) {
+            $value = $props[$key] ?? 0;
+
+            if ($armour[$key] === 0 && is_numeric($value) && (float) $value !== 0.0) {
+                $errors[] = "This base has no {$label} to plan.";
             }
         }
 

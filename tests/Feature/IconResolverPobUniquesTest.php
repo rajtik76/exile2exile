@@ -18,6 +18,10 @@ beforeEach(function () {
             'resources/poe2/ggpk/items.json' => [
                 'Constricting Command' => ['icon' => 'Uniques/ConstrictingCommand.dds', 'rarity' => 'unique', 'category' => 'Helmet'],
                 'The Anvil' => ['icon' => 'Uniques/TheAnvil.dds', 'rarity' => 'unique', 'category' => 'Amulet'],
+                // Constricting Command's own synced base type (see the first test below) -
+                // a real GGPK base entry, so its defensive stats can resolve through it
+                // despite .dat carrying no unique-to-base-type link of its own.
+                'Viper Cap' => ['icon' => 'Bases/ViperCap.dds', 'itemClass' => 'Helmet', 'armour' => ['armour' => 0, 'evasion' => 179, 'energyShield' => 0, 'ward' => 0, 'block' => 0]],
             ],
         ],
         icons: ['Uniques/ConstrictingCommand.png', 'Uniques/TheAnvil.png'],
@@ -59,7 +63,24 @@ test('a unique reference carries its synced explicit mods as one tooltip string'
         ])
         // The unique's underlying base item, shown under its name in the tooltip
         // (the game's own unique tooltip does the same).
-        ->and($reference['baseType'])->toBe('Viper Cap');
+        ->and($reference['baseType'])->toBe('Viper Cap')
+        // Its defensive stats, resolved through that same synced base type - .dat has
+        // no unique-to-base-type link, but "Viper Cap" is a real GGPK base.
+        ->and($reference['armour'])->toBe([
+            'armour' => 0,
+            'evasion' => 179,
+            'energyShield' => 0,
+            'ward' => 0,
+            'block' => 0,
+        ]);
+});
+
+test("a unique's defensive stats are null when it has no synced base type yet", function () {
+    // No PobUniqueStore write - Constricting Command has no synced entry at all.
+    $reference = app(IconResolver::class)->resolveReference('unique', 'Constricting Command');
+
+    expect($reference['baseType'])->toBeNull()
+        ->and($reference['armour'])->toBeNull();
 });
 
 test('implicitCount splits the leading mod lines into implicits, the rest into the tooltip', function () {

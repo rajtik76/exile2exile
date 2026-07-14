@@ -26,6 +26,20 @@ const references: ReferenceMap = {
             },
         ],
     },
+    [refKey('base', 'Strider Vest')]: {
+        type: 'base',
+        id: 'Strider Vest',
+        name: 'Strider Vest',
+        category: 'Body Armour',
+        implicits: [],
+        armour: {
+            armour: 0,
+            evasion: 366,
+            energyShield: 0,
+            ward: 0,
+            block: 0,
+        },
+    },
 };
 
 function itemWith(overrides: Partial<ItemPlan> = {}): ItemPlan {
@@ -165,4 +179,28 @@ test('closing (✕) with an invalid value on a freshly opened empty slot clears 
 
     expect(onClear).toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+});
+
+test('a pure-evasion base only shows the Evasion property field, not Armour or Energy Shield', () => {
+    renderEditor(
+        itemWith({
+            rarity: 'normal',
+            base: { type: 'base', id: 'Strider Vest' },
+            uniqueMods: [],
+        }),
+    );
+
+    expect(screen.getByText('Quality')).toBeTruthy();
+    expect(screen.getByText('Evasion')).toBeTruthy();
+    expect(screen.queryByText('Armour')).toBeNull();
+    expect(screen.queryByText('Energy Shield')).toBeNull();
+});
+
+test('an unresolved/unique base shows every property field (no defensive data to gate on)', () => {
+    renderEditor(itemWith());
+
+    expect(screen.getByText('Quality')).toBeTruthy();
+    expect(screen.getByText('Armour')).toBeTruthy();
+    expect(screen.getByText('Evasion')).toBeTruthy();
+    expect(screen.getByText('Energy Shield')).toBeTruthy();
 });

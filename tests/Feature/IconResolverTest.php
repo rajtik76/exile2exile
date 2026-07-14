@@ -20,6 +20,7 @@ beforeEach(function () {
                 'Big Mana Flask' => ['icon' => 'Flasks/Mana.dds', 'itemClass' => 'ManaFlask'],
                 'Warding Charm' => ['icon' => 'Charms/Ward.dds', 'itemClass' => 'UtilityFlask'],
                 'Thornguard' => ['icon' => 'Uniques/Thornguard.dds', 'rarity' => 'unique', 'category' => 'Body Armour'],
+                'Strider Vest' => ['icon' => 'Armours/Vest.dds', 'itemClass' => 'Body Armour', 'armour' => ['armour' => 0, 'evasion' => 366, 'energyShield' => 0, 'ward' => 0, 'block' => 0]],
             ],
         ],
         icons: [
@@ -108,4 +109,24 @@ it('flags two-handed weapon bases', function () {
 it('returns null for an unknown base type', function () {
     expect((new IconResolver)->itemIcon('Not A Base'))->toBeNull()
         ->and((new IconResolver)->itemIcon(null))->toBeNull();
+});
+
+it("exposes a base's own defensive stats, zeroed per defence type it doesn't have", function () {
+    $resolver = new IconResolver;
+
+    expect($resolver->itemArmour('Strider Vest'))->toBe([
+        'armour' => 0,
+        'evasion' => 366,
+        'energyShield' => 0,
+        'ward' => 0,
+        'block' => 0,
+    ]);
+});
+
+it('returns null defensive stats for a base with no defensive row, or an unknown/empty name', function () {
+    $resolver = new IconResolver;
+
+    expect($resolver->itemArmour('Grand Staff'))->toBeNull()
+        ->and($resolver->itemArmour('Not A Base'))->toBeNull()
+        ->and($resolver->itemArmour(null))->toBeNull();
 });

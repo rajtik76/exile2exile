@@ -6,6 +6,7 @@
   "files": [
     "data/statdescriptions/stat_descriptions.csd",
     "data/statdescriptions/passive_skill_stat_descriptions.csd",
+    "data/statdescriptions/skill_stat_descriptions.csd",
     "metadata/passiveskillgraph.psg",
     "metadata/passiveskillgraphguidesettings.json"
   ],
@@ -274,6 +275,23 @@
       ]
     },
     {
+      "name": "ArmourTypes",
+      "columns": [
+        "BaseItemType",
+        "Armour",
+        "Evasion",
+        "EnergyShield",
+        "Ward"
+      ]
+    },
+    {
+      "name": "ShieldTypes",
+      "columns": [
+        "BaseItemType",
+        "Block"
+      ]
+    },
+    {
       "name": "Tags",
       "columns": [
         "Id",
@@ -317,6 +335,7 @@
         "IsSupport",
         "SupportGemLetter",
         "StatSet",
+        "CastTime",
         "AllowedActiveSkillTypes"
       ]
     },
@@ -363,6 +382,37 @@
       "columns": [
         "Id",
         "Name"
+      ]
+    },
+    {
+      "name": "GrantedEffectStatSets",
+      "columns": [
+        "Id",
+        "ConstantStats",
+        "ConstantStatsValues"
+      ]
+    },
+    {
+      "name": "GrantedEffectStatSetsPerLevel",
+      "columns": [
+        "StatSet",
+        "GemLevel",
+        "SpellCritChance",
+        "AttackCritChance",
+        "BaseResolvedValues",
+        "AdditionalStatsValues",
+        "FloatStats",
+        "AdditionalStats"
+      ]
+    },
+    {
+      "name": "GrantedEffectQualityStats",
+      "columns": [
+        "GrantedEffect",
+        "Stats",
+        "StatsValuesPermille",
+        "AltStats",
+        "AltStatValuesPermille"
       ]
     },
     {

@@ -18,6 +18,11 @@ beforeEach(function () {
                 'Crude Bow' => ['rarity' => 'normal', 'twoHanded' => true, 'itemClass' => 'Bow'],
                 'Iron Focus' => ['rarity' => 'normal', 'itemClass' => 'Focus'],
                 'Bramblejack' => ['rarity' => 'unique', 'category' => 'Body Armour'],
+                'Leather Vest' => ['rarity' => 'normal', 'itemClass' => 'Body Armour', 'armour' => ['armour' => 0, 'evasion' => 15, 'energyShield' => 0, 'ward' => 0, 'block' => 0]],
+                // Bramblejack's own synced base type (see seedBramblejackMods) - a
+                // separate GGPK base entry, pure evasion, used to prove a unique's
+                // defensive properties gate against its *base's* stats too.
+                'Thornguard' => ['rarity' => 'normal', 'itemClass' => 'Body Armour', 'armour' => ['armour' => 0, 'evasion' => 200, 'energyShield' => 0, 'ward' => 0, 'block' => 0]],
             ],
             'resources/poe2/ggpk/gems.json' => [
                 'SkillGemIceNova' => ['name' => 'Ice Nova', 'icon' => 'gems/ice-nova.dds', 'color' => 'b', 'kind' => 'active'],
@@ -342,6 +347,123 @@ test('a non-unique item cannot carry unique-modifier values', function () {
             ],
         ],
     ]))->assertInvalid(['sections.act-1.items.slots.body']);
+});
+
+test('a pure-evasion base cannot carry a nonzero Armour or Energy Shield value', function () {
+    $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'normal',
+                            'base' => ['type' => 'base', 'id' => 'Leather Vest'],
+                            'props' => ['quality' => 0, 'armour' => 5, 'evasion' => 15, 'energyShield' => 0, 'block' => 0],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->assertInvalid(['sections.act-1.items.slots.body']);
+});
+
+test('a pure-evasion base can carry its own Evasion value', function () {
+    $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'normal',
+                            'base' => ['type' => 'base', 'id' => 'Leather Vest'],
+                            'props' => ['quality' => 0, 'armour' => 0, 'evasion' => 15, 'energyShield' => 0, 'block' => 0],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->assertValid()->assertRedirect();
+});
+
+test('a unique gates its defensive properties via its own synced base type', function () {
+    // Bramblejack syncs to base "Thornguard" - pure evasion (see the items.json fixture
+    // above), same as a normal base would. A unique's own defence isn't in .dat either,
+    // but the synced base name it resolves to is a real GGPK base, so the same rule
+    // applies as for an ordinary pure-evasion item.
+    seedBramblejackMods();
+
+    $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'unique',
+                            'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
+                            'uniqueMods' => [
+                                ['key' => '+# to maximum Life', 'values' => [110]],
+                            ],
+                            'props' => ['quality' => 0, 'armour' => 40, 'evasion' => 40, 'energyShield' => 40, 'block' => 0],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->assertInvalid(['sections.act-1.items.slots.body']);
+});
+
+test('a unique can carry a defensive value its synced base actually has', function () {
+    seedBramblejackMods();
+
+    $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'unique',
+                            'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
+                            'uniqueMods' => [
+                                ['key' => '+# to maximum Life', 'values' => [110]],
+                            ],
+                            'props' => ['quality' => 0, 'armour' => 0, 'evasion' => 40, 'energyShield' => 0, 'block' => 0],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->assertValid()->assertRedirect();
+});
+
+test('an unsynced unique (no base type yet) stays unrestricted on defensive properties', function () {
+    // No seedBramblejackMods() call - Bramblejack has no synced entry, so its base type
+    // (and thus its defensive stats) are unknown. Same "nothing to gate on yet" rule as
+    // an unresolved normal base.
+    $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'unique',
+                            'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
+                            'props' => ['quality' => 0, 'armour' => 40, 'evasion' => 40, 'energyShield' => 40, 'block' => 0],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->assertValid()->assertRedirect();
 });
 
 test('a stored plan keeps distinct item priorities', function () {

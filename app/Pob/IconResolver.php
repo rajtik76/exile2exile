@@ -81,9 +81,22 @@ final class IconResolver
     ];
 
     /**
-     * @var array<string, array{name: string, icon: ?string, color: string, type: string, description: ?string, tags: list<string>}>|null
+     * @var array<string, array{name: string, icon: ?string, color: string, type: string, description: ?string, tags: list<string>, hoverImage: ?string}>|null
      */
     private ?array $gemIndex = null;
+
+    /**
+     * Per-level tooltip scaling from resources/poe2/ggpk/gem_scaling.json (see
+     * tools/poe-data-extract and the gem-extractor package's README for the shape).
+     *
+     * @var array<string, array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}>|null
+     */
+    private ?array $gemScalingIndex = null;
+
+    /**
+     * @var array<string, array{name: string, levels: array<string, array{requiredLevel: int, str: int, dex: int, int: int}>}>|null
+     */
+    private ?array $gemRequirementsIndex = null;
 
     /**
      * @var array<string, ?string>|null Base type display name => icon web path (or null).
@@ -116,6 +129,11 @@ final class IconResolver
      * @var array<string, array{str: int, dex: int, int: int}|null>|null
      */
     private ?array $reqIndex = null;
+
+    /**
+     * @var array<string, array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null>|null
+     */
+    private ?array $armourIndex = null;
 
     /**
      * @var array<string, string>|null Display name => rarity ("normal" | "unique").
@@ -180,9 +198,22 @@ final class IconResolver
     /**
      * Derived-index cache schema. Bump when an index's SHAPE changes (not its data),
      * so a deploy busts caches the old code populated even though the game data - and
-     * thus the data version - is unchanged. v2: notables carry a `keystone` flag.
+     * thus the data version - is unchanged. v2: notables carry a `keystone` flag. v3:
+     * gems carry `hoverImage`, plus the new `gem_scaling` index. v4: items carry
+     * `armour` (base defensive stats from GGPK `ArmourTypes`/`ShieldTypes`). v5: gems
+     * carry `requires` (the level/attribute range, capped at the character level cap,
+     * plus the new `gem_requirements` index).
      */
-    private const string CACHE_SCHEMA = 'v2';
+    private const string CACHE_SCHEMA = 'v5';
+
+    /**
+     * The game's own character level cap. Not itself a GGPK table value - a gem level
+     * whose required character level exceeds this is unreachable through normal play,
+     * so the in-game tooltip's "Requires:" line never shows it (confirmed against a
+     * live reference tooltip: Arc's requirement range tops out at gem level 19/char
+     * level 90, not gem level 20/char level 97 - {@see gemRequires}).
+     */
+    private const int GEM_MAX_CHARACTER_LEVEL = 90;
 
     /**
      * Build a derived index once, caching it across requests (keyed by the data
@@ -275,6 +306,42 @@ final class IconResolver
     }
 
     /**
+     * Web path to a gem's hover-art background (the SmartHover/GemHoverImage art the
+     * game paints behind the tooltip, top-right), or null when the gem has none.
+     *
+     * Coverage is genuinely sparse in the game's own data: no support gem has hover
+     * art, and only a fraction of active/spirit gems do on the current patch (see the
+     * gem-extractor package's README) - null here is the expected steady state for
+     * most gems, not a missing-asset bug.
+     */
+    public function gemHoverImage(?string $gemId): ?string
+    {
+        if ($gemId === null || $gemId === '') {
+            return null;
+        }
+
+        $entry = $this->gems()[$gemId] ?? null;
+
+        return $entry === null ? null : $this->webPathIfPresent($entry['hoverImage']);
+    }
+
+    /**
+     * Per-level tooltip scaling for a gem - cost, cast time, crit chance and the
+     * scaling stat lines a level-scaling slider needs, plus the quality bonus lines.
+     * Null when the gem has no resolved stat set (see gem_scaling.json's own caveats).
+     *
+     * @return array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null
+     */
+    public function gemScaling(?string $gemId): ?array
+    {
+        if ($gemId === null || $gemId === '') {
+            return null;
+        }
+
+        return $this->gemScalingIndex()[$gemId] ?? null;
+    }
+
+    /**
      * Strip PoE bbcode markup from descriptive text: "[Curse]" -> "Curse",
      * "[Charges|Power Charges]" -> "Power Charges" (the display half after the pipe).
      */
@@ -309,7 +376,7 @@ final class IconResolver
      * Build the gem index from the GGPK-derived mapping (already keyed by the
      * gem id's last path segment, matching {@see PobImport::normalizeGemId}).
      *
-     * @return array<string, array{name: string, icon: ?string, color: string, type: string, description: ?string, tags: list<string>}>
+     * @return array<string, array{name: string, icon: ?string, color: string, type: string, description: ?string, tags: list<string>, hoverImage: ?string}>
      */
     private function gems(): array
     {
@@ -327,11 +394,95 @@ final class IconResolver
                         (array) ($value['tags'] ?? []),
                         fn (mixed $tag): bool => is_string($tag) && ! in_array($tag, self::HIDDEN_GEM_TAGS, true),
                     )),
+                    'hoverImage' => $this->ddsToPng($value['hoverImage'] ?? null),
                 ];
             }
 
             return $index;
         });
+    }
+
+    /**
+     * Load the per-level tooltip scaling index (resources/poe2/ggpk/gem_scaling.json),
+     * already keyed by gem id and shaped exactly as {@see gemScaling} returns it.
+     *
+     * @return array<string, array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}>
+     */
+    private function gemScalingIndex(): array
+    {
+        return $this->gemScalingIndex ??= $this->remembered('gem_scaling', function (): array {
+            /** @var array<string, array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}> $decoded */
+            $decoded = $this->load('ggpk/gem_scaling.json');
+
+            return $decoded;
+        });
+    }
+
+    /**
+     * Load the per-level level/attribute requirement curve
+     * (resources/poe2/ggpk/gem_requirements.json) - the same file
+     * {@see GemRequirements} reads for build-gating, loaded independently
+     * here since that class isn't wired into this one's constructor.
+     *
+     * @return array<string, array{name: string, levels: array<string, array{requiredLevel: int, str: int, dex: int, int: int}>}>
+     */
+    private function gemRequirementsIndex(): array
+    {
+        return $this->gemRequirementsIndex ??= $this->remembered('gem_requirements', function (): array {
+            /** @var array<string, array{name: string, levels: array<string, array{requiredLevel: int, str: int, dex: int, int: int}>}> $decoded */
+            $decoded = $this->load('ggpk/gem_requirements.json');
+
+            return $decoded;
+        });
+    }
+
+    /**
+     * A gem's level/attribute requirement range, as the game's own tooltip shows it:
+     * gem level 1's requirement through the highest gem level still reachable at
+     * {@see GEM_MAX_CHARACTER_LEVEL} - a level needing more than that is unreachable
+     * through normal play, so the in-game tooltip never shows it. An attribute the
+     * gem never needs (weight 0 throughout) is omitted entirely, matching the
+     * in-game "Requires:" line, which never lists an attribute the gem doesn't need.
+     *
+     * Known gap: the underlying curve rounds any requirement under 8 down to 0
+     * (ported from Path of Building's own formula - see {@see GemRequirements}),
+     * so a gem whose true level-1 requirement is a small nonzero value (the reference
+     * tooltip shows Arc needing 4 Int at level 1) shows 0 here instead. This is a
+     * known precision gap in the source data, not a bug in this method.
+     *
+     * @return array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null
+     */
+    public function gemRequires(?string $gemId): ?array
+    {
+        if ($gemId === null || $gemId === '') {
+            return null;
+        }
+
+        $curve = $this->gemRequirementsIndex()[$gemId]['levels'] ?? null;
+
+        if ($curve === null || $curve === []) {
+            return null;
+        }
+
+        // Levels are keyed by gem level as a string ("1", "2", ...) in insertion
+        // order matching the curve, so the lowest level is simply the first entry -
+        // avoids assuming key "1" exists (it always does in practice, but nothing
+        // guarantees it statically).
+        $first = reset($curve);
+        $reachable = array_filter(
+            $curve,
+            static fn (array $row): bool => $row['requiredLevel'] <= self::GEM_MAX_CHARACTER_LEVEL,
+        );
+        $last = $reachable !== [] ? end($reachable) : $first;
+
+        $range = static fn (int $a, int $b): array => [$a, $b];
+
+        return [
+            'level' => $range($first['requiredLevel'], $last['requiredLevel']),
+            'str' => $last['str'] > 0 ? $range($first['str'], $last['str']) : null,
+            'dex' => $last['dex'] > 0 ? $range($first['dex'], $last['dex']) : null,
+            'int' => $last['int'] > 0 ? $range($first['int'], $last['int']) : null,
+        ];
     }
 
     /**
@@ -449,7 +600,7 @@ final class IconResolver
      * @param  list<string>  $types  any of 'gem', 'rune', 'unique'
      * @param  list<string>  $categories  restrict uniques to these base categories (e.g. equipment slots); empty = any
      * @param  ?string  $gemKind  restrict gems to a picker slot: 'skill' (active/spirit) or 'support'; null = any
-     * @return list<array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}>
+     * @return list<array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null}>
      */
     public function searchReferences(string $query, array $types, array $categories = [], ?string $gemKind = null, int $limit = 20): array
     {
@@ -542,7 +693,7 @@ final class IconResolver
      * Resolve a single reference token (type + id) to its display data, or null when
      * the id is unknown or the type is unsupported.
      *
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}|null
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null}|null
      */
     public function resolveReference(string $type, string $id): ?array
     {
@@ -688,7 +839,7 @@ final class IconResolver
     }
 
     /**
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function baseReference(string $name): array
     {
@@ -707,13 +858,17 @@ final class IconResolver
             'twoHanded' => $this->isTwoHanded($name),
             // A base's own fixed implicit lines (read-only), rendered from GGPK.
             'implicits' => $this->itemImplicits($name),
+            // The base's own defensive stats, used to know *which* of Armour/Evasion/
+            // Energy Shield a base actually has (see itemArmour) - null for a base GGPK
+            // has no defensive row for (weapons, jewellery, ...).
+            'armour' => $this->itemArmour($name),
             'sprite' => null,
         ];
     }
 
     /**
-     * @param  array{name: string, icon: ?string, color: string, type: string, description: ?string, tags: list<string>}  $entry
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @param  array{name: string, icon: ?string, color: string, type: string, description: ?string, tags: list<string>, hoverImage: ?string}  $entry
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage: ?string, scaling: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null}
      */
     private function gemReference(string $id, array $entry): array
     {
@@ -731,12 +886,17 @@ final class IconResolver
             'twoHanded' => false,
             'implicits' => [],
             'sprite' => null,
+            // Background art the tooltip paints behind its header (null for most
+            // gems - see gemHoverImage's own doc on why that's expected).
+            'hoverImage' => $this->gemHoverImage($id),
+            'scaling' => $this->gemScaling($id),
+            'requires' => $this->gemRequires($id),
         ];
     }
 
     /**
      * @param  array{levelRequirement: ?int, effects: list<string>}  $data
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function runeReference(string $name, array $data): array
     {
@@ -762,7 +922,7 @@ final class IconResolver
 
     /**
      * @param  array{stats: list<string>, ascendancy: bool, keystone: bool, icon: ?string}  $node
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function notableReference(string $name, array $node): array
     {
@@ -827,7 +987,7 @@ final class IconResolver
     }
 
     /**
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function uniqueReference(string $name): array
     {
@@ -862,6 +1022,11 @@ final class IconResolver
             // in the tooltip, same as the game's own unique tooltip does. Absent when
             // unsynced, same as the mods themselves.
             'baseType' => $mods['base'] ?? null,
+            // The unique's own defensive stats, looked up via its synced base type -
+            // .dat itself has no unique-to-base-type link, but the PoB-sourced base name
+            // above is a real GGPK base, so its ArmourTypes/ShieldTypes row still
+            // resolves. Null when unsynced (no base name to look up yet).
+            'armour' => $this->itemArmour($mods['base'] ?? null),
             'sprite' => null,
         ];
     }
@@ -893,6 +1058,24 @@ final class IconResolver
             'implicits' => array_map(UniqueModLine::parse(...), $mods['implicits']),
             'mods' => array_map(UniqueModLine::parse(...), $mods['mods']),
         ];
+    }
+
+    /**
+     * A unique's underlying base item (e.g. "Viper Cap" for Constricting Command),
+     * synced from Path of Building alongside its mods - .dat itself has no unique-to-
+     * base-type link. Null when unsynced or the name isn't a known unique. This is what
+     * lets a unique's own defensive stats be looked up via {@see itemArmour} despite
+     * .dat's gap - the base name it resolves to is a real GGPK base type.
+     */
+    public function uniqueBaseType(?string $name): ?string
+    {
+        if ($name === null || $name === '') {
+            return null;
+        }
+
+        $base = $this->pobUniqueMods()[$name]['base'] ?? null;
+
+        return is_string($base) && $base !== '' ? $base : null;
     }
 
     /**
@@ -1044,6 +1227,28 @@ final class IconResolver
     }
 
     /**
+     * A base type's own defensive stats (GGPK `ArmourTypes`/`ShieldTypes`), or null when
+     * the base carries no defensive row at all (weapons, jewellery, flasks, ...). A
+     * present result's individual values are 0 for a defence type the base doesn't have
+     * (e.g. a pure-evasion base has `armour: 0, energyShield: 0`) - distinct from the
+     * whole result being null. Always null for a unique: .dat has no unique-to-base-type
+     * link (same caveat as {@see itemRequirements}), so a unique's defence can only be
+     * hand-entered, not looked up.
+     *
+     * @return array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null
+     */
+    public function itemArmour(?string $baseType): ?array
+    {
+        if ($baseType === null || $baseType === '') {
+            return null;
+        }
+
+        $this->items();
+
+        return $this->armourIndex[$baseType] ?? null;
+    }
+
+    /**
      * The item class of a base type (e.g. "Crossbow", "Ring"), or null if unknown.
      */
     public function itemClass(?string $baseType): ?string
@@ -1093,6 +1298,7 @@ final class IconResolver
         $this->categoryIndex = $built['category'];
         $this->flavourIndex = $built['flavour'];
         $this->reqIndex = $built['req'];
+        $this->armourIndex = $built['armour'];
         $this->rarityIndex = $built['rarity'];
         $this->tagIndex = $built['tag'];
         $this->implicitIndex = $built['implicit'];
@@ -1113,6 +1319,7 @@ final class IconResolver
      *     category: array<string, ?string>,
      *     flavour: array<string, ?string>,
      *     req: array<string, array{str: int, dex: int, int: int}|null>,
+     *     armour: array<string, array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null>,
      *     rarity: array<string, string>,
      *     tag: array<string, list<string>>,
      *     implicit: array<string, list<string>>,
@@ -1127,6 +1334,7 @@ final class IconResolver
         $categories = [];
         $flavours = [];
         $reqs = [];
+        $armours = [];
         $rarities = [];
         $tags = [];
         $implicits = [];
@@ -1175,6 +1383,17 @@ final class IconResolver
                     'int' => (int) ($req['int'] ?? 0),
                 ]
                 : null;
+
+            $armour = $value['armour'] ?? null;
+            $armours[$name] = is_array($armour)
+                ? [
+                    'armour' => (int) ($armour['armour'] ?? 0),
+                    'evasion' => (int) ($armour['evasion'] ?? 0),
+                    'energyShield' => (int) ($armour['energyShield'] ?? 0),
+                    'ward' => (int) ($armour['ward'] ?? 0),
+                    'block' => (int) ($armour['block'] ?? 0),
+                ]
+                : null;
         }
 
         return [
@@ -1184,6 +1403,7 @@ final class IconResolver
             'category' => $categories,
             'flavour' => $flavours,
             'req' => $reqs,
+            'armour' => $armours,
             'rarity' => $rarities,
             'tag' => $tags,
             'implicit' => $implicits,

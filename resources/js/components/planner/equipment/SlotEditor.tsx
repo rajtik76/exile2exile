@@ -31,16 +31,27 @@ import {
 } from '@/types/planner';
 import type { ItemPlan, ItemProps, ItemStat, RuneRef } from '@/types/planner';
 
-/** The item's defensive/quality property fields. Block is shields-only (see isShield). */
+/**
+ * The item's defensive/quality property fields. Block is shields-only (see isShield).
+ * `defenceKey` gates a field against the resolved base's own GGPK defensive stats (see
+ * `propFields` below): a base that's purely Evasion (e.g. a dex-armour body armour)
+ * only shows the Evasion field, matching how the game's own tooltip never shows a
+ * defence type the base doesn't have.
+ */
 const PROP_FIELDS: Array<{
     key: keyof ItemProps;
     label: string;
     shieldOnly?: boolean;
+    defenceKey?: 'armour' | 'evasion' | 'energyShield';
 }> = [
     { key: 'quality', label: 'Quality' },
-    { key: 'armour', label: 'Armour' },
-    { key: 'evasion', label: 'Evasion' },
-    { key: 'energyShield', label: 'Energy Shield' },
+    { key: 'armour', label: 'Armour', defenceKey: 'armour' },
+    { key: 'evasion', label: 'Evasion', defenceKey: 'evasion' },
+    {
+        key: 'energyShield',
+        label: 'Energy Shield',
+        defenceKey: 'energyShield',
+    },
     { key: 'block', label: 'Block', shieldOnly: true },
 ];
 
@@ -207,9 +218,25 @@ export default function SlotEditor({
     const uniqueExplicitLines = reference?.modLines ?? [];
     // Block is a shield-only property (bucklers included); foci/quivers don't block.
     const isShield = /shield|buckler/i.test(reference?.category ?? '');
-    const propFields = PROP_FIELDS.filter(
-        (field) => !field.shieldOnly || isShield,
-    );
+    // The resolved base's own defensive stats (null when unresolved, or for a unique -
+    // .dat has no unique-to-base-type link, so its defence can't be looked up this way).
+    // Without it every defence field stays visible, same as before this existed.
+    const baseArmour = reference?.armour ?? null;
+    const propFields = PROP_FIELDS.filter((field) => {
+        if (field.shieldOnly && !isShield) {
+            return false;
+        }
+
+        if (
+            field.defenceKey &&
+            baseArmour &&
+            baseArmour[field.defenceKey] === 0
+        ) {
+            return false;
+        }
+
+        return true;
+    });
 
     // Done stays disabled while the item is illegal (an already-committed error, e.g.
     // too many affixes) or a unique-mod field holds an uncommitted invalid value - the

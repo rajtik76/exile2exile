@@ -9,9 +9,9 @@
     "build-data": "node build-data.mjs"
   },
   "dependencies": {
-    "@poe2-toolkit/gem-extractor": "^0.5.0",
+    "@poe2-toolkit/gem-extractor": "^0.6.0",
     "@poe2-toolkit/ggpk": "^0.4.0",
-    "@poe2-toolkit/item-extractor": "^0.10.0",
+    "@poe2-toolkit/item-extractor": "^0.11.0",
     "@poe2-toolkit/mod-extractor": "^0.1.1",
     "@poe2-toolkit/rune-extractor": "^0.4.0",
     "pathofexile-dat": "^15.1.0",

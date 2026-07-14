@@ -221,7 +221,7 @@ test('a rare item still aggregates its authored stats, unaffected by the unique 
     });
     const map: ReferenceMap = {
         [refKey('base', 'Viper Cap')]: {
-            type: 'gem' as PlanReference['type'],
+            type: 'base',
             id: 'Viper Cap',
             name: 'Viper Cap',
         },
