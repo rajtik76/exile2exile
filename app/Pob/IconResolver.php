@@ -6,6 +6,7 @@ namespace App\Pob;
 
 use App\Pob\Uniques\PobUniqueStore;
 use App\Pob\Uniques\UniqueModLine;
+use App\Support\Planner\PlanReferences;
 use Closure;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Facades\Storage;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Storage;
  * maps onto locally vendored PoE2 game icons, but the same {@see Gem::$icon} /
  * {@see EquippedItem::$icon} fields are filled straight from a signed `icon` URL
  * when a build arrives via the GGG OAuth API instead of a PoB export.
+ *
+ * @phpstan-type ReferenceEntry array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null}
  */
 final class IconResolver
 {
@@ -94,7 +97,7 @@ final class IconResolver
     private ?array $gemScalingIndex = null;
 
     /**
-     * @var array<string, array{name: string, levels: array<string, array{requiredLevel: int, str: int, dex: int, int: int}>}>|null
+     * @var array<string, array{name: string, levels: array<int, array{requiredLevel: int, str: int, dex: int, int: int}>}>|null
      */
     private ?array $gemRequirementsIndex = null;
 
@@ -193,6 +196,7 @@ final class IconResolver
         private readonly ?Cache $cache = null,
         private readonly string $dataVersion = 'dev',
         private readonly ?PobUniqueStore $pobUniqueStore = null,
+        private readonly GemRequirements $gemRequirements = new GemRequirements,
     ) {}
 
     /**
@@ -419,21 +423,20 @@ final class IconResolver
     }
 
     /**
-     * Load the per-level level/attribute requirement curve
-     * (resources/poe2/ggpk/gem_requirements.json) - the same file
-     * {@see GemRequirements} reads for build-gating, loaded independently
-     * here since that class isn't wired into this one's constructor.
+     * The per-level level/attribute requirement curve, keyed by gem id - reuses
+     * {@see GemRequirements}, the same class {@see PlanReferences}
+     * relies on for build-gating, so the file is parsed once per shape rather than
+     * independently in both places. Wrapped in {@see self::remembered()} for the
+     * across-request caching that class doesn't provide on its own.
      *
-     * @return array<string, array{name: string, levels: array<string, array{requiredLevel: int, str: int, dex: int, int: int}>}>
+     * @return array<string, array{name: string, levels: array<int, array{requiredLevel: int, str: int, dex: int, int: int}>}>
      */
     private function gemRequirementsIndex(): array
     {
-        return $this->gemRequirementsIndex ??= $this->remembered('gem_requirements', function (): array {
-            /** @var array<string, array{name: string, levels: array<string, array{requiredLevel: int, str: int, dex: int, int: int}>}> $decoded */
-            $decoded = $this->load('ggpk/gem_requirements.json');
-
-            return $decoded;
-        });
+        return $this->gemRequirementsIndex ??= $this->remembered(
+            'gem_requirements',
+            fn (): array => $this->gemRequirements->all(),
+        );
     }
 
     /**
@@ -600,7 +603,7 @@ final class IconResolver
      * @param  list<string>  $types  any of 'gem', 'rune', 'unique'
      * @param  list<string>  $categories  restrict uniques to these base categories (e.g. equipment slots); empty = any
      * @param  ?string  $gemKind  restrict gems to a picker slot: 'skill' (active/spirit) or 'support'; null = any
-     * @return list<array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null}>
+     * @return list<ReferenceEntry>
      */
     public function searchReferences(string $query, array $types, array $categories = [], ?string $gemKind = null, int $limit = 20): array
     {
@@ -693,7 +696,7 @@ final class IconResolver
      * Resolve a single reference token (type + id) to its display data, or null when
      * the id is unknown or the type is unsupported.
      *
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null}|null
+     * @return ReferenceEntry|null
      */
     public function resolveReference(string $type, string $id): ?array
     {

@@ -84,6 +84,15 @@ const TOOLTIP_HEADER_TEXTURES = {
         'art/textures/interface/2d/2dart/uiimages/ingame/itemsheaderuniquemiddle.dds',
     'ui/tooltip-header-unique-right.png':
         'art/textures/interface/2d/2dart/uiimages/ingame/itemsheaderuniqueright.dds',
+    // Runes and Soul Cores share one GGPK ItemClass ("SoulCore"/Augment) and
+    // the game renders both with the currency banner (ItemsHeaderCurrency*) -
+    // there is no separate rune/soul-core header art in the GGPK.
+    'ui/tooltip-header-currency-left.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/itemsheadercurrencyleft.dds',
+    'ui/tooltip-header-currency-middle.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/itemsheadercurrencymiddle.dds',
+    'ui/tooltip-header-currency-right.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/itemsheadercurrencyright.dds',
 };
 
 async function buildTooltipHeaderIcons() {
@@ -99,6 +108,27 @@ async function buildTooltipHeaderIcons() {
         }
 
         icons[outPath] = encodePng(img.width, img.height, img.rgba);
+    }
+
+    // The gem tooltip header is a single sprite-indexed image (not a raw dds path,
+    // not a left/middle/right triplet like the rarity/currency banners) - verified
+    // against poe2db's own CSS (`.item-popup--poe2.GemPopup .itemHeader { background:
+    // url(.../smarthover/gemhovertitle.webp) top left no-repeat; background-size:
+    // contain; }`), which resolves to this exact GGPK sprite. The `ItemsHeaderGem*`
+    // triplet some legacy CSS rules reference is PoE1 art, unused by poe2's own
+    // `.item-popup--poe2` rules - do not resurrect it here.
+    const gemTitle = await source.uiSprite(
+        'Art/2DArt/UIImages/InGame/SmartHover/GemHoverTitle',
+    );
+
+    if (gemTitle) {
+        icons['ui/tooltip-header-gem-title.png'] = encodePng(
+            gemTitle.width,
+            gemTitle.height,
+            gemTitle.rgba,
+        );
+    } else {
+        missing += 1;
     }
 
     return { icons, report: { packed: Object.keys(icons).length, missing } };
@@ -185,6 +215,7 @@ const writeJson = (name, value) =>
 writeJson('items', items.data);
 writeJson('gems', gems.data.gems);
 writeJson('gem_requirements', gems.data.requirements);
+writeJson('gem_scaling', gems.data.scaling);
 writeJson('runes', runes.data);
 writeJson('mods', mods);
 
@@ -197,7 +228,6 @@ writeJson('mods', mods);
 // not an approximation.
 for (const [label, report] of [
     ['items', items.icons.report],
-    ['gems', gems.icons.report],
     ['runes', runes.icons.report],
     ['tooltip header', tooltipHeader.report],
 ]) {
@@ -207,6 +237,29 @@ for (const [label, report] of [
         );
     }
 }
+
+// Gems are exempt from the fail-loud check above because @poe2-toolkit/gem-
+// extractor's combined `missing` counter covers both `icon` (should always
+// decode) and `hoverImage` (genuinely sparse in the game's own data - no
+// support gem has hover art, and most active gems don't have it yet either -
+// see the package's README), so a nonzero `missing` there is an expected
+// steady state, not necessarily a decoder gap. Fail loud on `icon` alone,
+// checked directly against the packed map so a real base-icon regression
+// still surfaces instead of being absorbed into the sparse-hoverImage noise.
+const gemIconPngPath = (ddsPath) => `${ddsPath.slice(0, -4)}.png`;
+const missingGemIcons = Object.values(gems.data.gems).filter(
+    (gem) => gem.icon && !(gemIconPngPath(gem.icon) in gems.icons.icons),
+).length;
+
+if (missingGemIcons > 0) {
+    throw new Error(
+        `gems: ${missingGemIcons} base icon(s) could not be decoded from the CDN - extend the DDS decoder in @poe2-toolkit/ggpk instead of falling back to committed art`,
+    );
+}
+
+console.log(
+    `gems icons: ${gems.icons.report.packed} packed, ${gems.icons.report.missing} missing overall (hoverImage sparsity expected; base gem icons checked separately above)`,
+);
 
 // DATA_JSON_ONLY (the pre-test extraction for CI and local runs) skips writing the
 // heavy PNG art - the server and tests only read the JSON mappings above, never the
@@ -251,6 +304,7 @@ console.log(
     `gems:  ${Object.keys(gems.data.gems).length} (${gems.icons.report.packed} icons from GGPK)`,
 );
 console.log(`gem requirements: ${Object.keys(gems.data.requirements).length}`);
+console.log(`gem scaling: ${Object.keys(gems.data.scaling).length}`);
 console.log(`runes: ${Object.keys(runes.data).length}`);
 console.log(
     `mods: ${mods.length} item affixes; implicits on ${Object.keys(implicits).length} bases (${unresolvedImplicits} unresolved refs)`,

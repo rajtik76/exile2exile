@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Filigree } from '@/components/build/Panel';
 import {
     BulletList,
+    MOD_TEXT_COLOR,
     rarityFrame,
     rarityTone,
     TooltipBadge,
@@ -261,7 +262,10 @@ export function RuneBadge({
                     {rune.effects.length > 0 && (
                         <>
                             {rune.levelRequirement !== null && <TooltipRule />}
-                            <BulletList lines={rune.effects} color="#8888ff" />
+                            <BulletList
+                                lines={rune.effects}
+                                color={MOD_TEXT_COLOR}
+                            />
                         </>
                     )}
                 </TooltipCard>
@@ -376,7 +380,10 @@ function Properties({ item }: { item: Item }) {
             {lines.map((line) => (
                 <p key={line.key} className="text-[#a7acb8]">
                     {line.label}:{' '}
-                    <span className="font-medium text-[#8888ff]">
+                    <span
+                        className="font-medium"
+                        style={{ color: MOD_TEXT_COLOR }}
+                    >
                         {line.value}
                     </span>
                 </p>
@@ -486,7 +493,11 @@ function ModDetailRow({ detail }: { detail: ItemModDetail }) {
                 {detailBadge(detail)}
             </span>
             {detail.lines.map((line, index) => (
-                <span key={index} className="font-medium text-[#8888ff]">
+                <span
+                    key={index}
+                    className="font-medium"
+                    style={{ color: MOD_TEXT_COLOR }}
+                >
                     {line}
                     {index < detail.lines.length - 1 ? ', ' : ''}
                 </span>
@@ -549,7 +560,7 @@ export function ItemCard({ item }: { item: Item }) {
             {hasMods && <TooltipRule />}
 
             {item.implicitMods.length > 0 && (
-                <BulletList lines={item.implicitMods} color="#8888ff" />
+                <BulletList lines={item.implicitMods} color={MOD_TEXT_COLOR} />
             )}
 
             {item.implicitMods.length > 0 && item.explicitMods.length > 0 && (
@@ -560,7 +571,10 @@ export function ItemCard({ item }: { item: Item }) {
                 (showDetail ? (
                     <ModDetailList details={item.modDetails ?? []} />
                 ) : (
-                    <BulletList lines={item.explicitMods} color="#8888ff" />
+                    <BulletList
+                        lines={item.explicitMods}
+                        color={MOD_TEXT_COLOR}
+                    />
                 ))}
 
             {(item.modDetails?.length ?? 0) > 0 && (

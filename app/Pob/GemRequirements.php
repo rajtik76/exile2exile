@@ -34,6 +34,18 @@ final class GemRequirements
     }
 
     /**
+     * The full requirement curve, keyed by gem id - the same vendored data
+     * {@see self::at()} reads from, exposed for callers (like {@see IconResolver})
+     * that need the whole per-gem level list rather than a single level's row.
+     *
+     * @return array<string, array{name: string, levels: array<int, array{requiredLevel: int, str: int, dex: int, int: int}>}>
+     */
+    public function all(): array
+    {
+        return $this->data();
+    }
+
+    /**
      * @return array<string, array{name: string, levels: array<int, array{requiredLevel: int, str: int, dex: int, int: int}>}>
      */
     private function data(): array

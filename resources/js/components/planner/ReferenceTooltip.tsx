@@ -2,6 +2,10 @@ import { useState } from 'react';
 import {
     BulletList,
     CursorTooltip,
+    GEM_LABEL_COLOR,
+    GEM_TITLE_COLOR,
+    GemTooltipBody,
+    MOD_TEXT_COLOR,
     SpriteIcon,
     TooltipBadge,
     TooltipCard,
@@ -10,6 +14,9 @@ import {
 import type { TooltipAccent } from '@/components/build/tooltip';
 import NotableTreeMap from '@/components/planner/NotableTreeMap';
 import type { PlanReference } from '@/lib/planReferences';
+
+/** The GGPK-decoded gem tooltip header art (`GemHoverTitle`, see tools/poe-data-extract). */
+const GEM_HEADER_IMAGE = '/icons/poe2/ui/tooltip-header-gem-title.png';
 
 /** Gem socket colour from the single-letter attribute (b/g/r/w). */
 const SOCKET: Record<string, string> = {
@@ -61,16 +68,30 @@ export default function ReferenceTooltip({
     const tags = reference?.tags ?? [];
     const tooltip = reference?.tooltip ?? null;
     const flavour = reference?.flavour ?? null;
+    const hoverImage = reference?.hoverImage ?? null;
+    const scaling = reference?.scaling ?? null;
+    const requires = reference?.requires ?? null;
+    const isGem = type === 'gem';
+
+    // A gem's header shows its primary tag ("Spell", "Attack", "Warcry", ...) as
+    // the subtitle, same as the game's own tooltip - the body's own tag list below
+    // excludes it so it isn't listed twice.
+    const gemSubtitle = tags[0];
+    const gemTags = tags.slice(1);
 
     const color = accentColor(type, reference?.color);
     const accent: TooltipAccent = {
-        text: color,
+        // A gem's title is always the game's own fixed teal, not socket-tinted -
+        // pixel-matched against poe2db's `--gem-color`, not the socket ring colour
+        // used for the chip/badges elsewhere.
+        text: isGem ? GEM_TITLE_COLOR : color,
         edge: color,
         glow: `${color}28`,
     };
 
     const hasTooltip = Boolean(
-        reference && (tooltip || tags.length || category || flavour),
+        reference &&
+        (tooltip || tags.length || category || flavour || scaling || requires),
     );
 
     return (
@@ -91,9 +112,9 @@ export default function ReferenceTooltip({
                     <>
                         <TooltipCard
                             accent={accent}
-                            icon={icon}
+                            icon={isGem ? undefined : icon}
                             iconNode={
-                                sprite ? (
+                                !isGem && sprite ? (
                                     <SpriteIcon
                                         sprite={sprite}
                                         size="2.5rem"
@@ -102,46 +123,73 @@ export default function ReferenceTooltip({
                                 ) : undefined
                             }
                             title={name}
-                            subtitle={category ?? undefined}
+                            subtitle={
+                                isGem ? gemSubtitle : (category ?? undefined)
+                            }
+                            subtitleColor={isGem ? GEM_LABEL_COLOR : undefined}
+                            frame={type === 'rune' ? 'currency' : undefined}
+                            backgroundImage={isGem ? hoverImage : undefined}
+                            headerImage={isGem ? GEM_HEADER_IMAGE : undefined}
                         >
-                            {tags.length > 0 && (
-                                <div className="mb-2.5 flex flex-wrap gap-1.5">
-                                    {tags.map((tag, index) => (
-                                        <TooltipBadge key={index}>
-                                            {tag.charAt(0).toUpperCase() +
-                                                tag.slice(1)}
-                                        </TooltipBadge>
-                                    ))}
-                                </div>
-                            )}
+                            {isGem ? (
+                                <GemTooltipBody
+                                    tags={gemTags}
+                                    description={tooltip}
+                                    scaling={scaling}
+                                    requires={requires}
+                                />
+                            ) : (
+                                <>
+                                    {tags.length > 0 && (
+                                        <div className="mb-2.5 flex flex-wrap gap-1.5">
+                                            {tags.map((tag, index) => (
+                                                <TooltipBadge key={index}>
+                                                    {tag
+                                                        .charAt(0)
+                                                        .toUpperCase() +
+                                                        tag.slice(1)}
+                                                </TooltipBadge>
+                                            ))}
+                                        </div>
+                                    )}
 
-                            {tooltip &&
-                                (type === 'rune' || type === 'notable') && (
-                                    <BulletList
-                                        lines={tooltip
-                                            .split('\n')
-                                            .filter(
-                                                (line) => line.trim() !== '',
-                                            )}
-                                        color={color}
-                                    />
-                                )}
+                                    {tooltip &&
+                                        (type === 'rune' ||
+                                            type === 'notable') && (
+                                            <BulletList
+                                                lines={tooltip
+                                                    .split('\n')
+                                                    .filter(
+                                                        (line) =>
+                                                            line.trim() !== '',
+                                                    )}
+                                                color={color}
+                                            />
+                                        )}
 
-                            {tooltip &&
-                                type !== 'rune' &&
-                                type !== 'notable' && (
-                                    <>
-                                        {tags.length > 0 && <TooltipRule />}
-                                        <p className="text-[#d6dae2]">
-                                            {tooltip}
+                                    {tooltip &&
+                                        type !== 'rune' &&
+                                        type !== 'notable' && (
+                                            <>
+                                                {tags.length > 0 && (
+                                                    <TooltipRule />
+                                                )}
+                                                <p
+                                                    style={{
+                                                        color: MOD_TEXT_COLOR,
+                                                    }}
+                                                >
+                                                    {tooltip}
+                                                </p>
+                                            </>
+                                        )}
+
+                                    {flavour && (
+                                        <p className="text-[15px] leading-snug whitespace-pre-line text-[#a08fd0] italic">
+                                            {flavour}
                                         </p>
-                                    </>
-                                )}
-
-                            {flavour && (
-                                <p className="text-[15px] leading-snug whitespace-pre-line text-[#a08fd0] italic">
-                                    {flavour}
-                                </p>
+                                    )}
+                                </>
                             )}
                         </TooltipCard>
 
