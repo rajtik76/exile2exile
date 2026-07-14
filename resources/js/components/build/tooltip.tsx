@@ -37,6 +37,12 @@ export const GEM_LABEL_COLOR = '#6e9a97';
 /** A rune/soul core's title colour - pixel-matched the same way as the gem palette. */
 export const RUNE_TITLE_COLOR = '#aa9e82';
 /**
+ * A notable/keystone passive's title colour - pixel-matched against poe2db's own
+ * `.notablePopup .itemHeader { color: #F9E6CA }` rule. Independent of `accent.text`
+ * (which stays teal for the card's edge/glow and the tree-map panel below it).
+ */
+export const NOTABLE_TITLE_COLOR = '#f9e6ca';
+/**
  * Muted grey shared across tooltip bodies: a gem's category tags and its
  * "Requires:" label, the dash inside a numeric range, and a rune's type line
  * ("Rune"/"Soul Core") plus its own "Requires:" label.
@@ -207,13 +213,16 @@ export function TooltipRule({ color = '#c9a24a' }: { color?: string }) {
  * (`SoulCore`) and the game renders both with the currency banner; there is no
  * separate rune/soul-core header art in the GGPK (verified: `itemsheaderrune*` /
  * `itemsheadersoulcore*` don't exist, `itemsheadercurrency*` does and matches the
- * in-game tooltip). Gems use no frame at all - {@link ReferenceTooltip} paints their
- * `hoverImage` behind the header instead, matching the game's own gem tooltip, which
- * has no carved banner. Tree nodes also render {@link TooltipCard} without this prop
- * and get a plain header instead.
+ * in-game tooltip). `notable` is the passive tree's own banner (`NotablePassiveHeader*`
+ * GGPK art, a distinct texture set from the item/currency banners above) - it also
+ * switches the title to {@link NOTABLE_TITLE_COLOR} and a larger FontinRegular face,
+ * matching the game's own notable tooltip rather than the smaller FontinSmallCaps
+ * every other frame uses. Gems use no frame at all - {@link ReferenceTooltip} paints
+ * their `hoverImage` behind the header instead, matching the game's own gem tooltip,
+ * which has no carved banner.
  */
 export type TooltipRarityFrame =
-    'white' | 'magic' | 'rare' | 'unique' | 'currency';
+    'white' | 'magic' | 'rare' | 'unique' | 'currency' | 'notable';
 
 /** Maps an item rarity string to its {@link TooltipRarityFrame} banner. */
 export function rarityFrame(rarity: string): TooltipRarityFrame {
@@ -305,6 +314,7 @@ export function TooltipCard({
     children?: React.ReactNode;
 }) {
     const leftAlign = Boolean(headerImage);
+    const isNotableTitle = frame === 'notable';
 
     return (
         <div
@@ -388,12 +398,16 @@ export function TooltipCard({
                     className={`relative min-w-0 ${leftAlign ? 'pl-[25px] text-left' : 'text-center'}`}
                 >
                     {/* Header in Fontin SmallCaps (the game's own tooltip face); the
-                        second line smaller. The body below reads in the same face. */}
+                        second line smaller. The body below reads in the same face.
+                        A notable's title is the one exception - the game sets it in
+                        the larger FontinRegular face and a fixed colour instead. */}
                     <p
-                        className="text-xl leading-tight tracking-wide"
+                        className={`leading-tight tracking-wide ${isNotableTitle ? 'text-[26px]' : 'text-xl'}`}
                         style={{
-                            ...FONTIN,
-                            color: accent.text,
+                            ...(isNotableTitle ? FONTIN_REGULAR : FONTIN),
+                            color: isNotableTitle
+                                ? NOTABLE_TITLE_COLOR
+                                : accent.text,
                             textShadow: '0 1px 2px rgba(0,0,0,0.9)',
                         }}
                     >
@@ -482,6 +496,21 @@ function renderNumberedText(text: string): React.ReactNode {
     }
 
     return nodes;
+}
+
+/**
+ * Centred mod/effect lines, mod-blue with numeric values picked out white (see
+ * {@link renderNumberedText}). Shared shape for a rune/notable tooltip's effect
+ * list - anywhere a tooltip lists mechanical effect text with no bullets.
+ */
+export function ModLines({ lines }: { lines: string[] }) {
+    return (
+        <div className="space-y-0.5" style={{ color: MOD_TEXT_COLOR }}>
+            {lines.map((line, i) => (
+                <div key={i}>{renderNumberedText(line)}</div>
+            ))}
+        </div>
+    );
 }
 
 /** `n` formatted exactly as it appears in a rendered stat line (matches `GemScalingStat.text`'s own number formatting). */
@@ -827,13 +856,7 @@ export function RuneTooltipBody({
                 </>
             )}
 
-            {effects.length > 0 && (
-                <div className="space-y-0.5" style={{ color: MOD_TEXT_COLOR }}>
-                    {effects.map((line, i) => (
-                        <div key={i}>{renderNumberedText(line)}</div>
-                    ))}
-                </div>
-            )}
+            {effects.length > 0 && <ModLines lines={effects} />}
         </>
     );
 }

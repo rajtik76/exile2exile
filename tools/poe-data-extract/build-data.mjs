@@ -93,6 +93,15 @@ const TOOLTIP_HEADER_TEXTURES = {
         'art/textures/interface/2d/2dart/uiimages/ingame/itemsheadercurrencymiddle.dds',
     'ui/tooltip-header-currency-right.png':
         'art/textures/interface/2d/2dart/uiimages/ingame/itemsheadercurrencyright.dds',
+    // The passive tree's own notable/keystone tooltip banner - distinct GGPK art
+    // from the item rarity/currency banners above (verified against poe2db's own
+    // CSS: `.notablePopup .itemHeader { background: url(.../notablepassiveheaderleft.webp) ...}`).
+    'ui/tooltip-header-notable-left.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/notablepassiveheaderleft.dds',
+    'ui/tooltip-header-notable-middle.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/notablepassiveheadermiddle.dds',
+    'ui/tooltip-header-notable-right.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/notablepassiveheaderright.dds',
 };
 
 async function buildTooltipHeaderIcons() {

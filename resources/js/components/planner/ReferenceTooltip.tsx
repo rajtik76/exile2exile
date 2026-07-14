@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-    BulletList,
     CursorTooltip,
     GEM_LABEL_COLOR,
     GEM_TITLE_COLOR,
     GemTooltipBody,
+    ModLines,
     MOD_TEXT_COLOR,
     RUNE_TITLE_COLOR,
     RuneTooltipBody,
@@ -103,6 +103,7 @@ export default function ReferenceTooltip({
     const levelRequirement = reference?.levelRequirement ?? null;
     const isGem = type === 'gem';
     const isRune = type === 'rune';
+    const isNotable = type === 'notable';
 
     // A gem's header shows its primary tag ("Spell", "Attack", "Warcry", ...) as
     // the subtitle, same as the game's own tooltip - the body's own tag list below
@@ -112,8 +113,9 @@ export default function ReferenceTooltip({
 
     // A rune/soul core's own type ("Rune"/"Soul Core") moves into the body's own
     // first line (see RuneTooltipBody) rather than the header subtitle, matching
-    // the game's own tooltip.
-    const runeEffects = (tooltip ?? '')
+    // the game's own tooltip. A notable's mod lines share the same shape (see
+    // ModLines) - no bullets, mod-blue text, numbers picked out white.
+    const effectLines = (tooltip ?? '')
         .split('\n')
         .filter((line) => line.trim() !== '');
 
@@ -205,7 +207,13 @@ export default function ReferenceTooltip({
                                       : (category ?? undefined)
                             }
                             subtitleColor={isGem ? GEM_LABEL_COLOR : undefined}
-                            frame={isRune ? 'currency' : undefined}
+                            frame={
+                                isRune
+                                    ? 'currency'
+                                    : isNotable
+                                      ? 'notable'
+                                      : undefined
+                            }
                             backgroundImage={isGem ? hoverImage : undefined}
                             headerImage={isGem ? GEM_HEADER_IMAGE : undefined}
                         >
@@ -220,8 +228,12 @@ export default function ReferenceTooltip({
                                 <RuneTooltipBody
                                     category={category ?? 'Rune'}
                                     levelRequirement={levelRequirement}
-                                    effects={runeEffects}
+                                    effects={effectLines}
                                 />
+                            ) : isNotable ? (
+                                effectLines.length > 0 && (
+                                    <ModLines lines={effectLines} />
+                                )
                             ) : (
                                 <>
                                     {tags.length > 0 && (
@@ -237,19 +249,7 @@ export default function ReferenceTooltip({
                                         </div>
                                     )}
 
-                                    {tooltip && type === 'notable' && (
-                                        <BulletList
-                                            lines={tooltip
-                                                .split('\n')
-                                                .filter(
-                                                    (line) =>
-                                                        line.trim() !== '',
-                                                )}
-                                            color={color}
-                                        />
-                                    )}
-
-                                    {tooltip && type !== 'notable' && (
+                                    {tooltip && (
                                         <>
                                             {tags.length > 0 && <TooltipRule />}
                                             <p
