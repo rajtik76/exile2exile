@@ -34,3 +34,16 @@ $heartbeatUrl = config('poe.economy.heartbeat_url');
 if (is_string($heartbeatUrl) && $heartbeatUrl !== '') {
     $economySync->pingOnSuccess($heartbeatUrl);
 }
+
+// Refresh the cached Path of Building unique-item mods once a day - independent of the
+// GGPK patch cycle: unique mods aren't in GGG's own data files.
+$pobUniquesSync = Schedule::command('poe2:sync-pob-uniques')
+    ->daily()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+$pobUniquesHeartbeatUrl = config('poe.pob_uniques.heartbeat_url');
+
+if (is_string($pobUniquesHeartbeatUrl) && $pobUniquesHeartbeatUrl !== '') {
+    $pobUniquesSync->pingOnSuccess($pobUniquesHeartbeatUrl);
+}

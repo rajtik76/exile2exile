@@ -98,4 +98,41 @@ return [
         ), static fn (string $league): bool => $league !== '')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Path of Building unique-item mods (documented GGPK exception)
+    |--------------------------------------------------------------------------
+    |
+    | Unique item explicit mods are not in GGG's .dat files - the game composes
+    | them at runtime. PoB's community-maintained Data/Uniques/*.lua files are the
+    | one approved non-GGPK source. Synced on its own
+    | daily cadence, independent of the GGPK patch/release cycle, into a directory
+    | outside the release symlink swap so a new patch never wipes it.
+    |
+    */
+
+    'pob_uniques' => [
+        'repo' => env('POB_UNIQUES_REPO', 'PathOfBuildingCommunity/PathOfBuilding-PoE2'),
+
+        'path' => env('POB_UNIQUES_PATH', 'src/Data/Uniques'),
+
+        'ref' => env('POB_UNIQUES_REF', 'main'),
+
+        // Outside storage/game-data/releases and its `current` symlink on purpose:
+        // a patch release swap must never touch this. Same persistent volume, own
+        // directory, own atomic write (see PobUniqueStore).
+        'storage_path' => env('POB_UNIQUES_STORAGE_PATH') ?: storage_path('game-data/pob-uniques'),
+
+        // Push-monitor URL (e.g. Uptime Kuma) pinged after a successful sync; the
+        // scheduler in routes/console.php only wires the ping when this is set, so a
+        // failed or skipped run withholds it and the monitor raises the alarm. Blank = off.
+        'heartbeat_url' => env('POB_UNIQUES_SYNC_HEARTBEAT_URL'),
+
+        // Safety floor: refuse to overwrite the snapshot if the newly parsed unique count
+        // drops by more than this fraction versus the last known-good one (an upstream
+        // format change silently starving the parser must fail loud, not ship a gutted
+        // catalogue). 0.5 = more than half missing aborts the sync.
+        'max_drop_ratio' => (float) env('POB_UNIQUES_MAX_DROP_RATIO', 0.5),
+    ],
+
 ];

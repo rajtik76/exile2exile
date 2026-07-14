@@ -2,6 +2,14 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-07-14
+- Unique item mods (e.g. "+(80-120) to maximum Life" on Constricting Command) now sync daily from Path of Building's community-maintained data - GGG's own files never carry them, since the game composes a unique's rolls at runtime rather than shipping them in the patch. This is the one documented exception to the app's GGPK-only data rule; credited on the [Credits & Licenses](credits) page.
+- Items in the build planner can now carry their own name, typed by hand or imported straight from a Path of Building code, so a rare or magic item's rolled name (like "Rift Pelt") shows above its base type instead of the two being indistinguishable. The item's base type line is gone from the tooltip body - it's redundant once the rarity frame and name already say what the piece is.
+- An item can now be marked Corrupted - imported automatically from Path of Building or set by hand in the editor - and shows as a red line at the very bottom of its tooltip, under a divider, matching the game's own colour.
+- The item level field is gone from the editor; it never tracked anything beyond a number the author typed in, and the name field replaces it as the one thing worth naming by hand.
+- An item's basic stats (Quality, Armour, Evasion, Energy Shield, Block) now show their values in the same blue as the item's modifiers, matching the game's own tooltip colours; the Alt-held per-modifier tier breakdown was brought in line with the same font size, line spacing and colours too.
+- The paper-doll's empty item slots, priority badge, clear button and the priority strip beneath the doll were all redesigned with a softer, rounded look; the priority strip now always shows every prioritised item in one row instead of hiding overflow.
+
 ## 2026-07-13
 - The newsletter signup form is now protected by [captchaapi.eu](https://captchaapi.eu), a proof-of-work captcha that solves itself invisibly in the background while you fill in the form - no puzzles, no cookies, no tracking. It's off by default in local development, so cloning the repo needs no extra setup to try the app.
 

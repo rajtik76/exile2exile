@@ -70,6 +70,42 @@ export default function Credits() {
                 </p>
             </LegalSection>
 
+            <LegalSection heading="Unique item mods">
+                <p>
+                    A unique item's explicit mods aren't in GGG's data files -
+                    the game composes them at runtime, not from the .dat tables
+                    everything else here is built from. The one exception to{' '}
+                    {appName}'s GGPK-only rule: unique mod lines are read from{' '}
+                    <a
+                        href="https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2"
+                        target="_blank"
+                        rel="noreferrer"
+                        className={LINK}
+                    >
+                        Path of Building
+                    </a>
+                    's community-maintained data. Two things apply here: the{' '}
+                    <code>.lua</code> files themselves are used under the MIT
+                    License; the item data they contain - names, base types, mod
+                    text - is Grinding Gear Games' own game content, same as
+                    everything else on this page, not Path of Building's.
+                </p>
+                <p>
+                    Copyright &copy; 2016 David Gowor / Path of Building
+                    Community. Licensed under the MIT License; the full licence
+                    text is kept alongside the vendored data in{' '}
+                    <a
+                        href="https://github.com/rajtik76/exile2exile/blob/main/resources/pob-uniques/LICENSE"
+                        target="_blank"
+                        rel="noreferrer"
+                        className={LINK}
+                    >
+                        resources/pob-uniques/LICENSE
+                    </a>
+                    .
+                </p>
+            </LegalSection>
+
             <LegalSection heading="Economy prices">
                 <p>
                     Live market prices for the loot-filter generator come from{' '}

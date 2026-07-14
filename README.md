@@ -57,6 +57,15 @@ straight from the official GGPK / patch server by
 scrapes. Market prices come from [poe2scout](https://poe2scout.com). The loot
 filter builds on [NeverSink's filter](https://github.com/NeverSinkDev/NeverSink-Filter).
 
+One documented exception: unique item mods aren't in GGG's own data files - the
+game composes a unique's rolls at runtime rather than shipping them in the
+patch. The `poe2:sync-pob-uniques` command refreshes them daily from
+[Path of Building](https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2)'s
+community-maintained data (MIT, see [`resources/pob-uniques`](resources/pob-uniques))
+into `storage/game-data/pob-uniques`, outside the GGPK release symlink so a
+patch swap never touches it - unique mods update on their own cadence, not the
+patch cycle. Full credits on the app's Credits & Licenses page.
+
 ### From patch to production
 
 Game data is not committed to this repository. It ships through a
