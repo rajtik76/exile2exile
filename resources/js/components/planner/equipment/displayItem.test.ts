@@ -1,5 +1,8 @@
 import { expect, test } from 'vitest';
-import { toDisplayItem } from '@/components/planner/equipment/displayItem';
+import {
+    referenceToDisplayItem,
+    toDisplayItem,
+} from '@/components/planner/equipment/displayItem';
 import type { ModMap } from '@/lib/modLines';
 import { refKey } from '@/lib/planReferences';
 import type { PlanReference, ReferenceMap } from '@/lib/planReferences';
@@ -36,6 +39,44 @@ function uniqueRef(overrides: Partial<PlanReference> = {}): PlanReference {
         ...overrides,
     };
 }
+
+test('referenceToDisplayItem adapts a bare unique reference to the same Item shape an equipped one gets', () => {
+    const reference = uniqueRef({
+        icon: '/icons/poe2/uniques/constricting-command.png',
+        baseType: 'Viper Cap',
+        flavour: 'A serpent coils tighter the more it is provoked.',
+        implicitLines: [],
+        modLines: [
+            {
+                key: '+# to maximum Life',
+                template: '+(80-120) to maximum Life',
+                rolls: [{ min: 80, max: 120 }],
+            },
+        ],
+    });
+
+    const display = referenceToDisplayItem(reference);
+
+    expect(display.rarity).toBe('unique');
+    expect(display.name).toBe('Constricting Command');
+    expect(display.baseType).toBe('Viper Cap');
+    expect(display.icon).toBe('/icons/poe2/uniques/constricting-command.png');
+    expect(display.flavour).toBe(
+        'A serpent coils tighter the more it is provoked.',
+    );
+    // No ItemPlan context (no props/sockets/corrupted) - and no rolled value to
+    // substitute, so a ranged mod line falls back to its range placeholder, same as
+    // an equipped-but-unsynced unique would.
+    expect(display.explicitMods).toEqual(['+(80-120) to maximum Life']);
+    expect(display.runes).toEqual([]);
+    expect(display.corrupted).toBeUndefined();
+});
+
+test('referenceToDisplayItem falls back to the unique name when no base type is synced', () => {
+    const display = referenceToDisplayItem(uniqueRef({ baseType: null }));
+
+    expect(display.baseType).toBe('Constricting Command');
+});
 
 test('a unique item shows its synced base type, distinct from its own name', () => {
     const plan = item({ base: { type: 'unique', id: 'Constricting Command' } });

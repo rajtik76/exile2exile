@@ -92,6 +92,29 @@ function renderUniqueLines(
     });
 }
 
+/**
+ * Adapt a bare unique reference - one named inline in plan notes text, with no equipped-
+ * item context (no props/sockets/corrupted/rolled values, since those only exist on an
+ * `ItemPlan` slot) - to the same display `Item` shape the paper-doll renders. This is what
+ * lets a unique's text reference and its equipped tile share exactly one tooltip component
+ * ({@see ItemTooltip}) instead of two different ones drifting apart over time. A ranged mod
+ * line just shows its range placeholder - there is no rolled value to substitute here.
+ */
+export function referenceToDisplayItem(reference: PlanReference): Item {
+    return {
+        slot: '',
+        rarity: 'unique',
+        name: reference.name,
+        baseType: reference.baseType ?? reference.name,
+        icon: reference.icon ?? null,
+        twoHanded: reference.twoHanded ?? false,
+        runes: [],
+        implicitMods: renderUniqueLines(reference.implicitLines ?? [], []),
+        explicitMods: renderUniqueLines(reference.modLines ?? [], []),
+        flavour: reference.flavour ?? null,
+    };
+}
+
 /** Adapt a planner item (plus live-resolved refs/mods) to the shared display Item shape. */
 export function toDisplayItem(
     slot: SlotDef,
