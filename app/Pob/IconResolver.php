@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Pob;
 
 use App\Pob\Uniques\PobUniqueStore;
+use App\Pob\Uniques\UniqueModLine;
 use Closure;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Facades\Storage;
@@ -149,10 +150,10 @@ final class IconResolver
     private ?array $implicitIndex = null;
 
     /**
-     * @var array<string, array{implicits: list<string>, mods: list<string>}>|null Unique
-     *                                                                             display name => its implicit/explicit mod lines, synced from Path of Building
-     *                                                                             (see {@see PobUniqueStore}) - the one documented exception to this file's
-     *                                                                             otherwise GGPK-only sourcing, since unique mods aren't in GGG's own data files.
+     * @var array<string, array{base: string, implicits: list<string>, mods: list<string>}>|null
+     *                                                                                           Unique display name => its base type and implicit/explicit mod lines, synced from Path of Building
+     *                                                                                           (see {@see PobUniqueStore}) - the one documented exception to this file's
+     *                                                                                           otherwise GGPK-only sourcing, since unique mods aren't in GGG's own data files.
      */
     private ?array $pobUniqueModsIndex = null;
 
@@ -448,7 +449,7 @@ final class IconResolver
      * @param  list<string>  $types  any of 'gem', 'rune', 'unique'
      * @param  list<string>  $categories  restrict uniques to these base categories (e.g. equipment slots); empty = any
      * @param  ?string  $gemKind  restrict gems to a picker slot: 'skill' (active/spirit) or 'support'; null = any
-     * @return list<array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}>
+     * @return list<array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}>
      */
     public function searchReferences(string $query, array $types, array $categories = [], ?string $gemKind = null, int $limit = 20): array
     {
@@ -541,7 +542,7 @@ final class IconResolver
      * Resolve a single reference token (type + id) to its display data, or null when
      * the id is unknown or the type is unsupported.
      *
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}|null
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}|null
      */
     public function resolveReference(string $type, string $id): ?array
     {
@@ -687,7 +688,7 @@ final class IconResolver
     }
 
     /**
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function baseReference(string $name): array
     {
@@ -712,7 +713,7 @@ final class IconResolver
 
     /**
      * @param  array{name: string, icon: ?string, color: string, type: string, description: ?string, tags: list<string>}  $entry
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function gemReference(string $id, array $entry): array
     {
@@ -735,7 +736,7 @@ final class IconResolver
 
     /**
      * @param  array{levelRequirement: ?int, effects: list<string>}  $data
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function runeReference(string $name, array $data): array
     {
@@ -761,7 +762,7 @@ final class IconResolver
 
     /**
      * @param  array{stats: list<string>, ascendancy: bool, keystone: bool, icon: ?string}  $node
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function notableReference(string $name, array $node): array
     {
@@ -826,7 +827,7 @@ final class IconResolver
     }
 
     /**
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function uniqueReference(string $name): array
     {
@@ -837,6 +838,7 @@ final class IconResolver
         // pobUniqueMods()). Absent (no sync yet, or an unmatched name) just means no mods
         // show yet; the reference itself (icon, category, flavour) still resolves from GGPK.
         $mods = $this->pobUniqueMods()[$name] ?? null;
+        $lines = $this->uniqueModLines($name);
 
         return [
             'type' => 'unique',
@@ -850,7 +852,46 @@ final class IconResolver
             'flavour' => $this->flavourIndex[$name] ?? null,
             'twoHanded' => $this->isTwoHanded($name),
             'implicits' => $mods['implicits'] ?? [],
+            // Structured (key/rolls) form of the same mods, for the equipped-item editor to
+            // render inputs and substitute a stored rolled value into.
+            'modLines' => array_map(self::uniqueModLineArray(...), $lines['mods']),
+            'implicitLines' => array_map(self::uniqueModLineArray(...), $lines['implicits']),
+            // The unique's underlying base item (e.g. "Viper Cap" for Constricting
+            // Command) - synced from Path of Building alongside its mods, since .dat
+            // carries no unique-to-base-type link either. Shown under the item's name
+            // in the tooltip, same as the game's own unique tooltip does. Absent when
+            // unsynced, same as the mods themselves.
+            'baseType' => $mods['base'] ?? null,
             'sprite' => null,
+        ];
+    }
+
+    /**
+     * @return array{key: string, template: string, rolls: list<array{min: float, max: float}>}
+     */
+    private static function uniqueModLineArray(UniqueModLine $line): array
+    {
+        return ['key' => $line->key, 'template' => $line->template, 'rolls' => $line->rolls];
+    }
+
+    /**
+     * The structured (key/rolls) form of a unique's synced mods, for callers that only need
+     * the parsed lines - the plan mapper's import-value matching, the plan request's range
+     * validation - without the rest of {@see uniqueReference()}'s payload.
+     *
+     * @return array{implicits: list<UniqueModLine>, mods: list<UniqueModLine>}
+     */
+    public function uniqueModLines(string $name): array
+    {
+        $mods = $this->pobUniqueMods()[$name] ?? null;
+
+        if ($mods === null) {
+            return ['implicits' => [], 'mods' => []];
+        }
+
+        return [
+            'implicits' => array_map(UniqueModLine::parse(...), $mods['implicits']),
+            'mods' => array_map(UniqueModLine::parse(...), $mods['mods']),
         ];
     }
 
@@ -877,7 +918,7 @@ final class IconResolver
      * the data version would keep serving yesterday's mods until the next deploy. The
      * store's own JSON read is cheap enough to just do once per request/instance.
      *
-     * @return array<string, array{implicits: list<string>, mods: list<string>}>
+     * @return array<string, array{base: string, implicits: list<string>, mods: list<string>}>
      */
     private function pobUniqueMods(): array
     {
@@ -895,6 +936,7 @@ final class IconResolver
 
         foreach ($snapshot['uniques'] as $name => $unique) {
             $index[$name] = [
+                'base' => $unique['base'],
                 'implicits' => array_slice($unique['mods'], 0, $unique['implicitCount']),
                 'mods' => array_slice($unique['mods'], $unique['implicitCount']),
             ];

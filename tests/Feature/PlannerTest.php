@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\BuildPlan;
+use App\Pob\Uniques\PobUniqueStore;
 use App\Support\Planner\PlanSchema;
 use Inertia\Testing\AssertableInertia;
 
@@ -221,6 +222,126 @@ test('a stored plan keeps equipment items and the viewer resolves their base ref
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('references.unique:Bramblejack.type', 'unique')
         );
+});
+
+/** Seeds Bramblejack's synced PoB mods on the fake pob-uniques store for one test. */
+function seedBramblejackMods(): void
+{
+    fakePobUniquesRoot();
+
+    app(PobUniqueStore::class)->write([
+        'Bramblejack' => [
+            'name' => 'Bramblejack',
+            'base' => 'Thornguard',
+            'league' => null,
+            'implicitCount' => 0,
+            'mods' => ['+(80-120) to maximum Life'],
+        ],
+    ], 'repo@sha');
+}
+
+test('a unique item mod value within its rolled range is accepted and stored', function () {
+    seedBramblejackMods();
+
+    $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'unique',
+                            'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
+                            'uniqueMods' => [
+                                ['key' => '+# to maximum Life', 'values' => [110]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->assertValid()->assertRedirect();
+
+    $slots = BuildPlan::first()->data['sections']['act-1']['items']['slots'];
+
+    expect($slots['body']['uniqueMods'])->toBe([
+        ['key' => '+# to maximum Life', 'values' => [110]],
+    ]);
+
+});
+
+test('a unique item mod value outside its rolled range is rejected', function () {
+    seedBramblejackMods();
+
+    $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'unique',
+                            'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
+                            'uniqueMods' => [
+                                // The synced roll caps at 120 - 500 could not have rolled.
+                                ['key' => '+# to maximum Life', 'values' => [500]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->assertInvalid(['sections.act-1.items.slots.body']);
+
+});
+
+test('a unique item mod key that matches no known line is rejected', function () {
+    seedBramblejackMods();
+
+    $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'unique',
+                            'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
+                            'uniqueMods' => [
+                                ['key' => '+# to a made-up stat', 'values' => [1]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->assertInvalid(['sections.act-1.items.slots.body']);
+
+});
+
+test('a non-unique item cannot carry unique-modifier values', function () {
+    $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'rare',
+                            'base' => ['type' => 'base', 'id' => 'Plate Vest'],
+                            'uniqueMods' => [
+                                ['key' => '+# to maximum Life', 'values' => [110]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]))->assertInvalid(['sections.act-1.items.slots.body']);
 });
 
 test('a stored plan keeps distinct item priorities', function () {

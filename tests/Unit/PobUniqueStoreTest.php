@@ -10,12 +10,7 @@ use Tests\TestCase;
 uses(TestCase::class);
 
 beforeEach(function () {
-    config(['poe.pob_uniques.storage_path' => storage_path('game-data-test/pob-uniques')]);
-    File::deleteDirectory(storage_path('game-data-test'));
-});
-
-afterEach(function () {
-    File::deleteDirectory(storage_path('game-data-test'));
+    fakePobUniquesRoot();
 });
 
 test('read returns null before the first write', function () {
@@ -57,7 +52,7 @@ test('a second write fully replaces the snapshot rather than merging', function 
 test('no stray temp files are left behind after a write', function () {
     (new PobUniqueStore)->write(['A' => ['name' => 'A', 'base' => 'Base', 'league' => null, 'implicitCount' => 0, 'mods' => ['mod']]], 'repo@1');
 
-    $files = File::files(storage_path('game-data-test/pob-uniques'));
+    $files = File::files(config()->string('poe.pob_uniques.storage_path'));
 
     expect($files)->toHaveCount(1)
         ->and((string) $files[0])->toEndWith('current.json');

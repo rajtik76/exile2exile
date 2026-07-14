@@ -66,6 +66,21 @@ function fakeGameDataRoot(): string
 }
 
 /**
+ * Point the PoB unique-mods store at a throwaway per-process dir and return it. The dir is
+ * wiped up front, same idiom as {@see fakeGameDataRoot} - a shared fixed path here would
+ * race across --parallel's separate worker processes (each own PobUniqueStore write/delete
+ * stomping on another's mid-test).
+ */
+function fakePobUniquesRoot(): string
+{
+    $root = storage_path('framework/testing/pob-uniques-'.getmypid());
+    File::deleteDirectory($root);
+    config()->set('poe.pob_uniques.storage_path', $root);
+
+    return $root;
+}
+
+/**
  * Drop a minimal staged release (just its version.json stamp) into the fake
  * releases root, so GameDataReleases::has() and activation see it.
  */

@@ -12,6 +12,7 @@ function item(overrides: Partial<ItemPlan> = {}): ItemPlan {
         corrupted: false,
         props: { quality: 0, armour: 0, evasion: 0, energyShield: 0, block: 0 },
         stats: [],
+        uniqueMods: [],
         sockets: [],
         priority: null,
         ...overrides,

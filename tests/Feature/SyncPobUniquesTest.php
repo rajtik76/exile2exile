@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Pob\Uniques\PobUniqueStore;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 
 function fakePobUniquesRepo(): void
@@ -31,12 +30,7 @@ function fakePobUniquesRepo(): void
 }
 
 beforeEach(function () {
-    config(['poe.pob_uniques.storage_path' => storage_path('game-data-test/pob-uniques')]);
-    File::deleteDirectory(storage_path('game-data-test'));
-});
-
-afterEach(function () {
-    File::deleteDirectory(storage_path('game-data-test'));
+    fakePobUniquesRoot();
 });
 
 test('it syncs unique mods from PoB and writes the snapshot', function () {

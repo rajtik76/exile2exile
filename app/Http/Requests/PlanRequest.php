@@ -60,6 +60,14 @@ abstract class PlanRequest extends FormRequest
             'sections.*.items.slots.*.stats.*.modId' => ['required', 'string', 'max:120'],
             'sections.*.items.slots.*.stats.*.values' => ['nullable', 'array', 'max:8'],
             'sections.*.items.slots.*.stats.*.values.*' => ['numeric'],
+            // A unique's own mods (rolled value per synced catalogue line, keyed by
+            // UniqueModLine::$key) - distinct from `stats`, which is the author-picked
+            // affixes only a base/rare/magic item carries. Decimals are real PoB rolls
+            // (e.g. "11.9 Life Regeneration per second"), so values are plain `numeric`.
+            'sections.*.items.slots.*.uniqueMods' => ['nullable', 'array', 'max:20'],
+            'sections.*.items.slots.*.uniqueMods.*.key' => ['required', 'string', 'max:200'],
+            'sections.*.items.slots.*.uniqueMods.*.values' => ['nullable', 'array', 'max:8'],
+            'sections.*.items.slots.*.uniqueMods.*.values.*' => ['numeric'],
             'sections.*.items.slots.*.sockets' => ['nullable', 'array', 'max:4'],
             'sections.*.items.slots.*.sockets.*' => ['nullable', 'array'],
             'sections.*.items.slots.*.sockets.*.type' => ['nullable', 'string', 'in:rune'],
@@ -156,6 +164,7 @@ abstract class PlanRequest extends FormRequest
                 $messages = [
                     ...PlanSchema::itemErrors((string) $slot, $item),
                     ...$catalogue->modErrors($rarity, $stats, self::baseModDomain($item, $icons), self::baseTags($item, $icons), self::baseItemClass($item, $icons)),
+                    ...self::uniqueModErrors($item, $icons),
                 ];
 
                 $priority = $item['priority'] ?? null;
@@ -261,6 +270,74 @@ abstract class PlanRequest extends FormRequest
         }
 
         return $icons->itemClass($base['id']);
+    }
+
+    /**
+     * A unique item's rolled mod values, checked against its synced catalogue lines - the
+     * counterpart to {@see ModCatalogue::modErrors} for `stats`. Each `uniqueMods` entry's
+     * `key` must name a real line on the unique ({@see IconResolver::uniqueModLines}), with
+     * exactly one value per that line's rolls, each within its `[min, max]` (decimals
+     * allowed - PoB's own data carries fractional rolls).
+     *
+     * @param  array<string, mixed>  $item
+     * @return list<string>
+     */
+    private static function uniqueModErrors(array $item, IconResolver $icons): array
+    {
+        if (($item['rarity'] ?? null) !== 'unique') {
+            return [];
+        }
+
+        $base = $item['base'] ?? null;
+
+        if (! is_array($base) || ($base['type'] ?? null) !== 'unique' || ! is_string($base['id'] ?? null)) {
+            return [];
+        }
+
+        $catalogue = $icons->uniqueModLines($base['id']);
+        $byKey = [];
+
+        foreach ([...$catalogue['implicits'], ...$catalogue['mods']] as $line) {
+            $byKey[$line->key] = $line;
+        }
+
+        $errors = [];
+        $uniqueMods = is_array($item['uniqueMods'] ?? null) ? array_values($item['uniqueMods']) : [];
+
+        foreach ($uniqueMods as $stat) {
+            if (! is_array($stat)) {
+                continue;
+            }
+
+            $key = is_string($stat['key'] ?? null) ? $stat['key'] : '';
+            $line = $byKey[$key] ?? null;
+
+            if ($line === null) {
+                $errors[] = 'A unique item modifier does not match one of its known mods.';
+
+                continue;
+            }
+
+            $values = is_array($stat['values'] ?? null) ? array_values($stat['values']) : [];
+
+            if (count($values) !== count($line->rolls)) {
+                $errors[] = "A unique item modifier's value count does not match its roll.";
+
+                continue;
+            }
+
+            foreach ($line->rolls as $index => $roll) {
+                $value = $values[$index] ?? null;
+
+                if (! is_numeric($value) || $value < $roll['min'] || $value > $roll['max']) {
+                    $errors[] = "A unique item modifier's value is outside its rolled range.";
+
+                    break;
+                }
+            }
+        }
+
+        return $errors;
     }
 
     /**

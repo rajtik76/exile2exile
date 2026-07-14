@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Pob\IconResolver;
 use App\Pob\Uniques\PobUniqueStore;
-use Illuminate\Support\Facades\File;
 
 /**
  * IconResolver::uniqueReference() joins a unique's GGPK identity (icon, category,
@@ -24,12 +23,7 @@ beforeEach(function () {
         icons: ['Uniques/ConstrictingCommand.png', 'Uniques/TheAnvil.png'],
     );
 
-    config(['poe.pob_uniques.storage_path' => storage_path('game-data-test/pob-uniques')]);
-    File::deleteDirectory(storage_path('game-data-test'));
-});
-
-afterEach(function () {
-    File::deleteDirectory(storage_path('game-data-test'));
+    fakePobUniquesRoot();
 });
 
 test('a unique reference carries its synced explicit mods as one tooltip string', function () {
@@ -55,7 +49,17 @@ test('a unique reference carries its synced explicit mods as one tooltip string'
         ->and($reference['implicits'])->toBe([])
         // The rest of the reference still resolves straight from GGPK, untouched by the join.
         ->and($reference['icon'])->toBe('/icons/poe2/Uniques/ConstrictingCommand.png')
-        ->and($reference['category'])->toBe('Unique Helmet');
+        ->and($reference['category'])->toBe('Unique Helmet')
+        // The structured form the editor uses to render value inputs.
+        ->and($reference['modLines'])->toHaveCount(3)
+        ->and($reference['modLines'][0])->toBe([
+            'key' => '+# to maximum Life',
+            'template' => '+(80-120) to maximum Life',
+            'rolls' => [['min' => 80.0, 'max' => 120.0]],
+        ])
+        // The unique's underlying base item, shown under its name in the tooltip
+        // (the game's own unique tooltip does the same).
+        ->and($reference['baseType'])->toBe('Viper Cap');
 });
 
 test('implicitCount splits the leading mod lines into implicits, the rest into the tooltip', function () {
@@ -86,6 +90,7 @@ test('a unique with no synced mods yet still resolves, just without a tooltip', 
     expect($reference)->not->toBeNull()
         ->and($reference['tooltip'])->toBeNull()
         ->and($reference['implicits'])->toBe([])
+        ->and($reference['baseType'])->toBeNull()
         ->and($reference['icon'])->not->toBeNull();
 });
 
@@ -108,5 +113,6 @@ test('a container-free IconResolver (no PobUniqueStore) degrades the same way', 
     expect($reference)->not->toBeNull()
         ->and($reference['tooltip'])->toBeNull()
         ->and($reference['implicits'])->toBe([])
+        ->and($reference['baseType'])->toBeNull()
         ->and($reference['icon'])->not->toBeNull();
 });

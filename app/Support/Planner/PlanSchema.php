@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Support\Planner;
 
 use App\Models\BuildPlan;
+use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
+use App\Pob\Uniques\UniqueModLine;
 use App\Tree\TreeAllocation;
 
 /**
@@ -362,7 +364,7 @@ final class PlanSchema
      * slots are dropped.
      *
      * @param  array<int|string, mixed>  $slots
-     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
+     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
      */
     private static function canonicalSlots(array $slots): array
     {
@@ -404,7 +406,7 @@ final class PlanSchema
      * no mod lines and no runes).
      *
      * @param  array<string, mixed>  $entry
-     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
+     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
      */
     private static function canonicalItem(array $entry): ?array
     {
@@ -434,10 +436,21 @@ final class PlanSchema
             }
         }
 
+        $uniqueMods = [];
+        $rawUniqueMods = is_array($entry['uniqueMods'] ?? null) ? $entry['uniqueMods'] : [];
+
+        foreach (array_slice(array_values($rawUniqueMods), 0, self::MAX_ITEM_STATS) as $stat) {
+            $mod = self::canonicalUniqueMod($stat);
+
+            if ($mod !== null) {
+                $uniqueMods[] = $mod;
+            }
+        }
+
         $sockets = self::canonicalSockets(is_array($entry['sockets'] ?? null) ? $entry['sockets'] : []);
         $props = self::canonicalProps(is_array($entry['props'] ?? null) ? $entry['props'] : []);
 
-        if ($base === null && $stats === [] && $sockets === [] && array_sum($props) === 0) {
+        if ($base === null && $stats === [] && $uniqueMods === [] && $sockets === [] && array_sum($props) === 0) {
             return null;
         }
 
@@ -453,6 +466,7 @@ final class PlanSchema
             'corrupted' => (bool) ($entry['corrupted'] ?? false),
             'props' => $props,
             'stats' => $stats,
+            'uniqueMods' => $uniqueMods,
             'sockets' => $sockets,
             'priority' => $priority,
         ];
@@ -507,12 +521,19 @@ final class PlanSchema
                 : "This slot holds at most {$maxSockets} rune sockets.";
         }
 
-        // A unique's modifiers are fixed by the unique itself, so the author adds none.
-        // Its level requirement and defensive properties are legitimate to record though
-        // (the planner holds no base defence data - typing them is the only way to plan a
-        // unique's armour/ES), so those are not rejected here.
-        if (($item['rarity'] ?? null) === 'unique' && $stats !== []) {
+        // A unique's modifiers are fixed by the unique itself, so the author picks none -
+        // it may only carry the rolled *value* of each mod the unique already has
+        // (uniqueMods), never an author-picked affix (stats). Its level requirement and
+        // defensive properties are legitimate to record though (the planner holds no base
+        // defence data - typing them is the only way to plan a unique's armour/ES).
+        $isUnique = ($item['rarity'] ?? null) === 'unique';
+
+        if ($isUnique && $stats !== []) {
             $errors[] = 'A unique item carries its own modifiers and cannot add more.';
+        }
+
+        if (! $isUnique && is_array($item['uniqueMods'] ?? null) && $item['uniqueMods'] !== []) {
+            $errors[] = 'Only a unique item can carry rolled unique-modifier values.';
         }
 
         return $errors;
@@ -613,6 +634,43 @@ final class PlanSchema
         }
 
         return ['modId' => mb_substr($modId, 0, 120), 'values' => $values];
+    }
+
+    /**
+     * Coerce one unique-item mod's rolled value(s): a reference to one of its synced
+     * catalogue lines (by {@see UniqueModLine::$key}, stable across a
+     * value changing) plus the value(s) rolled into each of that line's ranges. Unlike
+     * {@see canonicalMod}, decimals are expected and kept as-is - PoB's own unique data
+     * carries genuinely fractional rolls (e.g. "11.9 Life Regeneration per second").
+     * The key's range(s) are resolved live from {@see IconResolver::uniqueModLines},
+     * so only the key and the values are stored. Returns null when there is no key.
+     *
+     * @return array{key: string, values: list<int|float>}|null
+     */
+    private static function canonicalUniqueMod(mixed $stat): ?array
+    {
+        if (! is_array($stat)) {
+            return null;
+        }
+
+        $key = is_string($stat['key'] ?? null) ? trim((string) $stat['key']) : '';
+
+        if ($key === '') {
+            return null;
+        }
+
+        $values = [];
+        $rawValues = is_array($stat['values'] ?? null) ? $stat['values'] : [];
+
+        foreach (array_slice(array_values($rawValues), 0, 8) as $value) {
+            if (is_int($value) || is_float($value)) {
+                $values[] = $value;
+            } elseif (is_string($value) && is_numeric($value)) {
+                $values[] = $value + 0;
+            }
+        }
+
+        return ['key' => mb_substr($key, 0, 200), 'values' => $values];
     }
 
     /**

@@ -1,5 +1,7 @@
 import { modValuesValid } from '@/lib/modLines';
 import type { ModMap } from '@/lib/modLines';
+import type { PlanReference } from '@/lib/planReferences';
+import { uniqueModValuesValid } from '@/lib/uniqueModLines';
 import {
     MAX_ITEM_NAME_LENGTH,
     MAX_ITEM_QUALITY,
@@ -8,7 +10,12 @@ import {
     NO_RARE_SLOTS,
     SLOT_MAX_SOCKETS,
 } from '@/types/planner';
-import type { ItemPlan, ItemRarity, ItemStat } from '@/types/planner';
+import type {
+    ItemPlan,
+    ItemRarity,
+    ItemStat,
+    UniqueModStat,
+} from '@/types/planner';
 
 /**
  * The per-item rules the paper-doll must hold before its slot editor may close. A client
@@ -27,6 +34,7 @@ export function itemErrors(
     slotKey: string,
     item: ItemPlan,
     mods: ModMap,
+    reference?: PlanReference,
 ): string[] {
     const errors: string[] = [];
 
@@ -61,7 +69,8 @@ export function itemErrors(
     }
 
     // A unique's modifiers are fixed by the unique itself, so the author adds none; its
-    // defensive properties (checked above) are legitimate to record.
+    // defensive properties (checked above) are legitimate to record. It may only carry the
+    // rolled *value* of each mod the unique already has (uniqueMods).
     if (item.rarity === 'unique') {
         if (item.stats.length > 0) {
             errors.push(
@@ -69,10 +78,59 @@ export function itemErrors(
             );
         }
 
-        return errors;
+        return [...errors, ...uniqueModErrors(item.uniqueMods, reference)];
+    }
+
+    if (item.uniqueMods.length > 0) {
+        errors.push(
+            'Only a unique item can carry rolled unique-modifier values.',
+        );
     }
 
     return [...errors, ...modErrors(item.rarity, item.stats, mods)];
+}
+
+/**
+ * The rolled-value-range messages for a unique item's own mods, mirroring the server's
+ * `PlanRequest::uniqueModErrors`. Skips validation entirely while the reference hasn't
+ * resolved yet (unresolved ⇒ nothing to check against client-side; the server still
+ * validates the whole request on submit), same leniency {@link modErrors} gives an
+ * unresolved authored mod.
+ */
+function uniqueModErrors(
+    uniqueMods: UniqueModStat[],
+    reference: PlanReference | undefined,
+): string[] {
+    if (uniqueMods.length === 0 || !reference) {
+        return [];
+    }
+
+    const lines = [
+        ...(reference.implicitLines ?? []),
+        ...(reference.modLines ?? []),
+    ];
+    const byKey = new Map(lines.map((line) => [line.key, line]));
+    const errors: string[] = [];
+
+    for (const stat of uniqueMods) {
+        const line = byKey.get(stat.key);
+
+        if (!line) {
+            errors.push(
+                'A unique item modifier does not match one of its known mods.',
+            );
+
+            continue;
+        }
+
+        if (!uniqueModValuesValid(line, stat.values)) {
+            errors.push(
+                "A unique item modifier's value is outside its rolled range.",
+            );
+        }
+    }
+
+    return [...new Set(errors)];
 }
 
 /** The affix-rule messages for a non-unique item, mirroring ModCatalogue::modErrors. */

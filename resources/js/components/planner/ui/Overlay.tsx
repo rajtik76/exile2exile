@@ -29,6 +29,22 @@ export function Modal({
         };
     }, []);
 
+    // Escape closes the same way the backdrop/✕ do - callers that need Escape to do
+    // something other than an unconditional close (e.g. the slot editor's revert/clear
+    // while an unresolved invalid value is being typed) implement that inside the
+    // `onClose` they pass in, not here; Modal itself stays a dumb, reusable shell.
+    useEffect(() => {
+        function onKeyDown(event: KeyboardEvent): void {
+            if (event.key === 'Escape') {
+                onClose();
+            }
+        }
+
+        document.addEventListener('keydown', onKeyDown);
+
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [onClose]);
+
     // Portalled to <body> so the modal escapes the planner's stacking context
     // (the wrapper sits at z-10 for the class backdrop) and layers above the
     // sticky site header - otherwise its top slides behind the nav.

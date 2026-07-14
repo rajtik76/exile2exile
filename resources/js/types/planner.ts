@@ -55,6 +55,17 @@ export interface ItemStat {
 }
 
 /**
+ * One rolled value on a UNIQUE item's own (fixed) mod - the counterpart to {@link ItemStat}
+ * for a unique, which carries no author-picked affixes. `key` names one of the unique's
+ * synced Path of Building mod lines (stable across a value changing - see the server's
+ * `UniqueModLine`); `values` is empty for a line with no numeric range (flavour text).
+ */
+export interface UniqueModStat {
+    key: string;
+    values: number[];
+}
+
+/**
  * Most prefixes and most suffixes an item of each rarity may carry (a game rule, mirrored
  * on the server in ModCatalogue). Normal carries none; magic one of each; rare three.
  */
@@ -83,6 +94,8 @@ export interface ItemPlan {
     corrupted: boolean;
     props: ItemProps;
     stats: ItemStat[];
+    /** A unique item's own rolled mod values (see {@link UniqueModStat}); empty otherwise. */
+    uniqueMods: UniqueModStat[];
     sockets: (RuneRef | null)[];
     /**
      * The item's gearing priority (1..{@link MAX_PRIORITY}), or null when unset. A number

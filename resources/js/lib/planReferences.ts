@@ -21,6 +21,20 @@ export interface PlanReference {
     flavour?: string | null;
     /** A base type's own fixed implicit modifier lines (read-only); empty otherwise. */
     implicits?: string[];
+    /**
+     * A unique's synced mods/implicits, structured (key/rolls) rather than flat text - the
+     * editor uses these to render a value input per ranged line and to substitute a stored
+     * rolled value into the tooltip. Empty (or absent) for anything that isn't a unique.
+     */
+    modLines?: UniqueModLine[];
+    implicitLines?: UniqueModLine[];
+    /**
+     * A unique's underlying base item (e.g. "Viper Cap" for Constricting Command),
+     * synced from Path of Building alongside its mods - .dat carries no unique-to-
+     * base-type link either. Shown under the item's name, same as the game's own
+     * unique tooltip. Absent for anything that isn't a unique, or an unsynced one.
+     */
+    baseType?: string | null;
     /** Whether a weapon base/unique is two-handed (fills the off-hand). */
     twoHanded?: boolean;
     /**
@@ -28,6 +42,17 @@ export interface PlanReference {
      * icon (notable passives, whose art lives only in the tree atlas). Null otherwise.
      */
     sprite?: ReferenceSprite | null;
+}
+
+/**
+ * One of a unique's synced mod lines, structured - mirrors the server's `UniqueModLine`.
+ * `key` is the template with every ranged number blanked to `#` (stable identity, used to
+ * key a stored rolled value); `rolls` is empty for flavour text with nothing to roll.
+ */
+export interface UniqueModLine {
+    key: string;
+    template: string;
+    rolls: { min: number; max: number }[];
 }
 
 /** A rect within a sprite atlas sheet, enough to crop one icon out with CSS. */

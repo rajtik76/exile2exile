@@ -7,6 +7,7 @@ import type { SlotDef } from '@/components/planner/equipment/displayItem';
 import ModRow from '@/components/planner/equipment/ModRow';
 import Socket from '@/components/planner/equipment/Socket';
 import { MOD_TYPE_STYLE } from '@/components/planner/equipment/style';
+import UniqueModRow from '@/components/planner/equipment/UniqueModRow';
 import ModPicker from '@/components/planner/ModPicker';
 import { useMods } from '@/components/planner/ModsContext';
 import ReferencePicker from '@/components/planner/ReferencePicker';
@@ -94,7 +95,7 @@ function CorruptedToggle({
             type="button"
             onClick={() => onToggle(!active)}
             aria-pressed={active}
-            className="pl-text-xs rounded-[var(--pl-radius)] border px-2 py-0.5 font-semibold transition"
+            className="pl-text-xs rounded-[var(--pl-radius)] border px-2 py-0.5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             style={
                 active
                     ? {
@@ -131,6 +132,39 @@ export default function SlotEditor({
     const [pickerOpen, setPickerOpen] = useState(!item.base);
     const [modPickerOpen, setModPickerOpen] = useState(false);
     const [socketPicker, setSocketPicker] = useState<number | null>(null);
+    // Every unique-mod input currently holding a typed-but-uncommitted invalid value,
+    // keyed by `${line.key}#${rollIndex}` - reported live by UniqueModRow. While any
+    // exist, Done and every other mutating control (sockets, Corrupted, the base
+    // picker's Change) lock; only Clear slot and closing (✕/Esc/backdrop) still work.
+    const [invalidUniqueMods, setInvalidUniqueMods] = useState<Set<string>>(
+        new Set(),
+    );
+    const hasInvalidInput = invalidUniqueMods.size > 0;
+
+    function reportUniqueModValidity(id: string, invalid: boolean): void {
+        setInvalidUniqueMods((current) => {
+            const already = current.has(id);
+
+            if (invalid === already) {
+                return current;
+            }
+
+            const next = new Set(current);
+
+            if (invalid) {
+                next.add(id);
+            } else {
+                next.delete(id);
+            }
+
+            return next;
+        });
+    }
+
+    // Captured once, at mount - whether this editor opened on an empty slot (a fresh
+    // pick, not yet finished) or an already-configured item. Drives what closing while
+    // an invalid value is pending does: clear the half-finished pick, or just leave.
+    const [openedEmpty] = useState(item.base === null);
 
     const reference = item.base
         ? map[refKey(item.base.type, item.base.id)]
@@ -166,21 +200,39 @@ export default function SlotEditor({
     }
 
     const implicits = reference?.implicits ?? [];
+    // A unique's own mods/implicits, structured - rendered with editable value inputs
+    // instead of the base's plain-text `implicits` above (which stays as read-only GGPK
+    // data for a non-unique). See UniqueModRow.
+    const uniqueImplicitLines = reference?.implicitLines ?? [];
+    const uniqueExplicitLines = reference?.modLines ?? [];
     // Block is a shield-only property (bucklers included); foci/quivers don't block.
     const isShield = /shield|buckler/i.test(reference?.category ?? '');
     const propFields = PROP_FIELDS.filter(
         (field) => !field.shieldOnly || isShield,
     );
 
-    // The editor won't close on an illegal item - the author fixes it (or clears the
-    // slot) first, so a broken item never reaches the form. The server re-validates
-    // the whole request on submit.
-    const errors = itemErrors(slot.key, item, modMap);
+    // Done stays disabled while the item is illegal (an already-committed error, e.g.
+    // too many affixes) or a unique-mod field holds an uncommitted invalid value - the
+    // author fixes it (or clears the slot) first, so a broken item never reaches the
+    // form. The server re-validates the whole request on submit either way.
+    const errors = itemErrors(slot.key, item, modMap, reference);
+    const doneDisabled = errors.length > 0 || hasInvalidInput;
 
-    function attemptClose(): void {
-        if (errors.length === 0) {
-            onClose();
+    // Unlike Done, closing (✕ / Esc / clicking the backdrop) always works - Cancel
+    // should never be blocked by validation, that's what makes it Cancel. A pending
+    // invalid unique-mod value was never committed to `item` in the first place (see
+    // UniqueModRow), so there is nothing to roll back on the data side; the one thing
+    // this does is decide what "closing" now that the pick is incomplete: a freshly
+    // opened, still-empty slot didn't have anything worth keeping half-finished, so it
+    // clears instead of leaving a unique with no rolled values sitting in the slot.
+    function requestClose(): void {
+        if (hasInvalidInput && openedEmpty) {
+            onClear();
+
+            return;
         }
+
+        onClose();
     }
 
     // Every mutation flows through commit so the stored rarity always matches the base
@@ -211,10 +263,14 @@ export default function SlotEditor({
         };
 
         // A unique carries its own modifiers, so any author mods are dropped on the pick.
+        // Any previously rolled unique-mod values are dropped too - either they belonged
+        // to a different unique (their keys won't match the new one) or the item is no
+        // longer a unique at all.
         commit({
             ...item,
             base: nextBase,
             stats: picked.type === 'unique' ? [] : item.stats,
+            uniqueMods: [],
         });
         setPickerOpen(false);
     }
@@ -234,6 +290,11 @@ export default function SlotEditor({
                 ? Math.min(MAX_ITEM_QUALITY, Math.max(0, value))
                 : Math.max(0, value);
         commit({ ...item, props: { ...item.props, [key]: clamped } });
+    }
+
+    function setUniqueModValues(key: string, values: number[]): void {
+        const rest = item.uniqueMods.filter((stat) => stat.key !== key);
+        commit({ ...item, uniqueMods: [...rest, { key, values }] });
     }
 
     function addModifier(mod: ModInfo): void {
@@ -308,7 +369,7 @@ export default function SlotEditor({
     }
 
     return (
-        <Modal onClose={attemptClose}>
+        <Modal onClose={requestClose}>
             <div>
                 <div
                     className="flex items-center gap-3 border-b px-4 py-3"
@@ -330,8 +391,8 @@ export default function SlotEditor({
                     <Button
                         icon
                         variant="ghost"
-                        onClick={attemptClose}
-                        title="Close"
+                        onClick={requestClose}
+                        title="Close editor"
                         className="ml-auto"
                     >
                         ✕
@@ -387,343 +448,464 @@ export default function SlotEditor({
                     {/* Right: item-tooltip-style layout - base picker, name, requirements,
                     implicits, mods, runes. */}
                     <div className="flex min-w-0 flex-1 flex-col gap-3">
-                        <div className="relative">
-                            {/* Like a mod row's own Change picker: the title row (once a
+                        {/* A native <fieldset disabled> locks every control it contains in
+                        one place - no per-control `disabled` prop to remember to thread.
+                        It stops at the unique-mods section below on purpose: those inputs
+                        are exactly what the author needs to keep reaching to fix the value
+                        that triggered the lock in the first place. `contents` keeps it out
+                        of the flex layout entirely.
+
+                        Note for tests: jsdom does not implement the fieldset-disables-
+                        descendants cascade (only real browsers do), so this can't be
+                        asserted through a descendant's own `.disabled` in a jsdom test -
+                        assert `fieldset.disabled` itself instead. */}
+                        <fieldset
+                            disabled={hasInvalidInput}
+                            className="contents"
+                        >
+                            <div className="relative">
+                                {/* Like a mod row's own Change picker: the title row (once a
                             base is picked) stays put and toggles the picker above it,
                             instead of the picker replacing the row outright. */}
-                            {(pickerOpen || !item.base) && (
-                                <ReferencePicker
-                                    // "item" searches both craftable bases and uniques of
-                                    // the slot's categories in one list (picking a unique
-                                    // makes the item Unique; a base leaves rarity to derive
-                                    // from the mods you add). Categories keep a life-flask
-                                    // slot from ever listing a wand.
-                                    lockType="item"
-                                    categories={slot.categories}
-                                    placeholder={`Find a ${slot.label.toLowerCase()} (base or unique)…`}
-                                    onPick={pickBase}
-                                    onClose={() =>
-                                        item.base && setPickerOpen(false)
-                                    }
-                                />
-                            )}
-
-                            {item.base && (
-                                <div className="flex items-center gap-1.5">
-                                    <span
-                                        className="pl-text-sm min-w-0 flex-1 truncate"
-                                        style={{ color: rarityColor }}
-                                    >
-                                        {reference?.name ?? item.base.id}
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                            setPickerOpen((open) => !open)
+                                {(pickerOpen || !item.base) && (
+                                    <ReferencePicker
+                                        // "item" searches both craftable bases and uniques of
+                                        // the slot's categories in one list (picking a unique
+                                        // makes the item Unique; a base leaves rarity to derive
+                                        // from the mods you add). Categories keep a life-flask
+                                        // slot from ever listing a wand.
+                                        lockType="item"
+                                        categories={slot.categories}
+                                        placeholder={`Find a ${slot.label.toLowerCase()} (base or unique)…`}
+                                        onPick={pickBase}
+                                        onClose={() =>
+                                            item.base && setPickerOpen(false)
                                         }
-                                    >
-                                        Change
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
+                                    />
+                                )}
 
-                        <div>
-                            <p className={SECTION_LABEL}>Name</p>
-                            <label className="flex items-center gap-2">
-                                <TextInput
-                                    value={item.name}
-                                    onChange={(event) =>
-                                        setName(event.target.value)
-                                    }
-                                    maxLength={MAX_ITEM_NAME_LENGTH}
-                                    placeholder="Optional custom name…"
-                                    className="flex-1"
-                                />
-                                <CorruptedToggle
-                                    active={item.corrupted}
-                                    onToggle={setCorrupted}
-                                />
-                            </label>
-                        </div>
-
-                        <Divider />
-
-                        <div>
-                            <p className={SECTION_LABEL}>Properties</p>
-                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                {propFields.map((field) => (
-                                    <label
-                                        key={field.key}
-                                        className="flex min-w-0 items-center gap-1.5"
-                                    >
-                                        <span className="pl-text-xs shrink-0 basis-24 text-[var(--pl-muted)]">
-                                            {field.label}
+                                {item.base && (
+                                    <div className="flex items-center gap-1.5">
+                                        <span
+                                            className="pl-text-sm min-w-0 flex-1 truncate"
+                                            style={{ color: rarityColor }}
+                                        >
+                                            {reference?.name ?? item.base.id}
                                         </span>
-                                        <NumberField
-                                            value={item.props[field.key]}
-                                            onChange={(value) =>
-                                                setProp(field.key, value)
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                                setPickerOpen((open) => !open)
                                             }
-                                            className={`${NUMBER_INPUT} min-w-0`}
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        {implicits.length > 0 && (
-                            <>
-                                <Divider />
-                                <div>
-                                    <p className={SECTION_LABEL}>Implicit</p>
-                                    <div className="flex flex-col gap-0.5">
-                                        {implicits.map((line, index) => (
-                                            <p
-                                                key={index}
-                                                className="pl-text-sm text-[#7f8aa3]"
-                                            >
-                                                {line}
-                                            </p>
-                                        ))}
+                                        >
+                                            Change
+                                        </Button>
                                     </div>
-                                </div>
-                            </>
-                        )}
+                                )}
+                            </div>
 
-                        {showMods && (
-                            <>
-                                <Divider />
-                                <div>
-                                    <div className="mb-1.5 flex items-center justify-between">
-                                        <p className="pl-text-2xs tracking-[var(--pl-label-tracking)] text-[var(--pl-faint)] uppercase">
+                            <div>
+                                <p className={SECTION_LABEL}>Name</p>
+                                <label className="flex items-center gap-2">
+                                    <TextInput
+                                        value={item.name}
+                                        onChange={(event) =>
+                                            setName(event.target.value)
+                                        }
+                                        maxLength={MAX_ITEM_NAME_LENGTH}
+                                        placeholder="Optional custom name…"
+                                        className="flex-1"
+                                    />
+                                    <CorruptedToggle
+                                        active={item.corrupted}
+                                        onToggle={setCorrupted}
+                                    />
+                                </label>
+                            </div>
+
+                            <Divider />
+
+                            <div>
+                                <p className={SECTION_LABEL}>Properties</p>
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    {propFields.map((field) => (
+                                        <label
+                                            key={field.key}
+                                            className="flex min-w-0 items-center gap-1.5"
+                                        >
+                                            <span className="pl-text-xs shrink-0 basis-24 text-[var(--pl-muted)]">
+                                                {field.label}
+                                            </span>
+                                            <NumberField
+                                                value={item.props[field.key]}
+                                                onChange={(value) =>
+                                                    setProp(field.key, value)
+                                                }
+                                                className={`${NUMBER_INPUT} min-w-0`}
+                                            />
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* A base's own fixed implicit lines are read-only GGPK data - a
+                            unique's implicits/mods below are its own, editable, synced
+                            values instead (see UniqueModRow). */}
+                            {!isUnique && implicits.length > 0 && (
+                                <>
+                                    <Divider />
+                                    <div>
+                                        <p className={SECTION_LABEL}>
+                                            Implicit
+                                        </p>
+                                        <div className="flex flex-col gap-0.5">
+                                            {implicits.map((line, index) => (
+                                                <p
+                                                    key={index}
+                                                    className="pl-text-sm text-[#7f8aa3]"
+                                                >
+                                                    {line}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </fieldset>
+
+                        {isUnique &&
+                            (uniqueImplicitLines.length > 0 ||
+                                uniqueExplicitLines.length > 0) && (
+                                <>
+                                    <Divider />
+                                    <div>
+                                        <p className={SECTION_LABEL}>
                                             Modifiers
                                         </p>
-                                        <span className="pl-text-2xs text-[var(--pl-faint)]">
-                                            {modCounts.prefix}/{maxPerType}{' '}
-                                            prefix · {modCounts.suffix}/
-                                            {maxPerType} suffix
-                                        </span>
+                                        <div className="flex flex-col gap-1.5">
+                                            {uniqueImplicitLines.map((line) => (
+                                                <UniqueModRow
+                                                    key={line.key}
+                                                    line={line}
+                                                    values={
+                                                        item.uniqueMods.find(
+                                                            (stat) =>
+                                                                stat.key ===
+                                                                line.key,
+                                                        )?.values ?? []
+                                                    }
+                                                    onChange={(values) =>
+                                                        setUniqueModValues(
+                                                            line.key,
+                                                            values,
+                                                        )
+                                                    }
+                                                    onValidityChange={
+                                                        reportUniqueModValidity
+                                                    }
+                                                />
+                                            ))}
+                                            {uniqueExplicitLines.map((line) => (
+                                                <UniqueModRow
+                                                    key={line.key}
+                                                    line={line}
+                                                    values={
+                                                        item.uniqueMods.find(
+                                                            (stat) =>
+                                                                stat.key ===
+                                                                line.key,
+                                                        )?.values ?? []
+                                                    }
+                                                    onChange={(values) =>
+                                                        setUniqueModValues(
+                                                            line.key,
+                                                            values,
+                                                        )
+                                                    }
+                                                    onValidityChange={
+                                                        reportUniqueModValidity
+                                                    }
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="flex flex-col gap-1.5">
-                                        {item.stats.map((stat, index) => {
-                                            // A rule splits the prefix block from the
-                                            // suffix block (stats are sorted that way).
-                                            const dividesHere =
-                                                modMap[stat.modId]?.type ===
-                                                    'suffix' &&
-                                                modMap[
-                                                    item.stats[index - 1]?.modId
-                                                ]?.type === 'prefix';
+                                </>
+                            )}
 
-                                            return (
-                                                <Fragment key={index}>
-                                                    {dividesHere && (
-                                                        <div className="my-0.5 flex items-center gap-2">
-                                                            <span
-                                                                className="h-px flex-1"
-                                                                style={{
-                                                                    background:
-                                                                        MOD_TYPE_STYLE
+                        {/* Sockets/rare-mods live in a second fieldset - the unique-mods
+                        section above them stays out of the lock, same reasoning as the
+                        first fieldset. */}
+                        <fieldset
+                            disabled={hasInvalidInput}
+                            className="contents"
+                        >
+                            {showMods && (
+                                <>
+                                    <Divider />
+                                    <div>
+                                        <div className="mb-1.5 flex items-center justify-between">
+                                            <p className="pl-text-2xs tracking-[var(--pl-label-tracking)] text-[var(--pl-faint)] uppercase">
+                                                Modifiers
+                                            </p>
+                                            <span className="pl-text-2xs text-[var(--pl-faint)]">
+                                                {modCounts.prefix}/{maxPerType}{' '}
+                                                prefix · {modCounts.suffix}/
+                                                {maxPerType} suffix
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            {item.stats.map((stat, index) => {
+                                                // A rule splits the prefix block from the
+                                                // suffix block (stats are sorted that way).
+                                                const dividesHere =
+                                                    modMap[stat.modId]?.type ===
+                                                        'suffix' &&
+                                                    modMap[
+                                                        item.stats[index - 1]
+                                                            ?.modId
+                                                    ]?.type === 'prefix';
+
+                                                return (
+                                                    <Fragment key={index}>
+                                                        {dividesHere && (
+                                                            <div className="my-0.5 flex items-center gap-2">
+                                                                <span
+                                                                    className="h-px flex-1"
+                                                                    style={{
+                                                                        background:
+                                                                            MOD_TYPE_STYLE
+                                                                                .suffix
+                                                                                .color,
+                                                                        opacity: 0.55,
+                                                                    }}
+                                                                />
+                                                                <span
+                                                                    className="pl-text-2xs tracking-[var(--pl-label-tracking)] uppercase"
+                                                                    style={{
+                                                                        color: MOD_TYPE_STYLE
                                                                             .suffix
                                                                             .color,
-                                                                    opacity: 0.55,
-                                                                }}
-                                                            />
-                                                            <span
-                                                                className="pl-text-2xs tracking-[var(--pl-label-tracking)] uppercase"
-                                                                style={{
-                                                                    color: MOD_TYPE_STYLE
-                                                                        .suffix
-                                                                        .color,
-                                                                }}
-                                                            >
-                                                                Suffixes
-                                                            </span>
-                                                            <span
-                                                                className="h-px flex-1"
-                                                                style={{
-                                                                    background:
-                                                                        MOD_TYPE_STYLE
-                                                                            .suffix
-                                                                            .color,
-                                                                    opacity: 0.55,
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    )}
-                                                    <ModRow
-                                                        stat={stat}
-                                                        mod={modMap[stat.modId]}
-                                                        base={
-                                                            item.base?.type ===
-                                                            'base'
-                                                                ? item.base.id
-                                                                : null
-                                                        }
-                                                        categories={
-                                                            slot.categories
-                                                        }
-                                                        excludeGroups={groupsInUse(
-                                                            index,
+                                                                    }}
+                                                                >
+                                                                    Suffixes
+                                                                </span>
+                                                                <span
+                                                                    className="h-px flex-1"
+                                                                    style={{
+                                                                        background:
+                                                                            MOD_TYPE_STYLE
+                                                                                .suffix
+                                                                                .color,
+                                                                        opacity: 0.55,
+                                                                    }}
+                                                                />
+                                                            </div>
                                                         )}
-                                                        fullTypes={fullTypesInUse(
-                                                            index,
-                                                        )}
-                                                        onReplace={(picked) =>
-                                                            replaceModifier(
+                                                        <ModRow
+                                                            stat={stat}
+                                                            mod={
+                                                                modMap[
+                                                                    stat.modId
+                                                                ]
+                                                            }
+                                                            base={
+                                                                item.base
+                                                                    ?.type ===
+                                                                'base'
+                                                                    ? item.base
+                                                                          .id
+                                                                    : null
+                                                            }
+                                                            categories={
+                                                                slot.categories
+                                                            }
+                                                            excludeGroups={groupsInUse(
                                                                 index,
+                                                            )}
+                                                            fullTypes={fullTypesInUse(
+                                                                index,
+                                                            )}
+                                                            onReplace={(
                                                                 picked,
+                                                            ) =>
+                                                                replaceModifier(
+                                                                    index,
+                                                                    picked,
+                                                                )
+                                                            }
+                                                            onChange={(next) =>
+                                                                commit({
+                                                                    ...item,
+                                                                    stats: item.stats.map(
+                                                                        (
+                                                                            current,
+                                                                            position,
+                                                                        ) =>
+                                                                            position ===
+                                                                            index
+                                                                                ? next
+                                                                                : current,
+                                                                    ),
+                                                                })
+                                                            }
+                                                            onRemove={() =>
+                                                                commit({
+                                                                    ...item,
+                                                                    stats: item.stats.filter(
+                                                                        (
+                                                                            _,
+                                                                            position,
+                                                                        ) =>
+                                                                            position !==
+                                                                            index,
+                                                                    ),
+                                                                })
+                                                            }
+                                                        />
+                                                    </Fragment>
+                                                );
+                                            })}
+
+                                            {/* Both prefix and suffix at their cap - nothing
+                                            left to add, so hide the button entirely. */}
+                                            {fullTypesInUse().length < 2 && (
+                                                <div className="relative">
+                                                    <AddButton
+                                                        leadingPlus
+                                                        onClick={() =>
+                                                            setModPickerOpen(
+                                                                (open) => !open,
                                                             )
                                                         }
-                                                        onChange={(next) =>
-                                                            commit({
-                                                                ...item,
-                                                                stats: item.stats.map(
-                                                                    (
-                                                                        current,
-                                                                        position,
-                                                                    ) =>
-                                                                        position ===
-                                                                        index
-                                                                            ? next
-                                                                            : current,
-                                                                ),
-                                                            })
+                                                    >
+                                                        Add modifier
+                                                    </AddButton>
+                                                    {modPickerOpen && (
+                                                        <ModPicker
+                                                            base={
+                                                                item.base
+                                                                    ?.type ===
+                                                                'base'
+                                                                    ? item.base
+                                                                          .id
+                                                                    : null
+                                                            }
+                                                            categories={
+                                                                slot.categories
+                                                            }
+                                                            excludeGroups={groupsInUse()}
+                                                            fullTypes={fullTypesInUse()}
+                                                            onPick={addModifier}
+                                                            onClose={() =>
+                                                                setModPickerOpen(
+                                                                    false,
+                                                                )
+                                                            }
+                                                        />
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {maxSockets > 0 && (
+                                <>
+                                    <Divider />
+                                    <div>
+                                        <p className={SECTION_LABEL}>
+                                            Rune sockets
+                                        </p>
+                                        <div className="flex flex-col gap-1.5">
+                                            {item.sockets.map(
+                                                (socket, index) => (
+                                                    <Socket
+                                                        key={index}
+                                                        rune={socket}
+                                                        pickerOpen={
+                                                            socketPicker ===
+                                                            index
+                                                        }
+                                                        onOpen={() =>
+                                                            setSocketPicker(
+                                                                (open) =>
+                                                                    open ===
+                                                                    index
+                                                                        ? null
+                                                                        : index,
+                                                            )
+                                                        }
+                                                        onPick={(rune) => {
+                                                            setSocket(
+                                                                index,
+                                                                rune,
+                                                            );
+                                                            setSocketPicker(
+                                                                null,
+                                                            );
+                                                        }}
+                                                        onClosePicker={() =>
+                                                            setSocketPicker(
+                                                                null,
+                                                            )
                                                         }
                                                         onRemove={() =>
                                                             commit({
                                                                 ...item,
-                                                                stats: item.stats.filter(
-                                                                    (
-                                                                        _,
-                                                                        position,
-                                                                    ) =>
-                                                                        position !==
-                                                                        index,
-                                                                ),
+                                                                sockets:
+                                                                    item.sockets.filter(
+                                                                        (
+                                                                            _,
+                                                                            position,
+                                                                        ) =>
+                                                                            position !==
+                                                                            index,
+                                                                    ),
                                                             })
                                                         }
                                                     />
-                                                </Fragment>
-                                            );
-                                        })}
+                                                ),
+                                            )}
 
-                                        {/* Both prefix and suffix at their cap - nothing
-                                            left to add, so hide the button entirely. */}
-                                        {fullTypesInUse().length < 2 && (
-                                            <div className="relative">
+                                            {item.sockets.length <
+                                                maxSockets && (
                                                 <AddButton
                                                     leadingPlus
+                                                    className="self-start"
                                                     onClick={() =>
-                                                        setModPickerOpen(
-                                                            (open) => !open,
-                                                        )
+                                                        commit({
+                                                            ...item,
+                                                            sockets: [
+                                                                ...item.sockets,
+                                                                null,
+                                                            ],
+                                                        })
                                                     }
                                                 >
-                                                    Add modifier
+                                                    Socket
                                                 </AddButton>
-                                                {modPickerOpen && (
-                                                    <ModPicker
-                                                        base={
-                                                            item.base?.type ===
-                                                            'base'
-                                                                ? item.base.id
-                                                                : null
-                                                        }
-                                                        categories={
-                                                            slot.categories
-                                                        }
-                                                        excludeGroups={groupsInUse()}
-                                                        fullTypes={fullTypesInUse()}
-                                                        onPick={addModifier}
-                                                        onClose={() =>
-                                                            setModPickerOpen(
-                                                                false,
-                                                            )
-                                                        }
-                                                    />
-                                                )}
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            </>
-                        )}
-
-                        {maxSockets > 0 && (
-                            <>
-                                <Divider />
-                                <div>
-                                    <p className={SECTION_LABEL}>
-                                        Rune sockets
-                                    </p>
-                                    <div className="flex flex-col gap-1.5">
-                                        {item.sockets.map((socket, index) => (
-                                            <Socket
-                                                key={index}
-                                                rune={socket}
-                                                pickerOpen={
-                                                    socketPicker === index
-                                                }
-                                                onOpen={() =>
-                                                    setSocketPicker((open) =>
-                                                        open === index
-                                                            ? null
-                                                            : index,
-                                                    )
-                                                }
-                                                onPick={(rune) => {
-                                                    setSocket(index, rune);
-                                                    setSocketPicker(null);
-                                                }}
-                                                onClosePicker={() =>
-                                                    setSocketPicker(null)
-                                                }
-                                                onRemove={() =>
-                                                    commit({
-                                                        ...item,
-                                                        sockets:
-                                                            item.sockets.filter(
-                                                                (_, position) =>
-                                                                    position !==
-                                                                    index,
-                                                            ),
-                                                    })
-                                                }
-                                            />
-                                        ))}
-
-                                        {item.sockets.length < maxSockets && (
-                                            <AddButton
-                                                leadingPlus
-                                                className="self-start"
-                                                onClick={() =>
-                                                    commit({
-                                                        ...item,
-                                                        sockets: [
-                                                            ...item.sockets,
-                                                            null,
-                                                        ],
-                                                    })
-                                                }
-                                            >
-                                                Socket
-                                            </AddButton>
-                                        )}
-                                    </div>
-                                </div>
-                            </>
-                        )}
+                                </>
+                            )}
+                        </fieldset>
                     </div>
                 </div>
 
-                {errors.length > 0 && (
+                {(errors.length > 0 || hasInvalidInput) && (
                     <ul
                         role="alert"
                         className="pl-text-xs border-t border-[var(--pl-danger)] bg-[var(--pl-danger-soft)] px-4 py-2 text-[var(--pl-danger-lit)]"
                     >
+                        {hasInvalidInput && (
+                            <li>
+                                Fix the highlighted modifier value before
+                                continuing.
+                            </li>
+                        )}
                         {errors.map((message, index) => (
                             <li key={index}>{message}</li>
                         ))}
@@ -740,8 +922,8 @@ export default function SlotEditor({
                     <Button
                         variant="primary"
                         size="sm"
-                        onClick={attemptClose}
-                        disabled={errors.length > 0}
+                        onClick={onClose}
+                        disabled={doneDisabled}
                     >
                         Done
                     </Button>
