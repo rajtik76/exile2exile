@@ -103,16 +103,24 @@ export function toDisplayItem(
         block: item.props.block || null,
         runes: resolveRunes(item.sockets, map),
         emptySockets: item.sockets.filter((socket) => socket === null).length,
-        // A base's own fixed implicit lines (read-only), from the resolved base ref.
+        // A base's own fixed implicit lines (read-only), from the resolved base ref. For a
+        // unique this is its synced implicit mods (see IconResolver::uniqueReference).
         implicitMods: baseRef?.implicits ?? [],
         // Unique flavour/lore, shown italic at the foot of the tooltip.
         flavour: baseRef?.flavour ?? null,
+        // A unique's mods are fixed, not author-picked - read straight from its resolved
+        // reference's tooltip (synced from Path of Building) instead of the stat picker.
         // Same-stat affixes are summed into one line, as the game shows them by default.
-        explicitMods: aggregateModLines(
-            resolvedStats.flatMap(({ mod, values }) =>
-                renderModLines(mod, values),
-            ),
-        ),
+        explicitMods:
+            item.base?.type === 'unique'
+                ? (baseRef?.tooltip
+                      ?.split('\n')
+                      .filter((line) => line.trim() !== '') ?? [])
+                : aggregateModLines(
+                      resolvedStats.flatMap(({ mod, values }) =>
+                          renderModLines(mod, values),
+                      ),
+                  ),
         // The per-affix breakdown for the Alt-held detailed view.
         modDetails: resolvedStats.map(({ mod, values }) => ({
             type: mod.type,

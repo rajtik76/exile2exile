@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Pob;
 
+use App\Pob\Uniques\PobUniqueStore;
 use Closure;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Facades\Storage;
@@ -148,6 +149,14 @@ final class IconResolver
     private ?array $implicitIndex = null;
 
     /**
+     * @var array<string, array{implicits: list<string>, mods: list<string>}>|null Unique
+     *                                                                             display name => its implicit/explicit mod lines, synced from Path of Building
+     *                                                                             (see {@see PobUniqueStore}) - the one documented exception to this file's
+     *                                                                             otherwise GGPK-only sourcing, since unique mods aren't in GGG's own data files.
+     */
+    private ?array $pobUniqueModsIndex = null;
+
+    /**
      * @var array<string, ?string>|null Base type display name => its GGPK mod domain
      *                                  ("Item" for gear, "Flask" for flasks/charms, null
      *                                  for uniques). Joined domain-first to the mod catalogue.
@@ -164,6 +173,7 @@ final class IconResolver
     public function __construct(
         private readonly ?Cache $cache = null,
         private readonly string $dataVersion = 'dev',
+        private readonly ?PobUniqueStore $pobUniqueStore = null,
     ) {}
 
     /**
@@ -822,6 +832,11 @@ final class IconResolver
     {
         $this->items();
         $category = $this->categoryIndex[$name] ?? null;
+        // Not in .dat at all - the game composes a unique's rolls at runtime, so this is
+        // the one field on this reference sourced from Path of Building, not GGPK (see
+        // pobUniqueMods()). Absent (no sync yet, or an unmatched name) just means no mods
+        // show yet; the reference itself (icon, category, flavour) still resolves from GGPK.
+        $mods = $this->pobUniqueMods()[$name] ?? null;
 
         return [
             'type' => 'unique',
@@ -831,12 +846,10 @@ final class IconResolver
             'category' => $category !== null ? 'Unique '.$category : 'Unique',
             'color' => null,
             'tags' => [],
-            // The GGPK item mapping carries no unique mods, only the lore/flavour line.
-            'tooltip' => null,
+            'tooltip' => $mods !== null && $mods['mods'] !== [] ? implode("\n", $mods['mods']) : null,
             'flavour' => $this->flavourIndex[$name] ?? null,
             'twoHanded' => $this->isTwoHanded($name),
-            // A unique's base type - and thus its implicits - is not in .dat.
-            'implicits' => [],
+            'implicits' => $mods['implicits'] ?? [],
             'sprite' => null,
         ];
     }
@@ -854,6 +867,40 @@ final class IconResolver
 
             return $decoded;
         });
+    }
+
+    /**
+     * Unique display name => its mod lines, split into implicit/explicit by the synced
+     * `implicitCount`. Read straight from {@see PobUniqueStore} rather than through
+     * {@see remembered()}: that cache is keyed by the GGPK data version, but the PoB sync
+     * moves on its own daily cadence unrelated to a GGPK patch, so caching this against
+     * the data version would keep serving yesterday's mods until the next deploy. The
+     * store's own JSON read is cheap enough to just do once per request/instance.
+     *
+     * @return array<string, array{implicits: list<string>, mods: list<string>}>
+     */
+    private function pobUniqueMods(): array
+    {
+        if ($this->pobUniqueModsIndex !== null) {
+            return $this->pobUniqueModsIndex;
+        }
+
+        $snapshot = $this->pobUniqueStore?->read();
+
+        if ($snapshot === null) {
+            return $this->pobUniqueModsIndex = [];
+        }
+
+        $index = [];
+
+        foreach ($snapshot['uniques'] as $name => $unique) {
+            $index[$name] = [
+                'implicits' => array_slice($unique['mods'], 0, $unique['implicitCount']),
+                'mods' => array_slice($unique['mods'], $unique['implicitCount']),
+            ];
+        }
+
+        return $this->pobUniqueModsIndex = $index;
     }
 
     /**

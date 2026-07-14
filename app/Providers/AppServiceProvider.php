@@ -15,6 +15,7 @@ use App\Pob\Reference\LeagueReference;
 use App\Pob\Source\BuildSourceRegistry;
 use App\Pob\Source\PobbinSource;
 use App\Pob\Source\RawPobCodeSource;
+use App\Pob\Uniques\PobUniqueStore;
 use App\Tree\CachedTreeIndex;
 use App\Tree\TreeIndex;
 use Carbon\CarbonImmutable;
@@ -40,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(IconResolver::class, fn ($app): IconResolver => new IconResolver(
             $app->make(Cache::class),
             config()->string('poe.data_version'),
+            $app->make(PobUniqueStore::class),
         ));
 
         $this->app->singleton(ModCatalogue::class, fn ($app): ModCatalogue => new ModCatalogue(
