@@ -38,6 +38,12 @@ On the roadmap:
   through the GGG account API and compare it against a target build from Maxroll,
   Mobalytics, poe.ninja or pobb.in.
 
+## Build planner
+
+Plan a build with the full tree, skill gems and item editor, then save and share it.
+
+![Build planner demo](https://github.com/rajtik76/exile2exile/releases/download/media/build-planner.gif)
+
 ## Tech stack
 
 - **Backend:** Laravel 13, PHP 8.4
