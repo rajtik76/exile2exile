@@ -47,8 +47,9 @@ Plan a build with the full tree, skill gems and item editor, then save and share
 ## Tech stack
 
 - **Backend:** Laravel 13, PHP 8.4
-- **Frontend:** Inertia v3, React 19, Tailwind v4, shadcn/ui
-- **Tests:** Pest 4
+- **Database/cache/queue:** PostgreSQL, Redis
+- **Frontend:** Inertia v3, React 19, TypeScript, Tailwind v4, shadcn/ui, Vite
+- **Tests:** Pest 4 (Unit/Feature/Contract), Vitest, E2E via Pest's Browser plugin (Playwright)
 - Built on Laravel's React starter kit.
 
 A map of the codebase lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
