@@ -2,6 +2,10 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-07-16
+- Gem, rune and notable tooltips, the gem-group editor and the item editor now hold up on a phone: a tooltip could be forced wider than the screen and render partly off-edge, the skill + support gem row either scrolled sideways or spilled past the panel, and the item editor's art panel had nowhere to go next to the form. Tooltips now cap to the screen width and clamp fully on-screen, gem groups stack supports under the skill instead of scrolling, and the item editor swaps its art panel for a small thumbnail in the dialog header.
+- A gem with no specific hover art (most of them - only a fraction of active/spirit gems have one, and no support gem does) now falls back to the game's own generic placeholder background instead of showing a bare tooltip.
+
 ## 2026-07-14
 - Notable and keystone passive tooltips now show the game's own carved header banner (matching the passive tree screen itself) instead of the plain reference-picker header every other type used to share.
 - Gem, rune and soul core tooltips now match the game's own layout: gems show the GGPK-decoded header art and per-level scaling (cost, cast time, crit chance, requirements, mod ranges), and runes/soul cores show their carved currency-item frame, type, level requirement and effect lines - both replace the old generic reference-picker tooltip they used to share with every other type. The shared tooltip card also grows to keep a title on one line where it fits, instead of a fixed width that forced wrapping.
@@ -38,6 +42,10 @@ Key changes, newest first. Built in the open; the full history lives in git.
 - New logo: an E2E mark built from the wordmark's own letterforms now sits in the top navigation, the footer and the favicon.
 - The editor now checks data crossing its boundaries: a stale local draft, a misshapen server reply or broken tree data is rejected at the source instead of crashing the page mid-render.
 - For contributors: pull requests now run the full lint-and-test gate in CI, each quality check runs as its own step, every suite runs against a fresh database, and the default tree view is pinned to a visual snapshot so a renderer change that alters the drawn scene fails loudly.
+
+## 2026-07-10
+- Fixed an imported Path of Building build sometimes showing no ascendancy label, portrait or ascendancy nodes: the tree data keys an ascendancy by its internal id (e.g. "Mercenary2"), the class gallery by its display name ("Witchhunter"), and the planner only knew how to look one of them up.
+- Game-data releases now stage next to the live data and only go live once a GitHub Actions run has validated the exact downloaded artifact against the real Contract test suite - a failed check leaves production on the last good release instead of swapping to a broken one, and older releases stay on disk as instant rollback targets.
 
 ## 2026-07-08
 - The build planner reads better on phones: buttons, pickers, toggles and the phase bar now scale down to the screen, the phase bar is more compact, and the build-name placeholder stays legible over the moving backdrop.
