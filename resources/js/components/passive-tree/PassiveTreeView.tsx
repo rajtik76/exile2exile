@@ -655,6 +655,22 @@ export default function PassiveTreeView(props: PlanTreeProps) {
         }, 240);
     };
 
+    /**
+     * Read-only touch: a tap only ever inspects, never edits, so it skips
+     * {@link handleNodeClick}'s whole arm/edit dance and just pins the detail
+     * tooltip. Still marks {@link nodeTappedRef} - the stage wrapper's
+     * pointer-up bubbles right after this and would otherwise treat the tap as
+     * having hit empty space and clear what this just set.
+     */
+    const handleNodeInspect = (
+        skill: number,
+        screen: { x: number; y: number },
+    ) => {
+        nodeTappedRef.current = true;
+        setTapDetail({ skill, screen });
+        setHovered(skill);
+    };
+
     /* ----------------------------------------------------------- framing */
 
     const [focus, setFocus] = useState<WorldRect | null>(null);
@@ -1041,7 +1057,13 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                         }
                         resources={resources ?? undefined}
                         onNodeHover={setHovered}
-                        onNodeClick={editable ? handleNodeClick : undefined}
+                        onNodeClick={
+                            editable
+                                ? handleNodeClick
+                                : coarsePointer
+                                  ? handleNodeInspect
+                                  : undefined
+                        }
                         onInteractStart={
                             editable
                                 ? () => {
@@ -1055,7 +1077,13 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                                       setHovered(null);
                                       setToolsOpen(false);
                                   }
-                                : undefined
+                                : coarsePointer
+                                  ? () => {
+                                        setTapDetail(null);
+                                        setHovered(null);
+                                        setToolsOpen(false);
+                                    }
+                                  : undefined
                         }
                         preview={preview}
                         controls={treeControls}
@@ -1097,11 +1125,11 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                         />
                     )}
 
-                {/* Touch detail: pinned above the tapped node. The attribute
-                    picker (an interactive tooltip) takes over for its node, so
-                    suppress this one while a picker is open. */}
-                {editable &&
-                    coarsePointer &&
+                {/* Touch detail: pinned above the tapped node. Works read-only
+                    too - inspecting a node never requires editing. The attribute
+                    picker (an interactive tooltip, editable only) takes over for
+                    its node, so suppress this one while a picker is open. */}
+                {coarsePointer &&
                     tapDetail &&
                     tapNode &&
                     tapKind &&

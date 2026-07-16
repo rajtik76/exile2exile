@@ -2,6 +2,9 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-07-17
+- Fixed tapping a passive tree node on a phone showing nothing when the tree is read-only (a build you're only viewing, or the /t viewer): the node's info tooltip only ever wired up in edit mode, even though looking at a node's details never edits anything. Tapping a node now shows its tooltip in both modes, and tapping elsewhere or panning away dismisses it either way.
+
 ## 2026-07-16
 - Gem, rune and notable tooltips, the gem-group editor and the item editor now hold up on a phone: a tooltip could be forced wider than the screen and render partly off-edge, the skill + support gem row either scrolled sideways or spilled past the panel, and the item editor's art panel had nowhere to go next to the form. Tooltips now cap to the screen width and clamp fully on-screen, gem groups stack supports under the skill instead of scrolling, and the item editor swaps its art panel for a small thumbnail in the dialog header.
 - A gem with no specific hover art (most of them - only a fraction of active/spirit gems have one, and no support gem does) now falls back to the game's own generic placeholder background instead of showing a bare tooltip.
