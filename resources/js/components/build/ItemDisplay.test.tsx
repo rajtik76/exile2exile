@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { expect, test } from 'vitest';
-import { ItemCard } from '@/components/build/ItemDisplay';
+import { afterEach, expect, test } from 'vitest';
+import { HoverTooltip, ItemCard } from '@/components/build/ItemDisplay';
 import type { Item } from '@/components/build/ItemDisplay';
 
 function item(overrides: Partial<Item> = {}): Item {
@@ -96,4 +96,84 @@ test('a non-corrupted item shows no Corrupted footer', () => {
     render(<ItemCard item={item({ corrupted: false })} />);
 
     expect(screen.queryByText('Corrupted')).toBeNull();
+});
+
+/**
+ * A centre-column paper-doll slot (helmet, body armour, belt, the middle
+ * charm) has no `align`, so its tooltip falls into HoverTooltip's own
+ * side-detection - which used to only ever choose left or right. On a phone,
+ * where the panel's 26rem floor is wider than the whole viewport, neither
+ * side ever fit; it now falls back to above/below instead.
+ */
+function setViewport(width: number, height: number) {
+    Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: width,
+    });
+    Object.defineProperty(window, 'innerHeight', {
+        writable: true,
+        configurable: true,
+        value: height,
+    });
+}
+
+const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+
+afterEach(() => {
+    Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+});
+
+test('HoverTooltip falls back to below the trigger when neither side has room', () => {
+    setViewport(375, 700);
+    Element.prototype.getBoundingClientRect = () =>
+        ({
+            top: 300,
+            bottom: 340,
+            left: 170,
+            right: 205,
+            width: 35,
+            height: 40,
+            x: 170,
+            y: 300,
+            toJSON() {},
+        }) as DOMRect;
+
+    render(
+        <div className="group">
+            <HoverTooltip show="group-hover:block">Tooltip body</HoverTooltip>
+        </div>,
+    );
+
+    const panel = screen.getByText('Tooltip body');
+
+    expect(panel?.className).toContain('top-full');
+    expect(panel?.className).not.toContain('left-full');
+    expect(panel?.className).not.toContain('right-full');
+});
+
+test('HoverTooltip still opens to the side with room when one flank has space', () => {
+    setViewport(1200, 800);
+    Element.prototype.getBoundingClientRect = () =>
+        ({
+            top: 300,
+            bottom: 340,
+            left: 900,
+            right: 935,
+            width: 35,
+            height: 40,
+            x: 900,
+            y: 300,
+            toJSON() {},
+        }) as DOMRect;
+
+    render(
+        <div className="group">
+            <HoverTooltip show="group-hover:block">Tooltip body</HoverTooltip>
+        </div>,
+    );
+
+    const panel = screen.getByText('Tooltip body');
+
+    expect(panel?.className).toContain('right-full');
 });

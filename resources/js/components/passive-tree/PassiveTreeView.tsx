@@ -1005,9 +1005,11 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                         ? // Pinned below the site header (top nav stays visible) and above
                           // the planner's sticky phase bar (z-90) so it doesn't overlap.
                           'fixed right-0 bottom-0 left-0 z-[120] overflow-hidden bg-black'
-                        : `relative overflow-hidden rounded-sm border border-[#1c1a22] bg-[#0a0a10] ${
-                              editable ? 'h-full' : 'aspect-[4/3]'
-                          }`
+                        : // Every caller sizes its own box (a fixed height or a
+                          // flex-1 panel) and hands it down via `className`, in
+                          // both modes - read-only never wants a fixed aspect
+                          // ratio shrinking the canvas inside a taller box.
+                          'relative h-full overflow-hidden rounded-sm border border-[#1c1a22] bg-[#0a0a10]'
                 }
             >
                 {/* On-canvas controls. On mobile the search box and budget bar

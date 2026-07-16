@@ -102,7 +102,7 @@ export function dismissPinnedTooltip() {
  */
 export const TooltipSideContext = createContext<'left' | 'right' | null>(null);
 
-/** Positioned, hover/focus-revealed tooltip to the side of its trigger. */
+/** Positioned, hover/focus-revealed tooltip anchored to its trigger. */
 export function HoverTooltip({
     show,
     children,
@@ -112,7 +112,9 @@ export function HoverTooltip({
 }) {
     const forcedSide = useContext(TooltipSideContext);
     const ref = useRef<HTMLDivElement>(null);
-    const [autoSide, setAutoSide] = useState<'right' | 'left'>('right');
+    const [autoSide, setAutoSide] = useState<
+        'right' | 'left' | 'top' | 'bottom'
+    >('right');
 
     useEffect(() => {
         if (forcedSide) {
@@ -130,14 +132,25 @@ export function HoverTooltip({
             // The panel is hidden (display:none) until hover, so its real
             // fit-content width can't be measured up front - use its widest
             // possible width (the same ceiling the className below caps it at)
-            // as a conservative estimate, so this never picks 'right' only for
+            // as a conservative estimate, so this never picks a side only for
             // the panel to then overflow the viewport.
             const tipWidth = Math.min(512, window.innerWidth * 0.88);
+            const fitsRight = rect.right + 8 + tipWidth <= window.innerWidth;
+            const fitsLeft = rect.left - 8 - tipWidth >= 0;
 
+            if (fitsRight || fitsLeft) {
+                setAutoSide(fitsRight ? 'right' : 'left');
+
+                return;
+            }
+
+            // Neither side has room - a centre paper-doll slot (helmet, body
+            // armour, belt, the middle charm) on a narrow screen, where the
+            // panel is wider than the space to either flank. Drop to above/
+            // below instead, whichever has more room; flipping sides alone
+            // could never fit these, the trigger has no side clearance at all.
             setAutoSide(
-                rect.right + 8 + tipWidth <= window.innerWidth
-                    ? 'right'
-                    : 'left',
+                window.innerHeight - rect.bottom >= rect.top ? 'bottom' : 'top',
             );
         };
 
@@ -148,7 +161,14 @@ export function HoverTooltip({
     }, [forcedSide]);
 
     const side = forcedSide ?? autoSide;
-    const pos = side === 'right' ? 'left-full ml-2' : 'right-full mr-2';
+    const pos =
+        side === 'right'
+            ? 'top-1/2 left-full ml-2 -translate-y-1/2'
+            : side === 'left'
+              ? 'top-1/2 right-full mr-2 -translate-y-1/2'
+              : side === 'bottom'
+                ? 'top-full left-1/2 mt-2 -translate-x-1/2'
+                : 'bottom-full left-1/2 mb-2 -translate-x-1/2';
 
     return (
         <div
@@ -160,7 +180,11 @@ export function HoverTooltip({
             // pinned open (a click focuses the trigger - group-focus-within, either
             // the default group or the rune-scoped `group/rune`), it regains normal
             // pointer events so its text can be selected/copied.
-            className={`pointer-events-none absolute top-1/2 z-[65] hidden w-max max-w-[min(32rem,88vw)] min-w-[26rem] -translate-y-1/2 select-text group-focus-within:pointer-events-auto group-focus-within/rune:pointer-events-auto ${pos} ${show}`}
+            // The 26rem floor keeps the desktop layout roomy, but on a narrow
+            // screen it alone would overflow every side (and top/bottom centred)
+            // placement alike - drop it below the `sm` breakpoint so only the
+            // 88vw ceiling governs there.
+            className={`pointer-events-none absolute z-[65] hidden w-max max-w-[min(32rem,88vw)] min-w-[26rem] select-text group-focus-within:pointer-events-auto group-focus-within/rune:pointer-events-auto max-sm:min-w-0 ${pos} ${show}`}
         >
             {children}
         </div>
