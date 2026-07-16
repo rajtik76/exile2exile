@@ -36,6 +36,45 @@ it('publishes the skill atlas frame map with its sheet size', function () {
         ->and($skills['sheet']['h'] ?? 0)->toBeGreaterThan(0);
 });
 
+/**
+ * The tree hub loads its centre art by naming convention, not through a manifest:
+ * portrait-<class>.webp and ascendancy-<slug>.webp per data.json's classes, plus
+ * the two ring sprites (see classPortrait.tsx and classCatalog.ts). The extractor
+ * skips art it cannot fetch, so an extraction against a half-propagated patch CDN
+ * can stage a release with these files silently missing - this test is the
+ * promotion gate that catches exactly that.
+ */
+it('ships centre art for every class, every ascendancy and both hub ring sprites', function () {
+    $data = gameData('public/tree/current/data.json');
+    $disk = Storage::disk('game-data');
+
+    // Filename slug matching the extractor (buildCentre.ts): lower, non-alnum to '-'.
+    $slug = fn (string $name): string => trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($name)), '-');
+
+    $expected = ['ring-static', 'ring-active'];
+
+    expect($data['classes'] ?? [])->toBeArray()->not->toBeEmpty();
+
+    foreach ($data['classes'] as $class) {
+        $expected[] = 'portrait-'.$slug($class['name']);
+
+        // Every released class carries at least one ascendancy; an empty list here
+        // means the loop below would silently check nothing for it.
+        expect($class['ascendancies'] ?? [])->toBeArray()->not->toBeEmpty();
+
+        foreach ($class['ascendancies'] as $ascendancy) {
+            $expected[] = 'ascendancy-'.$slug($ascendancy['name']);
+        }
+    }
+
+    foreach ($expected as $name) {
+        $path = "public/tree/current/assets/centre/{$name}.webp";
+
+        expect($disk->exists($path))->toBeTrue("missing centre art: {$path}")
+            ->and($disk->size($path))->toBeGreaterThan(0, "empty centre art file: {$path}");
+    }
+});
+
 it('builds the tree index from the real data', function () {
     $index = app(TreeIndex::class);
 
