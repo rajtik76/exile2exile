@@ -14,6 +14,7 @@
     "@poe2-toolkit/item-extractor": "^0.11.0",
     "@poe2-toolkit/mod-extractor": "^0.1.1",
     "@poe2-toolkit/rune-extractor": "^0.4.0",
+    "@poe2-toolkit/tree-extractor": "^0.6.1",
     "pathofexile-dat": "^15.1.0",
     "sharp": "^0.35.2"
   }

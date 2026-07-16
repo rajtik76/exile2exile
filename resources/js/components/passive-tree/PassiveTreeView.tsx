@@ -301,10 +301,16 @@ export default function PassiveTreeView(props: PlanTreeProps) {
         [data, allocation, classId],
     );
 
-    // Walkable graphs for click-to-allocate - only built when editing.
+    // Walkable graphs for click-to-allocate - only built when editing. Scoped to
+    // the active class's start node so a path cannot bridge two gateways by
+    // stepping through another class's start (tree-core >= 0.4.2).
+    const activeStartNode =
+        classId !== null
+            ? data?.classes.find((cls) => cls.id === classId)?.startNode
+            : undefined;
     const graph = useMemo<TreeGraph | null>(
-        () => (editable && data ? buildTreeGraph(data) : null),
-        [editable, data],
+        () => (editable && data ? buildTreeGraph(data, activeStartNode) : null),
+        [editable, data, activeStartNode],
     );
     const ascGraph = useMemo<TreeGraph | null>(
         () =>

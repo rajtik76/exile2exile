@@ -28,12 +28,27 @@ class StageGameData implements ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 3;
+    public int $tries = 5;
 
     /** The extractor downloads and re-encodes the whole art set; give it headroom. */
     public int $timeout = 1800;
 
     public function __construct(public string $version) {}
+
+    /**
+     * Seconds to wait between retries.
+     *
+     * A retry only ever happens because the extractor threw - typically a patch
+     * CDN that has not finished propagating every bundle right after a fresh
+     * release (see buildCentre.ts's fail-loud DDS check). 15 minutes gives that
+     * propagation real time to catch up before trying again.
+     *
+     * @return list<int>
+     */
+    public function backoff(): array
+    {
+        return [900, 900, 900, 900];
+    }
 
     public function handle(GameDataReleases $releases): void
     {

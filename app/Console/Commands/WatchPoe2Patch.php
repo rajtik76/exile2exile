@@ -23,6 +23,15 @@ class WatchPoe2Patch extends Command
     /** Minimum time between validation nudges for a patch that is not live yet. */
     private const int RETRY_INTERVAL_HOURS = 6;
 
+    /**
+     * Grace period before the first staging attempt for a freshly detected patch.
+     * GGG announces the version over the patch server before every art bundle has
+     * necessarily finished propagating across the CDN; this delay gives that a
+     * head start before the extractor's own fail-loud DDS check takes over via
+     * the job's retry backoff.
+     */
+    private const int FIRST_STAGE_DELAY_MINUTES = 10;
+
     public function handle(Poe2PatchServer $patchServer, Poe2PatchStatus $status, GameDataReleases $releases): int
     {
         // A transient GGG patch-server outage (timeout, refused, unparseable reply)
@@ -56,11 +65,13 @@ class WatchPoe2Patch extends Command
         // Stage the new data next to the live release and ask CI to validate it;
         // the swap happens only after the Contract suite goes green (the workflow
         // calls the activation endpoint). Seed the retry key so the next ticks do
-        // not re-dispatch while the extraction is still running.
+        // not re-dispatch while the extraction is still running. Delayed: see
+        // FIRST_STAGE_DELAY_MINUTES.
         Cache::put($this->retryKey($version), now()->toIso8601String(), now()->addHours(self::RETRY_INTERVAL_HOURS));
-        StageGameData::dispatch($version);
+        StageGameData::dispatch($version)->delay(now()->addMinutes(self::FIRST_STAGE_DELAY_MINUTES));
 
-        // Announce the patch on Discord.
+        // Announce the patch on Discord immediately - subscribers want to know a
+        // patch is out now, independent of when staging gets around to running.
         SendDiscordPatchNotification::dispatch($version);
 
         $queued = 0;
