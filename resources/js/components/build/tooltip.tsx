@@ -400,9 +400,13 @@ export function TooltipCard({
                     {/* Header in Fontin SmallCaps (the game's own tooltip face); the
                         second line smaller. The body below reads in the same face.
                         A notable's title is the one exception - the game sets it in
-                        the larger FontinRegular face and a fixed colour instead. */}
+                        the larger FontinRegular face and a fixed colour instead.
+                        Both sizes shrink one step below the card's own min-width
+                        breakpoint (sm) - the card itself is capped to 88vw there, so
+                        the desktop size would otherwise force wrapping/overflow on a
+                        narrow phone regardless of how short the title is. */}
                     <p
-                        className={`leading-tight tracking-wide ${isNotableTitle ? 'text-[26px]' : 'text-xl'}`}
+                        className={`leading-tight tracking-wide ${isNotableTitle ? 'text-xl sm:text-[26px]' : 'text-base sm:text-xl'}`}
                         style={{
                             ...(isNotableTitle ? FONTIN_REGULAR : FONTIN),
                             color: isNotableTitle
@@ -415,7 +419,7 @@ export function TooltipCard({
                     </p>
                     {subtitle && (
                         <p
-                            className="mt-0.5 text-base leading-tight tracking-wide"
+                            className="mt-0.5 text-sm leading-tight tracking-wide sm:text-base"
                             style={{
                                 ...FONTIN,
                                 color: subtitleColor ?? accent.text,
@@ -431,7 +435,7 @@ export function TooltipCard({
 
             {children && (
                 <div
-                    className={`relative px-5 py-3 text-base leading-tight ${leftAlign ? 'text-left' : 'text-center'}`}
+                    className={`relative px-5 py-3 text-sm leading-tight sm:text-base ${leftAlign ? 'text-left' : 'text-center'}`}
                     style={FONTIN}
                 >
                     {children}
@@ -902,7 +906,18 @@ export function CursorTooltip({
     // frame before the real measurement corrects it.
     const tipWidth = width || Math.min(512, window.innerWidth * 0.88);
     const fitsRight = x + gap + tipWidth <= window.innerWidth;
-    const left = fitsRight ? x + gap : x - gap - tipWidth;
+
+    // Clamp horizontally into the viewport, same as the vertical clamp below -
+    // on a narrow phone the card is wider than the space on either side of the
+    // cursor, and without this it renders partly (or entirely) off-screen
+    // instead of just sitting flush against the nearer edge.
+    const left = Math.max(
+        8,
+        Math.min(
+            fitsRight ? x + gap : x - gap - tipWidth,
+            window.innerWidth - tipWidth - 8,
+        ),
+    );
 
     // Centre on the cursor, then keep the whole card inside the viewport.
     const top = Math.max(
@@ -913,7 +928,11 @@ export function CursorTooltip({
     return createPortal(
         <div
             ref={ref}
-            className="pointer-events-none fixed z-[120] w-max max-w-[min(32rem,88vw)] min-w-[26rem]"
+            // min-w matches max-w's 88vw ceiling - a plain min-w-[26rem] (416px)
+            // wins over max-w on any viewport narrower than that (CSS min-width
+            // always overrides a conflicting max-width), forcing the card wider
+            // than the screen on mobile regardless of the max-w cap below.
+            className="pointer-events-none fixed z-[120] w-max max-w-[min(32rem,88vw)] min-w-[min(26rem,88vw)]"
             style={{ left, top }}
         >
             {children}

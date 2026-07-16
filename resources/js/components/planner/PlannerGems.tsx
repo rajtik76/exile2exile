@@ -213,15 +213,21 @@ export default function PlannerGems({
 
     return (
         <div className="flex flex-col gap-2">
-            {/* The gem rows are a fixed-width grid (skill + five support columns), wider
-                than a phone. Scroll it horizontally rather than letting the row - and its
-                remove button - spill out of the panel. */}
+            {/* The gem rows are a fixed-column grid (skill + five support columns) at
+                sm and up, wider than a phone - scroll it horizontally there rather than
+                letting the row spill out of the panel. Below sm there's no room for
+                columns at all, so each row switches to a plain stack instead: the
+                header/skill line, then supports wrapping onto as many lines as they
+                need. Each grouping `<div>` uses `sm:contents` to unbox itself at the
+                grid breakpoint - its children rejoin the row as direct grid items,
+                landing in the exact same columns as before, so the sm+ layout is
+                byte-for-byte what it always was. */}
             {view === 'grid' && (
-                <div className="overflow-x-auto">
-                    <div className="flex min-w-max flex-col gap-2">
+                <div className="sm:overflow-x-auto">
+                    <div className="flex flex-col gap-2 sm:min-w-max">
                         {groups.length > 0 && (
                             <div
-                                className="grid items-center justify-items-center gap-3 px-2"
+                                className="hidden items-center justify-items-center gap-3 px-2 sm:grid"
                                 style={{ gridTemplateColumns: gridColumns }}
                             >
                                 {editable && <span />}
@@ -251,7 +257,7 @@ export default function PlannerGems({
                                 key={group.id}
                                 data-gem-group
                                 {...(editable ? groupDnd.target(group.id) : {})}
-                                className={`group/row relative grid items-center justify-items-center gap-3 rounded-[var(--pl-radius)] border bg-[var(--pl-panel-2)] p-2 transition ${
+                                className={`group/row relative flex flex-col gap-2 rounded-[var(--pl-radius)] border bg-[var(--pl-panel-2)] p-2 transition sm:grid sm:items-center sm:justify-items-center sm:gap-3 ${
                                     editable && groupDnd.isOver(group.id)
                                         ? 'border-[var(--pl-accent-lit)] ring-2 ring-[var(--pl-accent-lit)]'
                                         : 'border-[var(--pl-panel-border)]'
@@ -262,135 +268,171 @@ export default function PlannerGems({
                                 }`}
                                 style={{ gridTemplateColumns: gridColumns }}
                             >
-                                {editable && (
+                                <div className="flex items-center gap-2 sm:contents">
+                                    {editable && (
+                                        <span
+                                            {...groupDnd.source(group.id, {
+                                                dragImageSelector:
+                                                    '[data-gem-group]',
+                                            })}
+                                            title="Drag to reorder group"
+                                            className="cursor-grab text-sm leading-none text-[var(--pl-faint)] transition select-none hover:text-[var(--pl-accent-lit)] active:cursor-grabbing"
+                                        >
+                                            ⠿
+                                        </span>
+                                    )}
+
                                     <span
-                                        {...groupDnd.source(group.id, {
-                                            dragImageSelector:
-                                                '[data-gem-group]',
-                                        })}
-                                        title="Drag to reorder group"
-                                        className="cursor-grab text-sm leading-none text-[var(--pl-faint)] transition select-none hover:text-[var(--pl-accent-lit)] active:cursor-grabbing"
+                                        className="pl-text-xs flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--pl-accent-soft)] font-semibold text-[var(--pl-accent-lit)]"
+                                        title={`Skill priority ${groupIndex + 1}`}
                                     >
-                                        ⠿
+                                        {groupIndex + 1}
                                     </span>
-                                )}
 
-                                <span
-                                    className="pl-text-xs flex size-6 items-center justify-center rounded-full bg-[var(--pl-accent-soft)] font-semibold text-[var(--pl-accent-lit)]"
-                                    title={`Skill priority ${groupIndex + 1}`}
-                                >
-                                    {groupIndex + 1}
-                                </span>
+                                    <span
+                                        ref={setSkillRef(groupIndex)}
+                                        className="inline-flex"
+                                    >
+                                        <GemThumb
+                                            slot={group.gems[0]}
+                                            big
+                                            editable={editable}
+                                            placeholder="Skill"
+                                            tooltipDisabled={dragActive}
+                                            onClick={(event) =>
+                                                editable &&
+                                                openPicker(event, groupIndex, 0)
+                                            }
+                                            onRemove={
+                                                editable && group.gems[0]
+                                                    ? () =>
+                                                          removeGem(
+                                                              groupIndex,
+                                                              0,
+                                                          )
+                                                    : undefined
+                                            }
+                                        />
+                                    </span>
 
-                                <span
-                                    ref={setSkillRef(groupIndex)}
-                                    className="inline-flex"
-                                >
-                                    <GemThumb
-                                        slot={group.gems[0]}
-                                        big
-                                        editable={editable}
-                                        placeholder="Skill"
-                                        tooltipDisabled={dragActive}
-                                        onClick={(event) =>
-                                            editable &&
-                                            openPicker(event, groupIndex, 0)
-                                        }
-                                        onRemove={
-                                            editable && group.gems[0]
-                                                ? () => removeGem(groupIndex, 0)
-                                                : undefined
-                                        }
-                                    />
-                                </span>
+                                    {/* Mobile-only remove button, inline with the skill row -
+                                        the sm+ one below sits in the grid's own last column. */}
+                                    {editable && (
+                                        <Button
+                                            icon
+                                            variant="danger"
+                                            title="Remove group"
+                                            className="ml-auto border-2 sm:hidden"
+                                            onClick={() =>
+                                                removeGroup(groupIndex)
+                                            }
+                                        >
+                                            ✕
+                                        </Button>
+                                    )}
+                                </div>
 
-                                {Array.from(
-                                    { length: supportColumns },
-                                    (_, col) => {
-                                        const gemIndex = col + 1;
-                                        const gem = group.gems[gemIndex];
-                                        const key = `${groupIndex}:${gemIndex}`;
+                                <div className="flex flex-wrap items-center gap-2 sm:contents">
+                                    {Array.from(
+                                        { length: supportColumns },
+                                        (_, col) => {
+                                            const gemIndex = col + 1;
+                                            const gem = group.gems[gemIndex];
+                                            const key = `${groupIndex}:${gemIndex}`;
 
-                                        if (gem) {
-                                            return (
-                                                <span
-                                                    key={key}
-                                                    {...(editable
-                                                        ? supportDnd.source(key)
-                                                        : {})}
-                                                    {...(editable
-                                                        ? supportDnd.target(key)
-                                                        : {})}
-                                                    className={`inline-flex rounded-full transition ${
-                                                        editable
-                                                            ? 'cursor-grab active:cursor-grabbing'
-                                                            : ''
-                                                    } ${supportDnd.isDragging(key) ? 'opacity-40' : ''} ${
-                                                        supportDnd.isOver(key)
-                                                            ? 'ring-2 ring-[var(--pl-accent-lit)]'
-                                                            : ''
-                                                    }`}
-                                                >
-                                                    <GemThumb
-                                                        slot={gem}
-                                                        editable={editable}
-                                                        round
-                                                        tooltipDisabled={
-                                                            dragActive
-                                                        }
+                                            if (gem) {
+                                                return (
+                                                    <span
+                                                        key={key}
+                                                        {...(editable
+                                                            ? supportDnd.source(
+                                                                  key,
+                                                              )
+                                                            : {})}
+                                                        {...(editable
+                                                            ? supportDnd.target(
+                                                                  key,
+                                                              )
+                                                            : {})}
+                                                        className={`inline-flex rounded-full transition ${
+                                                            editable
+                                                                ? 'cursor-grab active:cursor-grabbing'
+                                                                : ''
+                                                        } ${supportDnd.isDragging(key) ? 'opacity-40' : ''} ${
+                                                            supportDnd.isOver(
+                                                                key,
+                                                            )
+                                                                ? 'ring-2 ring-[var(--pl-accent-lit)]'
+                                                                : ''
+                                                        }`}
+                                                    >
+                                                        <GemThumb
+                                                            slot={gem}
+                                                            editable={editable}
+                                                            round
+                                                            tooltipDisabled={
+                                                                dragActive
+                                                            }
+                                                            onClick={(event) =>
+                                                                editable &&
+                                                                openPicker(
+                                                                    event,
+                                                                    groupIndex,
+                                                                    gemIndex,
+                                                                )
+                                                            }
+                                                            onRemove={
+                                                                editable
+                                                                    ? () =>
+                                                                          removeGem(
+                                                                              groupIndex,
+                                                                              gemIndex,
+                                                                          )
+                                                                    : undefined
+                                                            }
+                                                        />
+                                                    </span>
+                                                );
+                                            }
+
+                                            // The first empty support column carries the "add support"
+                                            // button (only once a skill leads the group).
+                                            if (
+                                                editable &&
+                                                col === group.gems.length - 1 &&
+                                                group.gems.length >= 1
+                                            ) {
+                                                return (
+                                                    <AddButton
+                                                        key={key}
+                                                        shape="circle"
+                                                        icon
+                                                        title="Add support gem"
+                                                        className="size-9 sm:size-10"
                                                         onClick={(event) =>
-                                                            editable &&
                                                             openPicker(
                                                                 event,
                                                                 groupIndex,
-                                                                gemIndex,
+                                                                group.gems
+                                                                    .length,
                                                             )
                                                         }
-                                                        onRemove={
-                                                            editable
-                                                                ? () =>
-                                                                      removeGem(
-                                                                          groupIndex,
-                                                                          gemIndex,
-                                                                      )
-                                                                : undefined
-                                                        }
                                                     />
-                                                </span>
-                                            );
-                                        }
+                                                );
+                                            }
 
-                                        // The first empty support column carries the "add support"
-                                        // button (only once a skill leads the group).
-                                        if (
-                                            editable &&
-                                            col === group.gems.length - 1 &&
-                                            group.gems.length >= 1
-                                        ) {
                                             return (
-                                                <AddButton
+                                                <span
                                                     key={key}
-                                                    shape="circle"
-                                                    icon
-                                                    title="Add support gem"
-                                                    className="size-10"
-                                                    onClick={(event) =>
-                                                        openPicker(
-                                                            event,
-                                                            groupIndex,
-                                                            group.gems.length,
-                                                        )
-                                                    }
+                                                    className="hidden sm:inline"
                                                 />
                                             );
-                                        }
-
-                                        return <span key={key} />;
-                                    },
-                                )}
+                                        },
+                                    )}
+                                </div>
 
                                 {editable && (
-                                    <span className="flex w-full items-center justify-end">
+                                    <span className="hidden w-full items-center justify-end sm:flex">
                                         <Button
                                             icon
                                             variant="danger"
@@ -806,7 +848,11 @@ function GemThumb({
 }) {
     const { map } = useReferences();
     const reference = slot ? map[refKey('gem', slot.id)] : undefined;
-    const size = big ? 'size-14' : small ? 'size-[1.875rem]' : 'size-10';
+    const size = big
+        ? 'size-11 sm:size-14'
+        : small
+          ? 'size-[1.875rem]'
+          : 'size-9 sm:size-10';
 
     if (!slot) {
         return (

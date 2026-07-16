@@ -423,6 +423,17 @@ export default function SlotEditor({
                         background: 'var(--pl-header-bg)',
                     }}
                 >
+                    {/* Below sm the full art column (a fixed 11rem wide) has nowhere to
+                        go next to the form - it's hidden there (see the row below), so
+                        its only trace on mobile is this header thumbnail instead. */}
+                    {reference?.icon && (
+                        <img
+                            src={reference.icon}
+                            alt=""
+                            className="size-9 shrink-0 rounded-[var(--pl-radius)] border-2 bg-[var(--pl-input-bg)] object-contain p-0.5 sm:hidden"
+                            style={{ borderColor: `${rarityColor}aa` }}
+                        />
+                    )}
                     <h3
                         className="pl-text-lg"
                         style={{
@@ -444,9 +455,11 @@ export default function SlotEditor({
                     </Button>
                 </div>
 
-                <div className="flex gap-4 p-4">
-                    {/* Left: the item's art, which fills the column. */}
-                    <div className="flex w-44 shrink-0 flex-col gap-2">
+                <div className="flex flex-col gap-4 p-4 sm:flex-row">
+                    {/* Left: the item's art, which fills the column. Hidden below sm -
+                        the fixed-width column has no room next to the form on a phone,
+                        so a small thumbnail moves into the header above instead. */}
+                    <div className="hidden w-44 shrink-0 flex-col gap-2 sm:flex">
                         <div
                             className="relative flex flex-1 items-center justify-center rounded-[var(--pl-radius-lg)] border-2 bg-[var(--pl-input-bg)] p-2"
                             style={{
