@@ -102,6 +102,13 @@ const TOOLTIP_HEADER_TEXTURES = {
         'art/textures/interface/2d/2dart/uiimages/ingame/notablepassiveheadermiddle.dds',
     'ui/tooltip-header-notable-right.png':
         'art/textures/interface/2d/2dart/uiimages/ingame/notablepassiveheaderright.dds',
+    // The client's own fallback hover art for gems without a specific
+    // SmartHover/GemHoverImage texture (crystals on a dark, misty background) -
+    // sits right next to the per-skill GemHoverImage*.dds files in GGPK, but no
+    // SkillGems.UI_Image row ever points to it (it's an engine-side fallback, not
+    // a data-referenced asset), so the gem extractor never picks it up on its own.
+    'ui/gem-hover-placeholder.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/smarthover/gemhoverimage/gemhoverimageempty.dds',
 };
 
 async function buildTooltipHeaderIcons() {

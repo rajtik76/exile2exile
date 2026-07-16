@@ -61,3 +61,80 @@ it('ships item data whose first base icon exists on disk', function () {
     expect((new IconResolver)->itemIcon((string) array_key_first($items)))
         ->toStartWith('/icons/poe2/')->toEndWith('.png');
 });
+
+/**
+ * Fixed logical asset paths the frontend references as string literals (item
+ * rarity/currency tooltip banners, the gem tooltip header, the notable/keystone
+ * banner, the gem hover placeholder, and the rune/soul-core socket art) - not
+ * looked up through any per-entity JSON, so nothing else in this suite would
+ * catch one going missing from a release.
+ *
+ * @see resources/js/components/build/tooltip.tsx
+ * @see resources/js/components/planner/ReferenceTooltip.tsx
+ * @see resources/js/components/build/ItemDisplay.tsx
+ * @see tools/poe-data-extract/build-data.mjs (TOOLTIP_HEADER_TEXTURES)
+ * @see @poe2-toolkit/rune-extractor's buildSockets.js
+ */
+it('ships every fixed UI banner and socket asset the frontend hardcodes', function () {
+    $frames = ['white', 'magic', 'rare', 'unique', 'currency', 'notable'];
+    $sides = ['left', 'middle', 'right'];
+
+    $paths = [];
+
+    foreach ($frames as $frame) {
+        foreach ($sides as $side) {
+            $paths[] = "ui/tooltip-header-{$frame}-{$side}.png";
+        }
+    }
+
+    $paths[] = 'ui/tooltip-header-gem-title.png';
+    $paths[] = 'ui/gem-hover-placeholder.png';
+    $paths[] = 'ui/rune-socket.png';
+    $paths[] = 'ui/soul-core-socket.png';
+    $paths[] = 'ui/socket-empty.png';
+
+    $disk = Storage::disk('game-data');
+
+    foreach ($paths as $path) {
+        expect($disk->exists("public/icons/poe2/{$path}"))
+            ->toBeTrue("missing fixed UI asset: {$path}");
+    }
+});
+
+/**
+ * Every gem whose data claims a hoverImage must have the actual file on disk -
+ * checked directly against the disk rather than through IconResolver::gemHoverImage,
+ * since that method silently falls back to the generic placeholder when the specific
+ * file is missing, which would mask exactly the regression this test exists to catch.
+ *
+ * `gems.json` stores the raw GGPK `.dds` path (decoding it is IconResolver::gems()'s
+ * own job, via ddsToPng()); the extractor only ever writes the decoded `.png` to
+ * disk, so the check below mirrors that same extension swap.
+ */
+it('ships every gem hoverImage path the data points at', function () {
+    $gems = gameData('resources/poe2/ggpk/gems.json');
+    $disk = Storage::disk('game-data');
+
+    $withHoverImage = 0;
+
+    foreach ($gems as $id => $gem) {
+        $hoverImage = $gem['hoverImage'] ?? null;
+
+        if ($hoverImage === null) {
+            continue;
+        }
+
+        $withHoverImage++;
+        $pngPath = str_ends_with((string) $hoverImage, '.dds')
+            ? substr((string) $hoverImage, 0, -4).'.png'
+            : $hoverImage;
+
+        expect($disk->exists("public/icons/poe2/{$pngPath}"))
+            ->toBeTrue("gem {$id} points at a hoverImage that does not exist on disk: {$pngPath}");
+    }
+
+    // Coverage is genuinely sparse (see IconResolver::gemHoverImage's own doc), but
+    // some gems on the current patch do carry one - if this hits zero, the check
+    // above is vacuous and the extractor likely stopped populating the field.
+    expect($withHoverImage)->toBeGreaterThan(0);
+});

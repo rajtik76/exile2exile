@@ -311,12 +311,15 @@ final class IconResolver
 
     /**
      * Web path to a gem's hover-art background (the SmartHover/GemHoverImage art the
-     * game paints behind the tooltip, top-right), or null when the gem has none.
+     * game paints behind the tooltip, top-right). Falls back to the client's own
+     * generic placeholder (crystals on a dark background) when the gem has no
+     * specific art - the same fallback the game itself paints, decoded from GGPK
+     * (`SmartHover/GemHoverImage/GemHoverImageEmpty.dds`) rather than approximated.
      *
-     * Coverage is genuinely sparse in the game's own data: no support gem has hover
-     * art, and only a fraction of active/spirit gems do on the current patch (see the
-     * gem-extractor package's README) - null here is the expected steady state for
-     * most gems, not a missing-asset bug.
+     * Specific-art coverage is genuinely sparse in the game's own data: no support
+     * gem has hover art, and only a fraction of active/spirit gems do on the current
+     * patch (see the gem-extractor package's README) - falling back to the
+     * placeholder is the expected steady state for most gems, not a missing-asset bug.
      */
     public function gemHoverImage(?string $gemId): ?string
     {
@@ -326,7 +329,12 @@ final class IconResolver
 
         $entry = $this->gems()[$gemId] ?? null;
 
-        return $entry === null ? null : $this->webPathIfPresent($entry['hoverImage']);
+        if ($entry === null) {
+            return null;
+        }
+
+        return $this->webPathIfPresent($entry['hoverImage'])
+            ?? $this->webPathIfPresent('ui/gem-hover-placeholder.png');
     }
 
     /**
