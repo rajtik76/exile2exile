@@ -3,6 +3,7 @@
 Key changes, newest first. Built in the open; the full history lives in git.
 
 ## 2026-07-17
+- For contributors: the backend's game-data resolver (one 1,475-line class covering gems, items, runes, uniques, notables and reference search) was split into seven focused catalogue classes under a new GameData namespace, with the original class staying as a thin facade so nothing calling it changed. Every new class ships with over 95% test coverage.
 - Fixed tapping a passive tree node on a phone showing nothing when the tree is read-only (a build you're only viewing, or the /t viewer): the node's info tooltip only ever wired up in edit mode, even though looking at a node's details never edits anything. Tapping a node now shows its tooltip in both modes, and tapping elsewhere or panning away dismisses it either way.
 - Fixed the passive tree canvas leaving a large empty gap below it on a phone when viewing a build read-only: it was shrinking to a fixed aspect ratio instead of filling the height its panel actually gives it, the same way the editable tree already did.
 - Fixed the paper-doll's item tooltip not fitting anywhere on a phone for the helmet, body armour, belt and middle charm slots: it only ever opened to the left or right, and its minimum width alone was already wider than most phone screens, so neither side ever had room. It now opens above or below when that's the case, and drops its minimum width on narrow screens so it actually fits.
