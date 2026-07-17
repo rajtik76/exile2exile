@@ -18,6 +18,7 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
+        setupFiles: ['resources/js/vitest.setup.ts'],
         include: [
             'resources/js/**/*.test.{ts,tsx}',
             // The GGPK extractor's pure transforms (no CDN or table I/O in tests).

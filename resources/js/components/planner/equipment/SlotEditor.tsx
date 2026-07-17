@@ -4,6 +4,7 @@ import AddButton from '@/components/planner/AddButton';
 import Button from '@/components/planner/Button';
 import { resolveRunes } from '@/components/planner/equipment/displayItem';
 import type { SlotDef } from '@/components/planner/equipment/displayItem';
+import EditorSection from '@/components/planner/equipment/EditorSection';
 import {
     clampedProp,
     countModTypes,
@@ -31,7 +32,9 @@ import { defaultModValues } from '@/lib/modLines';
 import type { ModInfo, ModMap } from '@/lib/modLines';
 import { refKey } from '@/lib/planReferences';
 import type { PlanReference } from '@/lib/planReferences';
+import { weaponStatLines } from '@/lib/weaponStats';
 import {
+    MAX_ITEM_LEVEL,
     MAX_ITEM_NAME_LENGTH,
     MAX_ITEM_SOCKETS,
     MODS_PER_RARITY,
@@ -76,6 +79,9 @@ function NumberField({
 
 /** The game's own Corrupted red - matches the tooltip's footer line. */
 const CORRUPTED_COLOR = '#d20000';
+
+/** The game's "augmented" blue - a stat line a modifier (or quality) has changed. */
+const AUGMENTED_COLOR = '#8888ff';
 
 /** A toggle pill for the item's Corrupted flag, tinted the tooltip's own Corrupted
  * red so it reads the same way in both places. */
@@ -162,6 +168,16 @@ export default function SlotEditor({
     // an invalid value is pending does: clear the half-finished pick, or just leave.
     const [openedEmpty] = useState(item.base === null);
 
+    // Captured once too: whether the viewport is at least `sm`. Secondary sections
+    // (Properties, Implicit, Rune sockets) default collapsed on a phone, where the
+    // full form is one long scroll; the modifiers stay open everywhere.
+    const [wide] = useState(
+        () =>
+            typeof window !== 'undefined' &&
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(min-width: 640px)').matches,
+    );
+
     const reference = item.base
         ? map[refKey(item.base.type, item.base.id)]
         : undefined;
@@ -197,6 +213,10 @@ export default function SlotEditor({
     // unresolved, or for a unique with no synced base type yet - every defence field
     // then stays visible), with a shield-name heuristic as block's fallback.
     const propFields = visiblePropFields(reference);
+
+    // The derived weapon-stat lines (base WeaponTypes row + local mods + quality);
+    // empty for anything that isn't a weapon (or a Spirit-granting sceptre).
+    const weaponLines = weaponStatLines(reference, item, modMap);
 
     // Done stays disabled while the item is illegal (an already-committed error, e.g.
     // too many affixes) or a unique-mod field holds an uncommitted invalid value - the
@@ -243,6 +263,14 @@ export default function SlotEditor({
 
     function setCorrupted(value: boolean): void {
         commit({ ...item, corrupted: value });
+    }
+
+    function setItemLevel(value: number): void {
+        // 0 (a cleared field) means unset - the tooltip line is hidden.
+        commit({
+            ...item,
+            itemLevel: value === 0 ? null : Math.min(MAX_ITEM_LEVEL, value),
+        });
     }
 
     function setProp(key: keyof ItemProps, value: number): void {
@@ -309,10 +337,14 @@ export default function SlotEditor({
     }
 
     return (
-        <Modal onClose={requestClose}>
-            <div>
+        <Modal onClose={requestClose} fullScreenMobile>
+            <div className="flex min-h-[inherit] flex-col">
+                {/* On mobile (where the modal is a full-screen sheet and the form one
+                    long scroll) the top and bottom bars stick, keeping the slot name
+                    and the Done/Clear actions reachable without scroll-hunting. On
+                    sm+ they scroll with the card as before. */}
                 <div
-                    className="flex items-center gap-3 border-b px-4 py-3"
+                    className="z-20 flex items-center gap-3 border-b px-4 py-3 max-sm:sticky max-sm:top-0"
                     style={{
                         borderColor: 'var(--pl-header-border)',
                         background: 'var(--pl-header-bg)',
@@ -458,9 +490,9 @@ export default function SlotEditor({
                                 )}
                             </div>
 
-                            <div>
-                                <p className={SECTION_LABEL}>Name</p>
-                                <label className="flex items-center gap-2">
+                            <div className="flex items-end gap-2">
+                                <label className="min-w-0 flex-1">
+                                    <p className={SECTION_LABEL}>Name</p>
                                     <TextInput
                                         value={item.name}
                                         onChange={(event) =>
@@ -468,19 +500,70 @@ export default function SlotEditor({
                                         }
                                         maxLength={MAX_ITEM_NAME_LENGTH}
                                         placeholder="Optional custom name…"
-                                        className="flex-1"
+                                        className="w-full"
                                     />
+                                </label>
+                                <label className="w-20 shrink-0">
+                                    <p
+                                        className={SECTION_LABEL}
+                                        title="Item Level"
+                                    >
+                                        Item lvl
+                                    </p>
+                                    <NumberField
+                                        value={item.itemLevel ?? 0}
+                                        onChange={setItemLevel}
+                                        className={NUMBER_INPUT}
+                                    />
+                                </label>
+                                <div className="shrink-0 pb-1">
                                     <CorruptedToggle
                                         active={item.corrupted}
                                         onToggle={setCorrupted}
                                     />
-                                </label>
+                                </div>
                             </div>
+
+                            {/* The derived weapon lines, read-only - the game computes
+                            these from the base row plus the item's LOCAL mods (and
+                            quality), and so does weaponStatLines. Values a mod changed
+                            show in the game's augmented blue. */}
+                            {weaponLines.length > 0 && (
+                                <>
+                                    <Divider />
+                                    <EditorSection label="Weapon">
+                                        <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+                                            {weaponLines.map((line) => (
+                                                <div
+                                                    key={line.label}
+                                                    className="flex items-baseline justify-between gap-2"
+                                                >
+                                                    <span className="pl-text-xs text-[var(--pl-muted)]">
+                                                        {line.label}
+                                                    </span>
+                                                    <span
+                                                        className="pl-text-sm"
+                                                        style={{
+                                                            color: line.modified
+                                                                ? AUGMENTED_COLOR
+                                                                : 'var(--pl-text)',
+                                                        }}
+                                                    >
+                                                        {line.value}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </EditorSection>
+                                </>
+                            )}
 
                             <Divider />
 
-                            <div>
-                                <p className={SECTION_LABEL}>Properties</p>
+                            <EditorSection
+                                label="Properties"
+                                defaultOpen={wide}
+                            >
                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                     {propFields.map((field) => (
                                         <label
@@ -500,7 +583,7 @@ export default function SlotEditor({
                                         </label>
                                     ))}
                                 </div>
-                            </div>
+                            </EditorSection>
 
                             {/* A base's own fixed implicit lines are read-only GGPK data - a
                             unique's implicits/mods below are its own, editable, synced
@@ -508,10 +591,10 @@ export default function SlotEditor({
                             {!isUnique && implicits.length > 0 && (
                                 <>
                                     <Divider />
-                                    <div>
-                                        <p className={SECTION_LABEL}>
-                                            Implicit
-                                        </p>
+                                    <EditorSection
+                                        label="Implicit"
+                                        defaultOpen={wide}
+                                    >
                                         <div className="flex flex-col gap-0.5">
                                             {implicits.map((line, index) => (
                                                 <p
@@ -522,7 +605,7 @@ export default function SlotEditor({
                                                 </p>
                                             ))}
                                         </div>
-                                    </div>
+                                    </EditorSection>
                                 </>
                             )}
                         </fieldset>
@@ -532,10 +615,7 @@ export default function SlotEditor({
                                 uniqueExplicitLines.length > 0) && (
                                 <>
                                     <Divider />
-                                    <div>
-                                        <p className={SECTION_LABEL}>
-                                            Modifiers
-                                        </p>
+                                    <EditorSection label="Modifiers">
                                         <div className="flex flex-col gap-1.5">
                                             {uniqueImplicitLines.map((line) => (
                                                 <UniqueModRow
@@ -582,7 +662,7 @@ export default function SlotEditor({
                                                 />
                                             ))}
                                         </div>
-                                    </div>
+                                    </EditorSection>
                                 </>
                             )}
 
@@ -596,17 +676,10 @@ export default function SlotEditor({
                             {showMods && (
                                 <>
                                     <Divider />
-                                    <div>
-                                        <div className="mb-1.5 flex items-center justify-between">
-                                            <p className="pl-text-2xs tracking-[var(--pl-label-tracking)] text-[var(--pl-faint)] uppercase">
-                                                Modifiers
-                                            </p>
-                                            <span className="pl-text-2xs text-[var(--pl-faint)]">
-                                                {modCounts.prefix}/{maxPerType}{' '}
-                                                prefix · {modCounts.suffix}/
-                                                {maxPerType} suffix
-                                            </span>
-                                        </div>
+                                    <EditorSection
+                                        label="Modifiers"
+                                        meta={`${modCounts.prefix}/${maxPerType} prefix · ${modCounts.suffix}/${maxPerType} suffix`}
+                                    >
                                         <div className="flex flex-col gap-1.5">
                                             {item.stats.map((stat, index) => {
                                                 // A rule splits the prefix block from the
@@ -760,17 +833,20 @@ export default function SlotEditor({
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
+                                    </EditorSection>
                                 </>
                             )}
 
                             {maxSockets > 0 && (
                                 <>
                                     <Divider />
-                                    <div>
-                                        <p className={SECTION_LABEL}>
-                                            Rune sockets
-                                        </p>
+                                    <EditorSection
+                                        label="Rune sockets"
+                                        meta={`${item.sockets.length}/${maxSockets}`}
+                                        defaultOpen={
+                                            wide || item.sockets.length > 0
+                                        }
+                                    >
                                         <div className="flex flex-col gap-1.5">
                                             {item.sockets.map(
                                                 (socket, index) => (
@@ -841,7 +917,7 @@ export default function SlotEditor({
                                                 </AddButton>
                                             )}
                                         </div>
-                                    </div>
+                                    </EditorSection>
                                 </>
                             )}
                         </fieldset>
@@ -866,7 +942,7 @@ export default function SlotEditor({
                 )}
 
                 <div
-                    className="flex items-center justify-between border-t px-4 py-3"
+                    className="z-20 mt-auto flex items-center justify-between border-t bg-[var(--pl-panel)] px-4 py-3 max-sm:sticky max-sm:bottom-0"
                     style={{ borderColor: 'var(--pl-header-border)' }}
                 >
                     <Button variant="danger" size="sm" onClick={onClear}>

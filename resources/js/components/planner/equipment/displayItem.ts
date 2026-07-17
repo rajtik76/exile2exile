@@ -24,6 +24,7 @@ export function emptyItem(): ItemPlan {
         base: null,
         name: '',
         corrupted: false,
+        itemLevel: null,
         props: {
             quality: 0,
             armour: 0,

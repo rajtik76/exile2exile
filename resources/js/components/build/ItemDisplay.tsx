@@ -707,8 +707,11 @@ export function SlotTile({
                         className={`flex h-full w-full items-center justify-center overflow-hidden rounded-[10px] border transition ${onEdit && !item ? 'hover:border-[#c9a24a]/70 hover:bg-[#c9a24a]/[0.06]' : ''}`}
                         style={{
                             borderColor: tone ? tone.edge : '#1e1e26',
-                            background: item
-                                ? '#0a0a10'
+                            // A filled tile tints its background with the rarity's own
+                            // glow (as the game's inventory does), fading into the dark
+                            // base so the art stays readable.
+                            background: tone
+                                ? `radial-gradient(85% 85% at 50% 18%, ${tone.glow} 0%, transparent 70%), linear-gradient(180deg, #14141c 0%, #0a0a10 100%)`
                                 : 'radial-gradient(65% 65% at 50% 32%, rgba(201,162,74,0.06), transparent 72%), linear-gradient(180deg, #131319 0%, #0a0a0e 100%)',
                             boxShadow: tone
                                 ? `inset 0 0 26px -12px ${tone.glow}, 0 0 6px -3px ${tone.glow}`

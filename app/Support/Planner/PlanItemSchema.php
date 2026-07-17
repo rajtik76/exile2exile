@@ -55,6 +55,12 @@ final class PlanItemSchema
     public const int MAX_ITEM_QUALITY = 100;
 
     /**
+     * Item-level bounds. The game's item level tracks the monster level of the zone an
+     * item dropped in and gates which affix tiers can roll; 100 is the level cap.
+     */
+    public const int MAX_ITEM_LEVEL = 100;
+
+    /**
      * Equipment slots the items paper-doll fills, each holding one item reference.
      *
      * @var list<string>
@@ -101,7 +107,7 @@ final class PlanItemSchema
      * slots are dropped.
      *
      * @param  array<int|string, mixed>  $slots
-     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
+     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
      */
     public static function canonicalSlots(array $slots): array
     {
@@ -208,7 +214,7 @@ final class PlanItemSchema
      * no mod lines and no runes).
      *
      * @param  array<string, mixed>  $entry
-     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
+     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
      */
     private static function canonicalItem(array $entry): ?array
     {
@@ -266,12 +272,26 @@ final class PlanItemSchema
             'base' => $base,
             'name' => self::canonicalItemName($entry['name'] ?? null),
             'corrupted' => (bool) ($entry['corrupted'] ?? false),
+            'itemLevel' => self::canonicalItemLevel($entry['itemLevel'] ?? null),
             'props' => $props,
             'stats' => $stats,
             'uniqueMods' => $uniqueMods,
             'sockets' => $sockets,
             'priority' => $priority,
         ];
+    }
+
+    /**
+     * Coerce an item's author-typed item level: an int clamped to
+     * 1..{@see MAX_ITEM_LEVEL}, or null when absent/non-numeric (the line is hidden).
+     */
+    private static function canonicalItemLevel(mixed $level): ?int
+    {
+        if (! is_numeric($level)) {
+            return null;
+        }
+
+        return min(self::MAX_ITEM_LEVEL, max(1, (int) $level));
     }
 
     /**

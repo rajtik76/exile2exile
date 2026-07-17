@@ -292,6 +292,25 @@
       ]
     },
     {
+      "name": "WeaponTypes",
+      "columns": [
+        "BaseItemType",
+        "CritChance",
+        "Speed",
+        "DamageMin",
+        "DamageMax",
+        "RangeMax",
+        "ReloadTime"
+      ]
+    },
+    {
+      "name": "ItemSpirit",
+      "columns": [
+        "BaseItemType",
+        "SpiritGranted"
+      ]
+    },
+    {
       "name": "Tags",
       "columns": [
         "Id",

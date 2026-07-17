@@ -133,7 +133,7 @@ final class PlanReferences
      * token's embedded name.
      *
      * @param  array<string, mixed>  $planData
-     * @return array<string, array{type: string, id: string, name: string, icon: ?string, category: ?string, tooltip: ?string, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, levelRequirement?: ?int}>
+     * @return array<string, array{type: string, id: string, name: string, icon: ?string, category: ?string, tooltip: ?string, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, weapon?: array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null, spirit?: int, levelRequirement?: ?int}>
      */
     public static function resolveMap(array $planData, IconResolver $icons): array
     {

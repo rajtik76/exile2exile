@@ -2,6 +2,13 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-07-18
+- Weapons and off-hand foci/shields in the paper-doll now show their real combat stats - Physical Damage, Critical Hit Chance, Attacks per Second, Weapon Range, Reload Time on crossbows, and Spirit on sceptres - pulled straight from GGPK and read out live: added elemental/chaos damage lines only appear once a matching local modifier is actually on the item, and quality plus local physical/attack-speed/crit/reload modifiers scale the numbers the same way the game's own tooltip does.
+- Items in the build planner can now carry an item level, hand-typed or imported straight from a Path of Building code, shown next to the item's name in the editor.
+- The paper-doll's item editor is now built for a phone: it opens as a full-screen sheet instead of a floating card, its name/action bar and Done/Clear buttons stay pinned to the top and bottom while the form scrolls between them, and the Properties, Implicit and empty Rune sockets sections start collapsed to cut down the scroll - Modifiers stays open, since that's usually what you're there for.
+- A filled paper-doll slot now tints its background with a soft glow in the item's own rarity colour (the same blue/yellow/orange the game's inventory uses), instead of every slot sharing one flat dark background regardless of what's equipped.
+- For contributors: the GGPK item extractor pipeline now pulls the `WeaponTypes` and `ItemSpirit` tables (previously unused), and the extracted item data carries a weapon's raw offensive stats and a sceptre's granted Spirit for the first time.
+
 ## 2026-07-17
 - For contributors: static analysis tightened from PHPStan level 7 to level 8 (nullable types must be checked before use). The handful of findings were fixed properly rather than suppressed: the tree import endpoint now guards the decoded build snapshot explicitly, the patch status read-out falls back to the current time when a release row has no timestamp, and the plan seeder's passive-tree loader returns the loaded tree instead of filling nullable properties behind the caller's back.
 - For contributors: the GGPK data extraction pipeline (`tools/poe-data-extract`) runs its four table extractors - items, gems, runes, mods - each on its own worker thread instead of sequentially, since that work is CPU-bound (table parsing, DDS/PNG decoding) rather than I/O-bound. About 37% faster on a warm cache (~38s to ~24s). Output data is unchanged.

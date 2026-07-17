@@ -18,6 +18,7 @@ function item(overrides: Partial<ItemPlan> = {}): ItemPlan {
         base: null,
         name: '',
         corrupted: false,
+        itemLevel: null,
         props: { quality: 0, armour: 0, evasion: 0, energyShield: 0, block: 0 },
         stats: [],
         uniqueMods: [],

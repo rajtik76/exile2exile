@@ -986,6 +986,39 @@ test('an item can be marked corrupted', function () {
     expect($body['corrupted'])->toBe(true);
 });
 
+test('an item level is stored, clamped to its 1..100 bounds', function () {
+    $this->post(route('planner.store'), planWithItem('body', [
+        'rarity' => 'rare',
+        'base' => ['type' => 'base', 'id' => 'Plate1'],
+        'itemLevel' => 82,
+    ]))->assertRedirect();
+
+    $body = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body'];
+
+    expect($body['itemLevel'])->toBe(82);
+});
+
+test('an out-of-range or missing item level canonicalises to a clamp or null', function () {
+    $this->post(route('planner.store'), planWithItem('body', [
+        'rarity' => 'rare',
+        'base' => ['type' => 'base', 'id' => 'Plate1'],
+        'itemLevel' => 250,
+    ]))->assertRedirect();
+
+    $body = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body'];
+    expect($body['itemLevel'])->toBe(PlanSchema::MAX_ITEM_LEVEL);
+
+    BuildPlan::query()->delete();
+
+    $this->post(route('planner.store'), planWithItem('body', [
+        'rarity' => 'rare',
+        'base' => ['type' => 'base', 'id' => 'Plate1'],
+    ]))->assertRedirect();
+
+    $body = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body'];
+    expect($body['itemLevel'])->toBeNull();
+});
+
 test('a weapon accepts three rune sockets', function () {
     $this->post(route('planner.store'), planWithItem('weapon1', [
         'rarity' => 'rare',

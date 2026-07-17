@@ -75,6 +75,15 @@ export interface PlanReference {
      * (see `baseType` above) is a real GGPK base, so its stats resolve the same way.
      */
     armour?: ReferenceArmour | null;
+    /**
+     * A base type's own offensive stats (GGPK `WeaponTypes`, raw units - see
+     * {@link ReferenceWeapon}). Null/absent for anything without a weapon row:
+     * armour, jewellery, and caster weapons (sceptres/wands/staves). For a unique
+     * weapon this resolves through its synced base type, same as `armour` above.
+     */
+    weapon?: ReferenceWeapon | null;
+    /** The Spirit the base grants (GGPK `ItemSpirit`) - non-zero only on sceptres. */
+    spirit?: number;
     /** A rune/soul core's level requirement, or null when it has none. Absent for anything that isn't a rune. */
     levelRequirement?: number | null;
 }
@@ -86,6 +95,21 @@ export interface ReferenceArmour {
     energyShield: number;
     ward: number;
     block: number;
+}
+
+/**
+ * A weapon base's own offensive stats, mirroring the server's `ItemCatalog::weapon`.
+ * Raw GGPK units: `critical` is crit chance x 100 (500 = 5.00%), `attackTime` and
+ * `reloadTime` are milliseconds, `rangeMax` is tenths of a metre, and the damage
+ * range is physical only (elemental damage exists solely through local mods).
+ */
+export interface ReferenceWeapon {
+    damageMin: number;
+    damageMax: number;
+    critical: number;
+    attackTime: number;
+    rangeMax: number;
+    reloadTime: number;
 }
 
 /** Per-level tooltip scaling for a gem, mirroring the server's `IconResolver::gemScaling`. */

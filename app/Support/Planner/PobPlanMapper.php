@@ -235,7 +235,7 @@ final class PobPlanMapper
      * Pelt" on a "Slipstrike Vest") and defensive properties (quality, armour, evasion,
      * energy shield, block) come across for every rarity.
      *
-     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<float>}>, sockets: list<array{type: string, id: string}>}
+     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: ?int, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<float>}>, sockets: list<array{type: string, id: string}>}
      */
     private function item(EquippedItem $item, string $slotKey): array
     {
@@ -251,6 +251,8 @@ final class PobPlanMapper
             // canonicalize() trims/caps this before storage.
             'name' => $item->name,
             'corrupted' => $item->corrupted,
+            // The PoB export's "Item Level:" line; canonicalize() clamps it to 1..100.
+            'itemLevel' => $item->itemLevel,
             // The item's computed defensive properties as the game shows them; block is
             // only present on shields. Carried for every rarity - for a unique these are
             // the only way to record its defences (the planner holds no base defence data).

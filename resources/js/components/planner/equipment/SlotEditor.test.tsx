@@ -40,6 +40,22 @@ const references: ReferenceMap = {
             block: 0,
         },
     },
+    [refKey('base', 'Makeshift Crossbow')]: {
+        type: 'base',
+        id: 'Makeshift Crossbow',
+        name: 'Makeshift Crossbow',
+        category: 'Crossbow',
+        implicits: [],
+        weapon: {
+            damageMin: 7,
+            damageMax: 12,
+            critical: 500,
+            attackTime: 625,
+            rangeMax: 120,
+            reloadTime: 800,
+        },
+        spirit: 0,
+    },
 };
 
 function itemWith(overrides: Partial<ItemPlan> = {}): ItemPlan {
@@ -48,6 +64,7 @@ function itemWith(overrides: Partial<ItemPlan> = {}): ItemPlan {
         base: { type: 'unique', id: 'Constricting Command' },
         name: '',
         corrupted: false,
+        itemLevel: null,
         props: { quality: 0, armour: 0, evasion: 0, energyShield: 0, block: 0 },
         stats: [],
         uniqueMods: [{ key: '+# to maximum Life', values: [100] }],
@@ -203,6 +220,72 @@ test('an unresolved/unique base shows every property field (no defensive data to
     expect(screen.getByText('Armour')).toBeTruthy();
     expect(screen.getByText('Evasion')).toBeTruthy();
     expect(screen.getByText('Energy Shield')).toBeTruthy();
+});
+
+test('a weapon base shows its derived weapon-stat lines, read-only', () => {
+    renderEditor(
+        itemWith({
+            rarity: 'normal',
+            base: { type: 'base', id: 'Makeshift Crossbow' },
+            uniqueMods: [],
+        }),
+    );
+
+    expect(screen.getByText('Physical Damage')).toBeTruthy();
+    expect(screen.getByText('7-12')).toBeTruthy();
+    expect(screen.getByText('Critical Hit Chance')).toBeTruthy();
+    expect(screen.getByText('5.00%')).toBeTruthy();
+    expect(screen.getByText('Reload Time')).toBeTruthy();
+    expect(screen.getByText('0.80 sec')).toBeTruthy();
+});
+
+test('a non-weapon base shows no weapon-stat section', () => {
+    renderEditor(
+        itemWith({
+            rarity: 'normal',
+            base: { type: 'base', id: 'Strider Vest' },
+            uniqueMods: [],
+        }),
+    );
+
+    expect(screen.queryByText('Physical Damage')).toBeNull();
+    expect(screen.queryByText('Critical Hit Chance')).toBeNull();
+});
+
+test('the Item lvl field commits a clamped item level, and clearing it unsets it', () => {
+    const onChange = vi.fn();
+    renderEditor(itemWith(), { onChange });
+
+    const input = screen
+        .getByText('Item lvl')
+        .closest('label')!
+        .querySelector('input') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: '82' } });
+    expect(onChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ itemLevel: 82 }),
+    );
+
+    // Above the cap the committed value clamps to 100.
+    fireEvent.change(input, { target: { value: '250' } });
+    expect(onChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ itemLevel: 100 }),
+    );
+});
+
+test('clearing the Item lvl field stores null, not 0', () => {
+    const onChange = vi.fn();
+    renderEditor(itemWith({ itemLevel: 82 }), { onChange });
+
+    const input = screen
+        .getByText('Item lvl')
+        .closest('label')!
+        .querySelector('input') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: '' } });
+    expect(onChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ itemLevel: null }),
+    );
 });
 
 afterEach(() => vi.unstubAllGlobals());

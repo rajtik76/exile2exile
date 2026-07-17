@@ -246,6 +246,7 @@ test('canonicalize coerces equipment items and drops empty or unknown slots', fu
             'base' => ['type' => 'base', 'id' => 'Advanced Plate Vest'],
             'name' => '',
             'corrupted' => false,
+            'itemLevel' => null,
             'props' => ['quality' => 0, 'armour' => 0, 'evasion' => 0, 'energyShield' => 0, 'block' => 0],
             // The blank-id entry and the bare string are dropped; only a real mod ref stays.
             'stats' => [

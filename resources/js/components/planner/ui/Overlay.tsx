@@ -13,10 +13,13 @@ export function Modal({
     onClose,
     children,
     className,
+    fullScreenMobile = false,
 }: {
     onClose: () => void;
     children: React.ReactNode;
     className?: string;
+    /** Below `sm`, fill the viewport edge-to-edge (a sheet) instead of a floating card. */
+    fullScreenMobile?: boolean;
 }) {
     // Lock page scroll while the modal is open, so the background can't scroll behind
     // it (including middle-click autoscroll). Restored to its previous value on close.
@@ -54,19 +57,21 @@ export function Modal({
 
     return createPortal(
         <div
-            className="planner-reading fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto p-4 pt-12"
+            className={cn(
+                'planner-reading fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto',
+                fullScreenMobile ? 'sm:p-4 sm:pt-12' : 'p-4 pt-12',
+            )}
             style={{ background: 'rgba(0,0,0,0.72)' }}
             onClick={onClose}
         >
             <div
                 className={cn(
-                    'w-full max-w-3xl border border-[var(--pl-panel-border)] bg-[var(--pl-panel)]',
+                    'w-full max-w-3xl rounded-[var(--pl-radius-lg)] border border-[var(--pl-panel-border)] bg-[var(--pl-panel)]',
+                    fullScreenMobile &&
+                        'max-sm:min-h-dvh max-sm:max-w-none max-sm:rounded-none max-sm:border-0',
                     className,
                 )}
-                style={{
-                    borderRadius: 'var(--pl-radius-lg)',
-                    boxShadow: 'var(--pl-shadow)',
-                }}
+                style={{ boxShadow: 'var(--pl-shadow)' }}
                 onClick={(event) => event.stopPropagation()}
             >
                 {children}

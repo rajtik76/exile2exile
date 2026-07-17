@@ -195,6 +195,16 @@ it('imports the item name and defensive properties from PoB', function () {
         ]);
 });
 
+it('imports the item level from PoB', function () {
+    $slots = mapFixture(MERC_BUILD)['sections'][PlanSchema::SINGLE_KEY]['items']['slots'];
+
+    // Every equipped item in a PoB export carries an "Item Level:" line; the mapper
+    // brings it across and canonicalize() keeps it inside 1..100.
+    expect($slots['gloves']['itemLevel'])->toBeInt()
+        ->and($slots['gloves']['itemLevel'])->toBeGreaterThanOrEqual(1)
+        ->and($slots['gloves']['itemLevel'])->toBeLessThanOrEqual(PlanSchema::MAX_ITEM_LEVEL);
+});
+
 /**
  * Whether the live extract carries the desecrated mod domain and essence-only mods
  * (extracts before that carry only soul-tagged and naturally rolling affixes). Contract

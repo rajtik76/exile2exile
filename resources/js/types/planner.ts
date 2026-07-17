@@ -92,6 +92,11 @@ export interface ItemPlan {
     name: string;
     /** Whether the item is Corrupted (author-toggled or carried over from a PoB import). */
     corrupted: boolean;
+    /**
+     * The item's level (1..{@link MAX_ITEM_LEVEL}), author-typed or carried over from
+     * a PoB import; null when unset (the line is hidden).
+     */
+    itemLevel: number | null;
     props: ItemProps;
     stats: ItemStat[];
     /** A unique item's own rolled mod values (see {@link UniqueModStat}); empty otherwise. */
@@ -363,6 +368,13 @@ export const MAX_ITEM_NAME_LENGTH = 60;
  * shows +73%), so the ceiling is generous rather than a game rule. Mirrors PlanSchema.
  */
 export const MAX_ITEM_QUALITY = 100;
+
+/**
+ * Item-level bounds. The game's item level tracks the monster level of the zone an
+ * item dropped in and gates which affix tiers can roll; 100 is the level cap.
+ * Mirrors PlanSchema.
+ */
+export const MAX_ITEM_LEVEL = 100;
 
 /** The three defence types; triple-hybrid bases carry all of them at once. */
 export const ITEM_DEFENCE_KEYS = ['armour', 'evasion', 'energyShield'] as const;

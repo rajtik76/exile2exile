@@ -96,6 +96,16 @@ final class ItemCatalog
     private ?array $armourIndex = null;
 
     /**
+     * @var array<string, array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null>|null
+     */
+    private ?array $weaponIndex = null;
+
+    /**
+     * @var array<string, int>|null Base type display name => Spirit granted (sceptres; 0 elsewhere).
+     */
+    private ?array $spiritIndex = null;
+
+    /**
      * @var array<string, string>|null Display name => rarity ("normal" | "unique").
      */
     private ?array $rarityIndex = null;
@@ -392,6 +402,43 @@ final class ItemCatalog
     }
 
     /**
+     * A base type's own offensive stats (GGPK `WeaponTypes`, raw units: `critical` is
+     * crit chance x 100, `attackTime`/`reloadTime` in milliseconds, `rangeMax` in
+     * tenths of a metre, damage is physical only - elemental damage exists solely
+     * through local mods), or null when the base carries no weapon row at all
+     * (armour, jewellery, and caster weapons - sceptres/wands/staves have no
+     * WeaponTypes row). Always null for a unique: .dat has no unique-to-base-type
+     * link (same caveat as {@see armour}), so callers resolve a unique's weapon
+     * stats through its synced base type instead.
+     *
+     * @return array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null
+     */
+    public function weapon(?string $baseType): ?array
+    {
+        if ($baseType === null || $baseType === '') {
+            return null;
+        }
+
+        $this->items();
+
+        return $this->weaponIndex[$baseType] ?? null;
+    }
+
+    /**
+     * The Spirit a base type grants (GGPK `ItemSpirit`) - non-zero only on sceptres.
+     */
+    public function spirit(?string $baseType): int
+    {
+        if ($baseType === null || $baseType === '') {
+            return 0;
+        }
+
+        $this->items();
+
+        return $this->spiritIndex[$baseType] ?? 0;
+    }
+
+    /**
      * The item class of a base type (e.g. "Crossbow", "Ring"), or null if unknown.
      */
     public function itemClass(?string $baseType): ?string
@@ -454,6 +501,8 @@ final class ItemCatalog
         $this->flavourIndex = $built['flavour'];
         $this->reqIndex = $built['req'];
         $this->armourIndex = $built['armour'];
+        $this->weaponIndex = $built['weapon'];
+        $this->spiritIndex = $built['spirit'];
         $this->rarityIndex = $built['rarity'];
         $this->tagIndex = $built['tag'];
         $this->implicitIndex = $built['implicit'];
@@ -475,6 +524,8 @@ final class ItemCatalog
      *     flavour: array<string, ?string>,
      *     req: array<string, array{str: int, dex: int, int: int}|null>,
      *     armour: array<string, array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null>,
+     *     weapon: array<string, array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null>,
+     *     spirit: array<string, int>,
      *     rarity: array<string, string>,
      *     tag: array<string, list<string>>,
      *     implicit: array<string, list<string>>,
@@ -490,6 +541,8 @@ final class ItemCatalog
         $flavours = [];
         $reqs = [];
         $armours = [];
+        $weapons = [];
+        $spirits = [];
         $rarities = [];
         $tags = [];
         $implicits = [];
@@ -549,6 +602,21 @@ final class ItemCatalog
                     'block' => (int) ($armour['block'] ?? 0),
                 ]
                 : null;
+
+            $weapon = $value['weapon'] ?? null;
+            $weapons[$name] = is_array($weapon)
+                ? [
+                    'damageMin' => (int) ($weapon['damageMin'] ?? 0),
+                    'damageMax' => (int) ($weapon['damageMax'] ?? 0),
+                    'critical' => (int) ($weapon['critical'] ?? 0),
+                    'attackTime' => (int) ($weapon['attackTime'] ?? 0),
+                    'rangeMax' => (int) ($weapon['rangeMax'] ?? 0),
+                    'reloadTime' => (int) ($weapon['reloadTime'] ?? 0),
+                ]
+                : null;
+
+            $spirit = $value['spirit'] ?? 0;
+            $spirits[$name] = is_numeric($spirit) ? (int) $spirit : 0;
         }
 
         return [
@@ -559,6 +627,8 @@ final class ItemCatalog
             'flavour' => $flavours,
             'req' => $reqs,
             'armour' => $armours,
+            'weapon' => $weapons,
+            'spirit' => $spirits,
             'rarity' => $rarities,
             'tag' => $tags,
             'implicit' => $implicits,

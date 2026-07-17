@@ -28,7 +28,7 @@ final readonly class GameDataStore
      * carry `requires` (the level/attribute range, capped at the character level cap,
      * plus the new `gem_requirements` index).
      */
-    private const string CACHE_SCHEMA = 'v5';
+    private const string CACHE_SCHEMA = 'v6';
 
     /**
      * The derived catalogue indices are built from multi-MB GGPK JSON. When a cache is

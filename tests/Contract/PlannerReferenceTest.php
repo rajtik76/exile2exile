@@ -138,6 +138,42 @@ test('weapon bases report whether they are two-handed', function () {
         ->and($wands->every(fn (array $r): bool => $r['twoHanded'] === false))->toBeTrue();
 });
 
+test('weapon bases carry their GGPK weapon stats; non-weapons carry none', function () {
+    $crossbows = collect(getJson(route('planner.references', [
+        'q' => 'crossbow',
+        'type' => 'base',
+        'categories' => 'Crossbow',
+    ]))->assertOk()->json('results'));
+
+    expect($crossbows)->not->toBeEmpty()
+        ->and($crossbows->every(fn (array $r): bool => is_array($r['weapon'])
+            && $r['weapon']['damageMax'] > 0
+            && $r['weapon']['critical'] > 0
+            && $r['weapon']['attackTime'] > 0
+            && $r['weapon']['reloadTime'] > 0))->toBeTrue();
+
+    // Sceptres have no WeaponTypes row (caster weapon) but do grant Spirit.
+    $sceptres = collect(getJson(route('planner.references', [
+        'q' => 'sceptre',
+        'type' => 'base',
+        'categories' => 'Sceptre',
+    ]))->assertOk()->json('results'));
+
+    expect($sceptres)->not->toBeEmpty()
+        ->and($sceptres->every(fn (array $r): bool => $r['weapon'] === null && $r['spirit'] > 0))
+        ->toBeTrue();
+
+    $helmets = collect(getJson(route('planner.references', [
+        'q' => 'greathelm',
+        'type' => 'base',
+        'categories' => 'Helmet',
+    ]))->assertOk()->json('results'));
+
+    expect($helmets)->not->toBeEmpty()
+        ->and($helmets->every(fn (array $r): bool => $r['weapon'] === null && $r['spirit'] === 0))
+        ->toBeTrue();
+});
+
 test('the search returns non-unique base types for a slot category', function () {
     $results = getJson(route('planner.references', [
         'q' => 'greathelm',

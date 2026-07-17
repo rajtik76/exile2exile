@@ -28,7 +28,7 @@ final class PlanSchema
      * Current JSON schema version. Bump this (and add an upgrade step below) on any
      * change to the stored shape.
      */
-    public const int CURRENT_VERSION = 2;
+    public const int CURRENT_VERSION = 3;
 
     /**
      * The fixed base phases, in their immutable display order (see {@see PlanTabs}).
@@ -83,6 +83,8 @@ final class PlanSchema
     public const array ITEM_DEFENCE_KEYS = PlanItemSchema::ITEM_DEFENCE_KEYS;
 
     public const int MAX_ITEM_QUALITY = PlanItemSchema::MAX_ITEM_QUALITY;
+
+    public const int MAX_ITEM_LEVEL = PlanItemSchema::MAX_ITEM_LEVEL;
 
     /** @var list<string> */
     public const array EQUIPMENT_SLOTS = PlanItemSchema::EQUIPMENT_SLOTS;
@@ -225,6 +227,11 @@ final class PlanSchema
 
                 return $data;
             },
+            // v2 -> v3: added the per-item `itemLevel` (a real item level this time -
+            // it gates which affix tiers the mod picker offers, unlike the retired v1
+            // `req.level` which tracked nothing). Purely additive: canonicalize()
+            // defaults the missing key to null, so there is nothing to rewrite.
+            2 => fn (array $data): array => $data,
         ];
     }
 
