@@ -4,6 +4,16 @@ import AddButton from '@/components/planner/AddButton';
 import Button from '@/components/planner/Button';
 import { resolveRunes } from '@/components/planner/equipment/displayItem';
 import type { SlotDef } from '@/components/planner/equipment/displayItem';
+import {
+    clampedProp,
+    countModTypes,
+    fullTypesInUse as computeFullTypes,
+    groupsInUse as computeGroupsInUse,
+    normalizeItem,
+    visiblePropFields,
+    withBasePicked,
+    withUniqueModValues,
+} from '@/components/planner/equipment/itemEdits';
 import ModRow from '@/components/planner/equipment/ModRow';
 import Socket from '@/components/planner/equipment/Socket';
 import { MOD_TYPE_STYLE } from '@/components/planner/equipment/style';
@@ -23,38 +33,12 @@ import { refKey } from '@/lib/planReferences';
 import type { PlanReference } from '@/lib/planReferences';
 import {
     MAX_ITEM_NAME_LENGTH,
-    MAX_ITEM_QUALITY,
     MAX_ITEM_SOCKETS,
     MODS_PER_RARITY,
     RARITY_COLOR,
     SLOT_MAX_SOCKETS,
 } from '@/types/planner';
-import type { ItemPlan, ItemProps, ItemStat, RuneRef } from '@/types/planner';
-
-/**
- * The item's defensive/quality property fields. `defenceKey` gates a field against
- * the resolved base's own GGPK defensive stats (see `propFields` below): a base
- * that's purely Evasion (e.g. a dex-armour body armour) only shows the Evasion field,
- * matching how the game's own tooltip never shows a defence type the base doesn't
- * have. `shieldOnly` is the fallback for `block` when the base isn't resolved yet (no
- * GGPK data to gate on at all) - `isShield`'s category-name heuristic.
- */
-const PROP_FIELDS: Array<{
-    key: keyof ItemProps;
-    label: string;
-    shieldOnly?: boolean;
-    defenceKey?: 'armour' | 'evasion' | 'energyShield' | 'block';
-}> = [
-    { key: 'quality', label: 'Quality' },
-    { key: 'armour', label: 'Armour', defenceKey: 'armour' },
-    { key: 'evasion', label: 'Evasion', defenceKey: 'evasion' },
-    {
-        key: 'energyShield',
-        label: 'Energy Shield',
-        defenceKey: 'energyShield',
-    },
-    { key: 'block', label: 'Block', shieldOnly: true, defenceKey: 'block' },
-];
+import type { ItemPlan, ItemProps, RuneRef } from '@/types/planner';
 
 const NUMBER_INPUT =
     'pl-text-sm w-full rounded-[var(--pl-radius)] border border-[var(--pl-input-border)] bg-[var(--pl-input-bg)] px-2 py-1 text-[var(--pl-text)] outline-none focus-visible:border-[var(--pl-focus)]';
@@ -201,15 +185,7 @@ export default function SlotEditor({
         slot.flask || slot.trinket
             ? MODS_PER_RARITY.magic
             : MODS_PER_RARITY.rare;
-    const modCounts = { prefix: 0, suffix: 0 };
-
-    for (const stat of item.stats) {
-        const mod = modMap[stat.modId];
-
-        if (mod) {
-            modCounts[mod.type] += 1;
-        }
-    }
+    const modCounts = countModTypes(item.stats, modMap);
 
     const implicits = reference?.implicits ?? [];
     // A unique's own mods/implicits, structured - rendered with editable value inputs
@@ -217,25 +193,10 @@ export default function SlotEditor({
     // data for a non-unique). See UniqueModRow.
     const uniqueImplicitLines = reference?.implicitLines ?? [];
     const uniqueExplicitLines = reference?.modLines ?? [];
-    // Fallback for block while the base isn't resolved yet (no GGPK armour data to gate
-    // on at all) - a category-name heuristic. Block is a shield-only property (bucklers
-    // included); foci/quivers don't block.
-    const isShield = /shield|buckler/i.test(reference?.category ?? '');
-    // The resolved base's own defensive stats - null when unresolved, or for a unique
-    // with no synced base type yet (see IconResolver::uniqueBaseType). Without it every
-    // defence field stays visible, same as before this existed.
-    const baseArmour = reference?.armour ?? null;
-    const propFields = PROP_FIELDS.filter((field) => {
-        if (field.defenceKey && baseArmour) {
-            return baseArmour[field.defenceKey] !== 0;
-        }
-
-        if (field.shieldOnly) {
-            return isShield;
-        }
-
-        return true;
-    });
+    // The fields gated by the resolved base's own GGPK defensive stats (null when
+    // unresolved, or for a unique with no synced base type yet - every defence field
+    // then stays visible), with a shield-name heuristic as block's fallback.
+    const propFields = visiblePropFields(reference);
 
     // Done stays disabled while the item is illegal (an already-committed error, e.g.
     // too many affixes) or a unique-mod field holds an uncommitted invalid value - the
@@ -263,60 +224,16 @@ export default function SlotEditor({
 
     // Every mutation flows through commit so the stored rarity always matches the base
     // and mods, and mods stay grouped prefixes-first (suffixes below). `extra` folds in
-    // a mod not yet in the shared map (a fresh pick).
+    // a mod not yet in the shared map (a fresh pick). See normalizeItem.
     function commit(next: ItemPlan, extra?: ModMap): void {
         const lookup = extra ? { ...modMap, ...extra } : modMap;
-        const rank = (stat: ItemStat): number => {
-            const type = lookup[stat.modId]?.type;
 
-            return type === 'prefix' ? 0 : type === 'suffix' ? 1 : 2;
-        };
-        // Array.sort is stable, so mods keep their order within each affix type.
-        const stats = [...next.stats].sort((a, b) => rank(a) - rank(b));
-
-        onChange({
-            ...next,
-            stats,
-            rarity: deriveRarity(next.base, stats, lookup),
-        });
+        onChange(normalizeItem(next, lookup));
     }
 
     function pickBase(picked: PlanReference): void {
         addReference(picked);
-        const nextBase = {
-            type: picked.type as 'base' | 'unique',
-            id: picked.id,
-        };
-
-        // A unique carries its own modifiers, so any author mods are dropped on the pick.
-        // Any previously rolled unique-mod values are dropped too - either they belonged
-        // to a different unique (their keys won't match the new one) or the item is no
-        // longer a unique at all.
-        commit({
-            ...item,
-            base: nextBase,
-            stats: picked.type === 'unique' ? [] : item.stats,
-            uniqueMods: [],
-            // A defence value the new base doesn't have would otherwise survive as a
-            // stale, now-hidden number (propFields gates its input out) with no way to
-            // fix it in the editor - clear it the moment the base changes, same as
-            // stats/uniqueMods just above. Unresolved picks (no armour data yet) leave
-            // every value as-is, same as propFields itself does.
-            props: picked.armour
-                ? {
-                      ...item.props,
-                      armour:
-                          picked.armour.armour === 0 ? 0 : item.props.armour,
-                      evasion:
-                          picked.armour.evasion === 0 ? 0 : item.props.evasion,
-                      energyShield:
-                          picked.armour.energyShield === 0
-                              ? 0
-                              : item.props.energyShield,
-                      block: picked.armour.block === 0 ? 0 : item.props.block,
-                  }
-                : item.props,
-        });
+        commit(withBasePicked(item, picked));
         setPickerOpen(false);
     }
 
@@ -329,17 +246,14 @@ export default function SlotEditor({
     }
 
     function setProp(key: keyof ItemProps, value: number): void {
-        // Quality caps at 20; every property floors at 0.
-        const clamped =
-            key === 'quality'
-                ? Math.min(MAX_ITEM_QUALITY, Math.max(0, value))
-                : Math.max(0, value);
-        commit({ ...item, props: { ...item.props, [key]: clamped } });
+        commit({
+            ...item,
+            props: { ...item.props, [key]: clampedProp(key, value) },
+        });
     }
 
     function setUniqueModValues(key: string, values: number[]): void {
-        const rest = item.uniqueMods.filter((stat) => stat.key !== key);
-        commit({ ...item, uniqueMods: [...rest, { key, values }] });
+        commit(withUniqueModValues(item, key, values));
     }
 
     function addModifier(mod: ModInfo): void {
@@ -375,33 +289,14 @@ export default function SlotEditor({
     // Affix groups already on the item - a group can hold only one mod, so the picker
     // hides any group already present (skipping `exceptIndex`, the row being changed).
     function groupsInUse(exceptIndex?: number): string[] {
-        return item.stats
-            .filter((_, position) => position !== exceptIndex)
-            .map((stat) => modMap[stat.modId]?.group)
-            .filter((group): group is string => !!group);
+        return computeGroupsInUse(item.stats, modMap, exceptIndex);
     }
 
     // Generation types already at their cap (e.g. 3 prefixes) - the picker hides them so
     // an over-cap mod can't be added. `exceptIndex` is the row being changed, whose own
     // type is freed for the swap.
     function fullTypesInUse(exceptIndex?: number): Array<'prefix' | 'suffix'> {
-        const counts = { prefix: 0, suffix: 0 };
-
-        item.stats.forEach((stat, position) => {
-            if (position === exceptIndex) {
-                return;
-            }
-
-            const mod = modMap[stat.modId];
-
-            if (mod) {
-                counts[mod.type] += 1;
-            }
-        });
-
-        return (['prefix', 'suffix'] as const).filter(
-            (kind) => counts[kind] >= maxPerType,
-        );
+        return computeFullTypes(item.stats, modMap, maxPerType, exceptIndex);
     }
 
     function setSocket(index: number, rune: RuneRef | null): void {
