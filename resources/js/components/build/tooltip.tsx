@@ -398,7 +398,14 @@ export function TooltipCard({
             {children && (
                 <div
                     className={`relative px-5 py-3 text-sm leading-tight sm:text-base ${leftAlign ? 'text-left' : 'text-center'}`}
-                    style={FONTIN}
+                    // Notable and keystone read their body in FontinRegular too, not
+                    // just the title - poe2db's own CSS scopes FontinRegular to the
+                    // whole card for these two (`.notablePopup .implicitMod,
+                    // .keystonePopup .implicitMod { font-family: FontinRegular }`).
+                    // FontinSmallCaps is a real distinct font file (not a CSS
+                    // text-transform), so mod text left on it renders visually as
+                    // if it were all-caps - correct for a title, wrong for prose.
+                    style={isBigTitleFrame ? FONTIN_REGULAR : FONTIN}
                 >
                     {children}
                 </div>
@@ -447,7 +454,13 @@ export function ModLines({ lines }: { lines: string[] }) {
     return (
         <div className="space-y-0.5" style={{ color: MOD_TEXT_COLOR }}>
             {lines.map((line, i) => (
-                <div key={i}>{renderNumberedText(line)}</div>
+                // A single line can itself carry real "\n"s (a multi-sentence
+                // passive stat, e.g.) - whitespace-pre-line renders those as
+                // actual line breaks instead of collapsing them into one run-on
+                // paragraph, the default for any block element.
+                <div key={i} className="whitespace-pre-line">
+                    {renderNumberedText(line)}
+                </div>
             ))}
         </div>
     );

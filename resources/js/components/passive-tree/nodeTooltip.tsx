@@ -117,7 +117,17 @@ export function NodeTooltip({
         setTip((prev) =>
             prev.w === next.w && prev.h === next.h ? prev : next,
         );
-    }, [node, anchor, pointer.x, pointer.y, width, height, pick, jewel]);
+    }, [
+        node,
+        attributeOption,
+        anchor,
+        pointer.x,
+        pointer.y,
+        width,
+        height,
+        pick,
+        jewel,
+    ]);
 
     const { left, top } = placeTooltip({
         tip,
@@ -126,14 +136,27 @@ export function NodeTooltip({
         anchor,
     });
 
-    // Hidden until measured, so it never flashes at an unclamped position.
-    const style: CSSProperties = { left, top, opacity: tip.w ? 1 : 0 };
+    // Capped to the *stage*, not the viewport - this tooltip is `position:
+    // absolute` inside the stage, which on a phone can be narrower than the
+    // viewport (page chrome around it), so a `vw`-based max-width doesn't
+    // know its real ceiling and can render wider than the stage - and the
+    // page - even after clampPos above pins it flush to the left edge.
+    // Falls back to a viewport-relative cap for the one frame before the
+    // stage is measured (width === 0); invisible either way (see opacity).
+    const maxWidth = width > 0 ? Math.min(672, width * 0.92) : undefined;
 
-    // Width capped to the viewport so a wide node never spills off a phone; left/
-    // top are computed (and clamped) above, so no translate is needed. TooltipCard
-    // draws its own shadow, so none is added here.
+    // Hidden until measured, so it never flashes at an unclamped position.
+    const style: CSSProperties = {
+        left,
+        top,
+        opacity: tip.w ? 1 : 0,
+        maxWidth,
+    };
+
+    // left/top are computed (and clamped) above, so no translate is needed.
+    // TooltipCard draws its own shadow, so none is added here.
     const base =
-        'pointer-events-none absolute z-20 w-max max-w-[min(92vw,42rem)] transition-opacity duration-75';
+        'pointer-events-none absolute z-20 w-max max-w-[92vw] transition-opacity duration-75';
 
     return (
         <div ref={tipRef} className={base} style={style}>
@@ -142,13 +165,19 @@ export function NodeTooltip({
                 title={node.name || `#${node.skill}`}
                 frame={NODE_FRAME[kind]}
             >
-                {stats.length > 0 && <ModLines lines={stats} />}
+                {/* TooltipCard centres its body by default (matching every other
+                    tooltip) - the game's own tree tooltip left-aligns the mod/flavour
+                    text specifically, so it's overridden just here; the title above,
+                    and the jewel/picker/allocated sections below, stay centred. */}
+                <div className="text-left">
+                    {stats.length > 0 && <ModLines lines={stats} />}
 
-                {node.flavourText && (
-                    <p className="mt-1.5 text-[#9a8b6e] italic">
-                        {node.flavourText}
-                    </p>
-                )}
+                    {node.flavourText && (
+                        <p className="mt-1.5 text-[#9a8b6e] italic">
+                            {node.flavourText}
+                        </p>
+                    )}
+                </div>
 
                 {jewel && (
                     <div className="mt-1.5">
