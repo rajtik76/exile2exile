@@ -58,11 +58,16 @@ class StageGameData implements ShouldQueue
             throw new RuntimeException("refusing to stage an invalid version: {$this->version}");
         }
 
-        if ($this->force || ! $releases->has($this->version)) {
+        $extracted = $this->force || ! $releases->has($this->version);
+
+        if ($extracted) {
             $this->extract($releases);
         }
 
-        $checksum = $releases->checksum($this->version) ?? $releases->pack($this->version);
+        // A forced re-extraction overwrites the release dir with fresh output, so
+        // a stale tarball/checksum from before must be repacked rather than reused.
+        $checksum = $extracted ? null : $releases->checksum($this->version);
+        $checksum ??= $releases->pack($this->version);
 
         TriggerContractRun::dispatch($this->version, $checksum);
     }
@@ -82,7 +87,9 @@ class StageGameData implements ShouldQueue
 
         // The rename publishes the staging dir as a release only once the whole
         // extraction succeeded; a failed run leaves at most a .staging leftover.
-        if (! File::moveDirectory($staging, $releases->releasePath($this->version))) {
+        // overwrite: true lets a forced re-extraction replace an already staged
+        // release dir instead of failing because the destination exists.
+        if (! File::moveDirectory($staging, $releases->releasePath($this->version), overwrite: true)) {
             throw new RuntimeException("could not publish {$staging} as a release");
         }
     }
