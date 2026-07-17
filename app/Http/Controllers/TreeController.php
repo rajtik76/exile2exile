@@ -68,12 +68,11 @@ class TreeController extends Controller
         }
 
         $validity = $validator->validate($code);
+        $build = $validity->snapshot;
 
-        if (! $validity->valid) {
+        if (! $validity->valid || $build === null) {
             throw ValidationException::withMessages(['code' => implode(' ', $validity->errors)]);
         }
-
-        $build = $validity->snapshot;
 
         // The build is identified by class *name*: PoB's numeric classId is
         // not stable across versions (an older Mercenary exports as classId

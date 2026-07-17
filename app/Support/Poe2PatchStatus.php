@@ -27,7 +27,7 @@ class Poe2PatchStatus
         // row the watcher creates on detection. Resolve it here (the watcher
         // path, every few minutes), so the web request only reads the cache.
         $release = PatchRelease::query()->where('version', $rawVersion)->first();
-        $releasedAt = $release !== null ? $release->created_at : now();
+        $releasedAt = $release->created_at ?? now();
 
         $this->cache->forever(self::CACHE_KEY, [
             'version' => $rawVersion,

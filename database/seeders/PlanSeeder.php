@@ -582,13 +582,13 @@ class PlanSeeder extends Seeder
      */
     private function allocateFromStart(int $classIndex, int $count): array
     {
-        $this->loadTree();
-        $start = $this->classStartNode($classIndex);
+        ['nodes' => $nodes, 'adjacency' => $adjacency] = $this->loadTree();
+        $start = $this->classStartNode($nodes, $classIndex);
 
         $allocated = [];
         $notables = [];
         $seen = [$start => true];
-        $queue = $this->adjacency[$start] ?? [];
+        $queue = $adjacency[$start] ?? [];
 
         while ($queue !== [] && count($allocated) < $count) {
             $skill = (int) array_shift($queue);
@@ -598,7 +598,7 @@ class PlanSeeder extends Seeder
             }
 
             $seen[$skill] = true;
-            $node = $this->nodes[$skill] ?? null;
+            $node = $nodes[$skill] ?? null;
 
             if ($node === null || ! $this->isAllocatable($node)) {
                 continue;
@@ -610,7 +610,7 @@ class PlanSeeder extends Seeder
                 $notables[] = $skill;
             }
 
-            foreach ($this->adjacency[$skill] ?? [] as $next) {
+            foreach ($adjacency[$skill] ?? [] as $next) {
                 if (! isset($seen[(int) $next])) {
                     $queue[] = (int) $next;
                 }
@@ -636,10 +636,12 @@ class PlanSeeder extends Seeder
 
     /**
      * The start-node skill id for a class index (one node can seed several classes).
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
      */
-    private function classStartNode(int $classIndex): int
+    private function classStartNode(array $nodes, int $classIndex): int
     {
-        foreach ($this->nodes as $skill => $node) {
+        foreach ($nodes as $skill => $node) {
             $starts = $node['classStartIndex'] ?? null;
 
             if (is_array($starts) && in_array($classIndex, $starts, true)) {
@@ -653,28 +655,30 @@ class PlanSeeder extends Seeder
     /**
      * Load the GGPK-derived passive tree once: nodes keyed by skill id plus an undirected
      * adjacency from each node's in/out edges.
+     *
+     * @return array{nodes: array<int, array<string, mixed>>, adjacency: array<int, list<int>>}
      */
-    private function loadTree(): void
+    private function loadTree(): array
     {
-        if ($this->nodes !== null) {
-            return;
+        if ($this->nodes === null || $this->adjacency === null) {
+            /** @var array{nodes: array<int|string, array<string, mixed>>} $data */
+            $data = json_decode(File::get(public_path('tree/current/data.json')), true);
+
+            $nodes = [];
+            $adjacency = [];
+
+            foreach ($data['nodes'] as $skill => $node) {
+                $id = (int) $skill;
+                $nodes[$id] = $node;
+                $out = is_array($node['out'] ?? null) ? $node['out'] : [];
+                $in = is_array($node['in'] ?? null) ? $node['in'] : [];
+                $adjacency[$id] = array_values(array_unique(array_map(intval(...), [...$out, ...$in])));
+            }
+
+            $this->nodes = $nodes;
+            $this->adjacency = $adjacency;
         }
 
-        /** @var array{nodes: array<int|string, array<string, mixed>>} $data */
-        $data = json_decode(File::get(public_path('tree/current/data.json')), true);
-
-        $nodes = [];
-        $adjacency = [];
-
-        foreach ($data['nodes'] as $skill => $node) {
-            $id = (int) $skill;
-            $nodes[$id] = $node;
-            $out = is_array($node['out'] ?? null) ? $node['out'] : [];
-            $in = is_array($node['in'] ?? null) ? $node['in'] : [];
-            $adjacency[$id] = array_values(array_unique(array_map(intval(...), [...$out, ...$in])));
-        }
-
-        $this->nodes = $nodes;
-        $this->adjacency = $adjacency;
+        return ['nodes' => $this->nodes, 'adjacency' => $this->adjacency];
     }
 }
