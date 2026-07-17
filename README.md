@@ -120,12 +120,22 @@ How it holds together:
 - Every failure mode ends in "no swap": red tests, a missing tarball or an
   unreachable server leave production on the last validated release. The
   watcher re-dispatches a stalled validation at most once per six hours.
+- The watcher only stages a release when the GGG patch version itself moves,
+  so a change to the extractor packages alone (a `@poe2-toolkit/*` bump) is
+  never exercised against production data on its own - the pinned patch did
+  not change, so nothing re-triggers `StageGameData`. Run
+  `php artisan poe2:restage-data [version] [--force]` to stage it by hand:
+  without `--force` it behaves like the watcher's stalled-validation nudge
+  (re-triggers CI on the already staged data), with `--force` it re-runs the
+  GGPK extraction even though the version is already staged. Either way it
+  still goes through the same CI Contract gate before anything is activated.
 
 The moving parts: the `poe2:watch-patch` command (detection + notifications),
 the `StageGameData` and `TriggerContractRun` jobs, the `GameDataReleases`
 service (release store, atomic swap, pruning), the token-gated
 `POST /api/data/activate` endpoint, and the `poe2:link-game-data` /
-`poe2:pack-release` commands for deploy wiring and tarball repair. Deployment
+`poe2:pack-release` / `poe2:restage-data` commands for deploy wiring, tarball
+repair and manual re-staging. Deployment
 needs `GITHUB_DISPATCH_TOKEN`, `GITHUB_REPOSITORY` and `POE_DATA_ACTIVATE_TOKEN`
 in the app environment, plus the `DATA_BASE_URL` variable and
 `DATA_ACTIVATE_TOKEN` secret on the GitHub side (see
