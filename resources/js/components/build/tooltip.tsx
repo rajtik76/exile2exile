@@ -181,14 +181,17 @@ export function TooltipRule({ color = '#c9a24a' }: { color?: string }) {
  * (`SoulCore`) and the game renders both with the currency banner; there is no
  * separate rune/soul-core header art in the GGPK (verified: `itemsheaderrune*` /
  * `itemsheadersoulcore*` don't exist, `itemsheadercurrency*` does and matches the
- * in-game tooltip). `notable` is the passive tree's own banner (`NotablePassiveHeader*`
- * GGPK art, a distinct texture set from the item/currency banners above) - it also
- * switches the title to {@link NOTABLE_TITLE_COLOR} and a larger FontinRegular face,
- * matching the game's own notable tooltip rather than the smaller FontinSmallCaps
- * every other frame uses. Gems use no frame at all - {@link ReferenceTooltip} paints
- * their `hoverImage` behind the header instead, matching the game's own gem tooltip,
- * which has no carved banner. (The type and the `rarityFrame` mapping live in
- * {@link ./tooltipText} and are re-exported above.)
+ * in-game tooltip). `normal`/`notable`/`keystone` are the passive tree's own
+ * banners (`NormalPassiveHeader*`/`NotablePassiveHeader*`/`KeystonePassiveHeader*`
+ * GGPK art, a distinct texture set per tier, pixel-checked against real in-game
+ * tree tooltips - an ascendancy notable reuses the plain `notable` banner, it has
+ * no distinct art of its own). `notable` and `keystone` also switch the title to
+ * {@link NOTABLE_TITLE_COLOR} and a larger FontinRegular face, matching the
+ * game's own tooltip rather than the smaller FontinSmallCaps `normal` and every
+ * other frame use. Gems use no frame at all - {@link ReferenceTooltip} paints
+ * their `hoverImage` behind the header instead, matching the game's own gem
+ * tooltip, which has no carved banner. (The type and the `rarityFrame` mapping
+ * live in {@link ./tooltipText} and are re-exported above.)
  */
 
 /**
@@ -267,7 +270,12 @@ export function TooltipCard({
     children?: React.ReactNode;
 }) {
     const leftAlign = Boolean(headerImage);
-    const isNotableTitle = frame === 'notable';
+    // Notable and keystone both carve their title in the game's own larger
+    // FontinRegular face and the shared cream colour (poe2db's own CSS groups
+    // them together: `.notablePopup, .keystonePopup { font-family: FontinRegular }`,
+    // matched against real in-game tree tooltip screenshots) - `normal` keeps the
+    // smaller FontinSmallCaps every other frame uses.
+    const isBigTitleFrame = frame === 'notable' || frame === 'keystone';
 
     return (
         <div
@@ -352,17 +360,18 @@ export function TooltipCard({
                 >
                     {/* Header in Fontin SmallCaps (the game's own tooltip face); the
                         second line smaller. The body below reads in the same face.
-                        A notable's title is the one exception - the game sets it in
-                        the larger FontinRegular face and a fixed colour instead.
-                        Both sizes shrink one step below the card's own min-width
-                        breakpoint (sm) - the card itself is capped to 88vw there, so
-                        the desktop size would otherwise force wrapping/overflow on a
-                        narrow phone regardless of how short the title is. */}
+                        Notable and keystone are the exception - the game sets their
+                        title in the larger FontinRegular face and a fixed colour
+                        instead. Both sizes shrink one step below the card's own
+                        min-width breakpoint (sm) - the card itself is capped to 88vw
+                        there, so the desktop size would otherwise force
+                        wrapping/overflow on a narrow phone regardless of how short
+                        the title is. */}
                     <p
-                        className={`leading-tight tracking-wide ${isNotableTitle ? 'text-xl sm:text-[26px]' : 'text-base sm:text-xl'}`}
+                        className={`leading-tight tracking-wide ${isBigTitleFrame ? 'text-xl sm:text-[26px]' : 'text-base sm:text-xl'}`}
                         style={{
-                            ...(isNotableTitle ? FONTIN_REGULAR : FONTIN),
-                            color: isNotableTitle
+                            ...(isBigTitleFrame ? FONTIN_REGULAR : FONTIN),
+                            color: isBigTitleFrame
                                 ? NOTABLE_TITLE_COLOR
                                 : accent.text,
                             textShadow: '0 1px 2px rgba(0,0,0,0.9)',

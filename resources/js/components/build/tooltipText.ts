@@ -54,7 +54,14 @@ export function rarityTone(rarity: string): TooltipAccent {
  * {@link TooltipRarityFrame} doc for the full GGPK-art story).
  */
 export type TooltipRarityFrame =
-    'white' | 'magic' | 'rare' | 'unique' | 'currency' | 'notable';
+    | 'white'
+    | 'magic'
+    | 'rare'
+    | 'unique'
+    | 'currency'
+    | 'normal'
+    | 'notable'
+    | 'keystone';
 
 /** Maps an item rarity string to its {@link TooltipRarityFrame} banner. */
 export function rarityFrame(rarity: string): TooltipRarityFrame {

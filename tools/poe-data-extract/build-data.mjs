@@ -93,15 +93,32 @@ const TOOLTIP_HEADER_TEXTURES = {
         'art/textures/interface/2d/2dart/uiimages/ingame/itemsheadercurrencymiddle.dds',
     'ui/tooltip-header-currency-right.png':
         'art/textures/interface/2d/2dart/uiimages/ingame/itemsheadercurrencyright.dds',
-    // The passive tree's own notable/keystone tooltip banner - distinct GGPK art
-    // from the item rarity/currency banners above (verified against poe2db's own
-    // CSS: `.notablePopup .itemHeader { background: url(.../notablepassiveheaderleft.webp) ...}`).
+    // The passive tree's own tooltip banners - distinct GGPK art from the item
+    // rarity/currency banners above (verified against poe2db's own CSS, then
+    // pixel-checked against real in-game screenshots: a plain/notable/keystone
+    // node's banner share one silhouette - normal in a dim silver tone, notable
+    // in a brighter gold tone, keystone in a visibly more ornate filigree -
+    // an ascendancy notable reuses the plain notable banner, it has no distinct
+    // art of its own despite a `.ascendancyPassivePopup` CSS rule that suggests
+    // otherwise).
+    'ui/tooltip-header-normal-left.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/normalpassiveheaderleft.dds',
+    'ui/tooltip-header-normal-middle.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/normalpassiveheadermiddle.dds',
+    'ui/tooltip-header-normal-right.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/normalpassiveheaderright.dds',
     'ui/tooltip-header-notable-left.png':
         'art/textures/interface/2d/2dart/uiimages/ingame/notablepassiveheaderleft.dds',
     'ui/tooltip-header-notable-middle.png':
         'art/textures/interface/2d/2dart/uiimages/ingame/notablepassiveheadermiddle.dds',
     'ui/tooltip-header-notable-right.png':
         'art/textures/interface/2d/2dart/uiimages/ingame/notablepassiveheaderright.dds',
+    'ui/tooltip-header-keystone-left.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/keystonepassiveheaderleft.dds',
+    'ui/tooltip-header-keystone-middle.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/keystonepassiveheadermiddle.dds',
+    'ui/tooltip-header-keystone-right.png':
+        'art/textures/interface/2d/2dart/uiimages/ingame/keystonepassiveheaderright.dds',
     // The client's own fallback hover art for gems without a specific
     // SmartHover/GemHoverImage texture (crystals on a dark, misty background) -
     // sits right next to the per-skill GemHoverImage*.dds files in GGPK, but no

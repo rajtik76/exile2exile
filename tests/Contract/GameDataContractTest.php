@@ -103,10 +103,10 @@ it('ships item data whose first base icon exists on disk', function () {
 
 /**
  * Fixed logical asset paths the frontend references as string literals (item
- * rarity/currency tooltip banners, the gem tooltip header, the notable/keystone
- * banner, the gem hover placeholder, and the rune/soul-core socket art) - not
- * looked up through any per-entity JSON, so nothing else in this suite would
- * catch one going missing from a release.
+ * rarity/currency tooltip banners, the gem tooltip header, the passive tree's
+ * normal/notable/keystone banners, the gem hover placeholder, and the
+ * rune/soul-core socket art) - not looked up through any per-entity JSON, so
+ * nothing else in this suite would catch one going missing from a release.
  *
  * @see resources/js/components/build/tooltip.tsx
  * @see resources/js/components/planner/ReferenceTooltip.tsx
@@ -115,7 +115,7 @@ it('ships item data whose first base icon exists on disk', function () {
  * @see @poe2-toolkit/rune-extractor's buildSockets.js
  */
 it('ships every fixed UI banner and socket asset the frontend hardcodes', function () {
-    $frames = ['white', 'magic', 'rare', 'unique', 'currency', 'notable'];
+    $frames = ['white', 'magic', 'rare', 'unique', 'currency', 'normal', 'notable', 'keystone'];
     $sides = ['left', 'middle', 'right'];
 
     $paths = [];

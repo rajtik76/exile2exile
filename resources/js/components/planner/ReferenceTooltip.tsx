@@ -104,6 +104,11 @@ export default function ReferenceTooltip({
     const isGem = type === 'gem';
     const isRune = type === 'rune';
     const isNotable = type === 'notable';
+    // A keystone is a `type: 'notable'` reference too (see IconResolver/treeNotables'
+    // `notableReference` - keystones and ascendancy notables share the same category
+    // field, both sourced from the tree data's own `isKeystone`/`ascendancy`), but the
+    // game draws it with its own more ornate banner rather than the plain notable one.
+    const isKeystone = category === 'Keystone';
 
     // A gem's header shows its primary tag ("Spell", "Attack", "Warcry", ...) as
     // the subtitle, same as the game's own tooltip - the body's own tag list below
@@ -210,9 +215,11 @@ export default function ReferenceTooltip({
                             frame={
                                 isRune
                                     ? 'currency'
-                                    : isNotable
-                                      ? 'notable'
-                                      : undefined
+                                    : isKeystone
+                                      ? 'keystone'
+                                      : isNotable
+                                        ? 'notable'
+                                        : undefined
                             }
                             backgroundImage={isGem ? hoverImage : undefined}
                             headerImage={isGem ? GEM_HEADER_IMAGE : undefined}
