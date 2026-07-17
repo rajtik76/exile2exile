@@ -4,10 +4,20 @@ import { withAssetVersion } from '@/lib/assetVersion';
 import type {
     GemRequires,
     GemScaling,
-    GemScalingLevel,
-    GemScalingStat,
     ReferenceSprite,
 } from '@/lib/planReferences';
+import {
+    cappedLevels,
+    combineStatLines,
+    minMax,
+    splitNumberedText,
+} from './tooltipText';
+import type { TooltipAccent, TooltipRarityFrame } from './tooltipText';
+
+// The pure palette/number helpers live in tooltipText.ts (unit-tested there);
+// re-exported so existing importers keep one tooltip entry point.
+export { rarityFrame, rarityTone } from './tooltipText';
+export type { TooltipAccent, TooltipRarityFrame } from './tooltipText';
 
 /**
  * Shared tooltip system. Every tooltip in the project (item, gem, rune,
@@ -59,48 +69,6 @@ const GEM_DESC_COLOR = '#baad85';
  * effect text rather than flavour or a title.
  */
 export const MOD_TEXT_COLOR = '#8888ff';
-
-/** Colour triplet tinting a card to its entity (rarity / socket / element). */
-export interface TooltipAccent {
-    text: string;
-    edge: string;
-    glow: string;
-}
-
-/** Item-rarity accent, matching the game's item-name palette. */
-export function rarityTone(rarity: string): TooltipAccent {
-    switch (rarity.toUpperCase()) {
-        case 'MAGIC':
-            // The game's own magic-item blue.
-            return {
-                text: '#8888ff',
-                edge: '#6a74d0',
-                glow: 'rgba(136,136,255,0.30)',
-            };
-        case 'RARE':
-            // The game's own rare-item yellow.
-            return {
-                text: '#ffff77',
-                edge: '#c2a23c',
-                glow: 'rgba(255,255,119,0.30)',
-            };
-        case 'UNIQUE':
-            // #af6025 is PoE1's burnt-orange unique; PoE2 overrides it to a
-            // brighter, more saturated orange for the item name specifically.
-            return {
-                text: '#ef6916',
-                edge: '#af6025',
-                glow: 'rgba(239,105,22,0.32)',
-            };
-        default:
-            // NORMAL (white) - bright neutral so it reads clearly, never gilded.
-            return {
-                text: '#f7f7f3',
-                edge: '#c8c5b8',
-                glow: 'rgba(245,245,238,0.36)',
-            };
-    }
-}
 
 /** Centred stat list, one line per mod - matches the game's own tooltip layout. */
 export function BulletList({
@@ -219,24 +187,9 @@ export function TooltipRule({ color = '#c9a24a' }: { color?: string }) {
  * matching the game's own notable tooltip rather than the smaller FontinSmallCaps
  * every other frame uses. Gems use no frame at all - {@link ReferenceTooltip} paints
  * their `hoverImage` behind the header instead, matching the game's own gem tooltip,
- * which has no carved banner.
+ * which has no carved banner. (The type and the `rarityFrame` mapping live in
+ * {@link ./tooltipText} and are re-exported above.)
  */
-export type TooltipRarityFrame =
-    'white' | 'magic' | 'rare' | 'unique' | 'currency' | 'notable';
-
-/** Maps an item rarity string to its {@link TooltipRarityFrame} banner. */
-export function rarityFrame(rarity: string): TooltipRarityFrame {
-    switch (rarity.toUpperCase()) {
-        case 'MAGIC':
-            return 'magic';
-        case 'RARE':
-            return 'rare';
-        case 'UNIQUE':
-            return 'unique';
-        default:
-            return 'white';
-    }
-}
 
 /**
  * One end cap of the rarity banner (the game's own carved corner art - a
@@ -445,61 +398,35 @@ export function TooltipCard({
     );
 }
 
-/** The highest gem level the in-game tooltip's "Level:"/stat ranges ever display - further levels (up to 40 in the raw data) come from mechanics outside normal play and aren't shown by default. Matches poe2db's own reference tooltip. */
-const GEM_MAX_DISPLAY_LEVEL = 20;
-
-/** `scaling.levels` capped at {@link GEM_MAX_DISPLAY_LEVEL} - empty only if the source data itself is empty. */
-function cappedLevels(levels: GemScalingLevel[]): GemScalingLevel[] {
-    return levels.filter((level) => level.level <= GEM_MAX_DISPLAY_LEVEL);
-}
-
 /**
- * Splits a stat/mod line into coloured segments: a parenthesised range like
+ * Renders a stat/mod line with its numbers picked out: a parenthesised range like
  * `(1—20)` gets white digits and a grey em dash, a lone number (with an optional
  * leading `+`) is plain white, everything else inherits the caller's colour
- * (the mod-blue). Mirrors the game's own tooltip number styling exactly - pixel
- * checked against a reference screenshot, not guessed.
+ * (the mod-blue). The parsing lives in {@link splitNumberedText} (unit-tested);
+ * this is only the segment-to-JSX mapping.
  */
 function renderNumberedText(text: string): React.ReactNode {
-    const pattern =
-        /(\([+-]?\d+(?:\.\d+)?—[+-]?\d+(?:\.\d+)?\))|([+-]?\d+(?:\.\d+)?)/g;
-    const nodes: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    let key = 0;
-
-    while ((match = pattern.exec(text)) !== null) {
-        if (match.index > lastIndex) {
-            nodes.push(text.slice(lastIndex, match.index));
-        }
-
-        if (match[1]) {
-            // A range: "(a—b)" - split the dash out for its own grey colour.
-            const [, low, high] = /^\(([^—]+)—(.+)\)$/.exec(match[1]) ?? [];
-
-            nodes.push(
-                <Fragment key={key++}>
-                    <span style={{ color: '#fff' }}>({low}</span>
+    return splitNumberedText(text).map((segment, key) => {
+        if (segment.kind === 'range') {
+            return (
+                <Fragment key={key}>
+                    <span style={{ color: '#fff' }}>({segment.low}</span>
                     <span style={{ color: MUTED_TEXT_COLOR }}>—</span>
-                    <span style={{ color: '#fff' }}>{high})</span>
-                </Fragment>,
-            );
-        } else {
-            nodes.push(
-                <span key={key++} style={{ color: '#fff' }}>
-                    {match[0]}
-                </span>,
+                    <span style={{ color: '#fff' }}>{segment.high})</span>
+                </Fragment>
             );
         }
 
-        lastIndex = match.index + match[0].length;
-    }
+        if (segment.kind === 'number') {
+            return (
+                <span key={key} style={{ color: '#fff' }}>
+                    {segment.text}
+                </span>
+            );
+        }
 
-    if (lastIndex < text.length) {
-        nodes.push(text.slice(lastIndex));
-    }
-
-    return nodes;
+        return <Fragment key={key}>{segment.text}</Fragment>;
+    });
 }
 
 /**
@@ -515,90 +442,6 @@ export function ModLines({ lines }: { lines: string[] }) {
             ))}
         </div>
     );
-}
-
-/** `n` formatted exactly as it appears in a rendered stat line (matches `GemScalingStat.text`'s own number formatting). */
-function formatStatNumber(value: number): string {
-    return Number.isInteger(value) ? String(value) : value.toFixed(2);
-}
-
-/**
- * Combines one stat across two levels into the range-notation line the game's own
- * tooltip shows (e.g. level 1's "Deals 1 to 13 Lightning Damage" + level 20's
- * "Deals 20 to 386 Lightning Damage" → "Deals (1—20) to (13—386) Lightning
- * Damage"). A stat whose value doesn't change between the two levels (e.g. a flat
- * "50% increased Magnitude of Shock inflicted") is left as-is - single numbers
- * don't get a range wrapped around them.
- */
-function combineStatText(first: GemScalingStat, last: GemScalingStat): string {
-    if (first.min === last.min && first.max === last.max) {
-        return first.text;
-    }
-
-    let text = first.text;
-    let searchFrom = 0;
-
-    // A plain indexOf would match the token inside an unrelated larger number
-    // (e.g. token "1" inside "10%") - require it not be flanked by another digit.
-    const isDigit = (ch: string | undefined) =>
-        ch !== undefined && ch >= '0' && ch <= '9';
-
-    const replaceOnce = (value: number, rangeMax: number) => {
-        const token = formatStatNumber(value);
-        let idx = text.indexOf(token, searchFrom);
-
-        while (
-            idx !== -1 &&
-            (isDigit(text[idx - 1]) || isDigit(text[idx + token.length]))
-        ) {
-            idx = text.indexOf(token, idx + 1);
-        }
-
-        if (idx === -1) {
-            return;
-        }
-
-        const replacement = `(${token}—${formatStatNumber(rangeMax)})`;
-        text =
-            text.slice(0, idx) + replacement + text.slice(idx + token.length);
-        searchFrom = idx + replacement.length;
-    };
-
-    replaceOnce(first.min, last.min);
-
-    if (first.max !== first.min) {
-        replaceOnce(first.max, last.max);
-    }
-
-    return text;
-}
-
-/**
- * Combines a gem's per-level stat lines into the game's own range-notation display
- * (see {@link combineStatText}), pairing each level's stats by array index - the
- * same stat set applies to every level, only the values scale, so position is a
- * reliable identity (verified against a live extract, not assumed).
- */
-function combineStatLines(
-    first: GemScalingStat[],
-    last: GemScalingStat[],
-): string[] {
-    if (first.length !== last.length) {
-        // Longer than expected to happen in practice (see the doc above) - fall
-        // back to the highest level's own numbers rather than guess a pairing.
-        return last.map((stat) => stat.text);
-    }
-
-    return first.map((stat, i) => combineStatText(stat, last[i]));
-}
-
-/** A single min/max pair across the displayed level range, or `null` when there's nothing to show. */
-function minMax(values: (number | null)[]): [number, number] | null {
-    const present = values.filter((v): v is number => v !== null);
-
-    return present.length > 0
-        ? [Math.min(...present), Math.max(...present)]
-        : null;
 }
 
 /** One label:value row in a gem tooltip's stat block (Tier, Level, Cost, ...). */

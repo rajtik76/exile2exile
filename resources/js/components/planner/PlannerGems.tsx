@@ -6,10 +6,17 @@ import { useReferences } from '@/components/planner/ReferencesContext';
 import ReferenceTooltip, {
     accentColor,
 } from '@/components/planner/ReferenceTooltip';
+import {
+    excludedGemIds,
+    gemsByPriority as flattenGemsByPriority,
+    withGemRemoved,
+    withGemSet,
+    withSupportMoved,
+} from '@/lib/gemGroups';
 import type { GemsView } from '@/lib/gemsView';
 import { refKey } from '@/lib/planReferences';
 import type { PlanReference } from '@/lib/planReferences';
-import { arrayMove, moveById } from '@/lib/reorder';
+import { moveById } from '@/lib/reorder';
 import { useDragReorder } from '@/lib/useDragReorder';
 import { MAX_GEM_GROUPS, MAX_GEMS_PER_GROUP } from '@/types/planner';
 import type { GemGroup, ItemSlot } from '@/types/planner';
@@ -94,37 +101,12 @@ export default function PlannerGems({
         addReference(reference);
         const slot: ItemSlot = { type: 'gem', id: reference.id };
 
-        onChange?.(
-            groups.map((group, index) =>
-                index !== groupIndex
-                    ? group
-                    : {
-                          ...group,
-                          gems:
-                              gemIndex < group.gems.length
-                                  ? group.gems.map((gem, position) =>
-                                        position === gemIndex ? slot : gem,
-                                    )
-                                  : [...group.gems, slot],
-                      },
-            ),
-        );
+        onChange?.(withGemSet(groups, groupIndex, gemIndex, slot));
         setPicker(null);
     }
 
     function removeGem(groupIndex: number, gemIndex: number): void {
-        onChange?.(
-            groups.map((group, index) =>
-                index !== groupIndex
-                    ? group
-                    : {
-                          ...group,
-                          gems: group.gems.filter(
-                              (_, position) => position !== gemIndex,
-                          ),
-                      },
-            ),
-        );
+        onChange?.(withGemRemoved(groups, groupIndex, gemIndex));
     }
 
     function removeGroup(groupIndex: number): void {
@@ -146,22 +128,9 @@ export default function PlannerGems({
 
     // Reorder support gems within a group. Keys are "<groupIndex>:<gemIndex>"; a drag is
     // confined to one group, and the active skill (index 0) never moves.
-    const supportDnd = useDragReorder((fromKey, toKey) => {
-        const [fromGroup, fromGem] = fromKey.split(':').map(Number);
-        const [toGroup, toGem] = toKey.split(':').map(Number);
-
-        if (fromGroup !== toGroup) {
-            return;
-        }
-
-        onChange?.(
-            groups.map((group, index) =>
-                index !== fromGroup
-                    ? group
-                    : { ...group, gems: arrayMove(group.gems, fromGem, toGem) },
-            ),
-        );
-    });
+    const supportDnd = useDragReorder((fromKey, toKey) =>
+        onChange?.(withSupportMoved(groups, fromKey, toKey)),
+    );
 
     // A tooltip left open during a drag sits over the drop target and blocks it, so
     // hide every gem tooltip while any drag is in progress.
@@ -169,18 +138,7 @@ export default function PlannerGems({
 
     /** Reference ids to hide from a slot's picker so a gem is never slotted twice. */
     function excludedIds(target: { group: number; gem: number }): string[] {
-        if (target.gem === 0) {
-            // A skill can lead only one group - bar every other group's active skill.
-            return groups
-                .filter((_, index) => index !== target.group)
-                .map((group) => group.gems[0]?.id)
-                .filter((id): id is string => Boolean(id));
-        }
-
-        // A support can't repeat within its group - bar the group's other supports.
-        return groups[target.group].gems
-            .filter((_, position) => position >= 1 && position !== target.gem)
-            .map((gem) => gem.id);
+        return excludedGemIds(groups, target);
     }
 
     // One skill + its supports laid out on a fixed column grid so the row-number
@@ -193,13 +151,7 @@ export default function PlannerGems({
 
     // Every gem flattened in priority order (each group top-to-bottom, skill then its
     // supports left-to-right) for the read-only summary row under the editor.
-    const gemsByPriority = groups.flatMap((group) =>
-        group.gems.map((gem, index) => ({
-            gem,
-            support: index > 0,
-            key: `${group.id}:${index}`,
-        })),
-    );
+    const gemsByPriority = flattenGemsByPriority(groups);
 
     /** Display name + accent colour for a gem slot, resolved from the live reference. */
     function gemInfo(slot?: ItemSlot): { name: string; color: string } {

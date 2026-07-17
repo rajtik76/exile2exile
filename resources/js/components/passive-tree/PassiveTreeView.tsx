@@ -13,35 +13,35 @@ import type {
     AllocMode,
     BuildAllocation,
     JewelInfo,
-    NodeKind,
-    NodeOption,
     Scene,
     TreeGraph,
-    TreeNode,
     WeaponSet,
     WeaponSetAllocation,
     WorldRect,
 } from '@poe2-toolkit/tree-core';
-import { DEFAULT_TREE_COLORS, TreeView } from '@poe2-toolkit/tree-react';
+import { TreeView } from '@poe2-toolkit/tree-react';
 import type {
     AllocationPreview,
     HighlightStyle,
     TreeViewControls,
 } from '@poe2-toolkit/tree-react';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer';
 import { centreSprites } from '@/lib/classCatalog';
 import { useTreeData } from '@/lib/useTreeData';
-import {
-    ClearGlyph,
-    Divider,
-    ICON_SEGMENT,
-    INPUT_FONT,
-    PANEL_FONT,
-    PLAQUE,
-} from './chrome';
+import { PANEL_FONT, PLAQUE } from './chrome';
+import { searchTreeNodes } from './nodeSearch';
+import { NodeTooltip } from './nodeTooltip';
 import { notifyPointLimit } from './pointLimitToast';
+import { exceededCap, pointUsage } from './treeBudgets';
+import type { PointUsage } from './treeBudgets';
+import {
+    BudgetBar,
+    ClearBuildButton,
+    SearchBox,
+    ToolsGlyph,
+    ZoomBar,
+} from './treeControls';
 import { ASCENDANCY_POINT_LIMIT, ascendancyPointsUsed } from './treePoints';
 import { previewFor } from './treePreview';
 
@@ -49,34 +49,11 @@ import { previewFor } from './treePreview';
 const FALLBACK_POINT_LIMIT = 123;
 const FALLBACK_WEAPON_SET_LIMIT = 24;
 
-/**
- * Weapon-set accent colours, derived from the renderer's default set tints (set
- * I red, set II green, the in-game colours) so the counters and paint toggle
- * always read as the same sets drawn on the tree. The basic tree keeps the gold
- * chrome.
- */
-const hexColor = (color: number): string =>
-    `#${color.toString(16).padStart(6, '0')}`;
-
-const WEAPON_SET_HEX: Record<WeaponSet, string> = {
-    1: hexColor(DEFAULT_TREE_COLORS.weaponSet[1]),
-    2: hexColor(DEFAULT_TREE_COLORS.weaponSet[2]),
-};
-
-/**
- * Gauge tint for the ascendancy budget - a violet, distinct from the gold basic
- * gauge and the weapon-set red/green, so the four budgets read as one family.
- */
-const ASCENDANCY_HEX = '#b48ce0';
-
 /** Stable empty map, so a build with no weapon sets keeps one reference. */
 const EMPTY_WEAPON_SETS: Record<number, WeaponSet> = {};
 
 /** The deployed tree snapshot every edited allocation is stamped against. */
 const TREE_VERSION = '0_5';
-
-/** Shortest node-search query that highlights matches (avoids matching everything). */
-const SEARCH_MIN = 2;
 
 /**
  * Gold search-highlight rings with a stronger pulse than the renderer default -
@@ -149,7 +126,9 @@ interface PlanTreeProps extends SharedTreeProps {
  * The class / ascendancy pickers and the Path of Building importer live with the
  * page now ({@link PlannerControls}); this component keeps only the chrome bound
  * to the canvas: search, the point gauge and the zoom rail. Geometry, pathing
- * and the scene all come from `@poe2-toolkit/tree-core`.
+ * and the scene all come from `@poe2-toolkit/tree-core`; the chrome bars live in
+ * {@link ./treeControls}, the tooltip in {@link ./nodeTooltip} and the budget /
+ * search maths in {@link ./treeBudgets} / {@link ./nodeSearch}.
  */
 export default function PassiveTreeView(props: PlanTreeProps) {
     const {
@@ -330,57 +309,22 @@ export default function PassiveTreeView(props: PlanTreeProps) {
 
     const weaponSetLimit = budget?.weaponSet ?? FALLBACK_WEAPON_SET_LIMIT;
 
-    // Per-mode main-tree usage. Ascendancy nodes draw from a separate pool and
-    // never count here. Set I nodes are basic nodes tagged for a weapon set, so
-    // they count toward both the basic budget and the set I cap; set II is the
-    // additive divergence with its own cap.
-    const pointUsage = (
+    // Ascendancy nodes draw from a separate pool and never count toward the
+    // main-tree budgets (see {@link pointUsage}).
+    const usageOf = (
         allocated: Iterable<number>,
         sets: Record<number, WeaponSet>,
-    ): { basic: number; setI: number; setII: number } => {
-        let basic = 0;
-        let setI = 0;
-        let setII = 0;
+    ): PointUsage =>
+        pointUsage(allocated, sets, (id) =>
+            Boolean(data?.nodes[id]?.ascendancyName),
+        );
 
-        for (const id of allocated) {
-            if (data?.nodes[id]?.ascendancyName) {
-                continue;
-            }
-
-            const mode = sets[id];
-
-            if (mode === 1) {
-                setI++;
-            } else if (mode === 2) {
-                setII++;
-            } else {
-                basic++;
-            }
-        }
-
-        return { basic: basic + setI, setI, setII };
-    };
-
-    // The first budget a step would overspend (so the toast names it), comparing
-    // before/after counts - a build already over a cap stays editable.
-    const exceededCap = (
-        before: { basic: number; setI: number; setII: number },
-        after: { basic: number; setI: number; setII: number },
-    ): { label: string; limit: number } | null => {
-        if (before.basic <= pointLimit && after.basic > pointLimit) {
-            return { label: 'Passive point', limit: pointLimit };
-        }
-
-        if (before.setI <= weaponSetLimit && after.setI > weaponSetLimit) {
-            return { label: 'Weapon set I', limit: weaponSetLimit };
-        }
-
-        if (before.setII <= weaponSetLimit && after.setII > weaponSetLimit) {
-            return { label: 'Weapon set II', limit: weaponSetLimit };
-        }
-
-        return null;
-    };
+    // The first budget a step would overspend, against the live caps.
+    const capExceeded = (before: PointUsage, after: PointUsage) =>
+        exceededCap(before, after, {
+            basic: pointLimit,
+            weaponSet: weaponSetLimit,
+        });
 
     const commitAllocation = (
         allocated: number[],
@@ -487,9 +431,9 @@ export default function PassiveTreeView(props: PlanTreeProps) {
             graph,
         );
 
-        const cap = exceededCap(
-            pointUsage(current.allocated, current.weaponSets),
-            pointUsage(next.allocated, next.weaponSets),
+        const cap = capExceeded(
+            usageOf(current.allocated, current.weaponSets),
+            usageOf(next.allocated, next.weaponSets),
         );
 
         if (cap) {
@@ -529,9 +473,9 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                 graph,
             );
 
-            const cap = exceededCap(
-                pointUsage(current.allocated, current.weaponSets),
-                pointUsage(next.allocated, next.weaponSets),
+            const cap = capExceeded(
+                usageOf(current.allocated, current.weaponSets),
+                usageOf(next.allocated, next.weaponSets),
             );
 
             if (cap) {
@@ -698,46 +642,10 @@ export default function PassiveTreeView(props: PlanTreeProps) {
     const [search, setSearch] = useState('');
 
     // Skill ids whose node name OR stat description matches - drawn with a ring.
-    // Only the active ascendancy's nodes are on screen (relocated into the hub);
-    // every other ascendancy's nodes sit at far-flung raw positions, so matching
-    // them would ring empty spots on the tree's edges. Keep the active one - the
-    // renderer highlights it at its relocated position.
-    const searchMatches = useMemo<Set<number>>(() => {
-        const query = search.trim().toLowerCase();
-
-        if (query.length < SEARCH_MIN || !data) {
-            return new Set();
-        }
-
-        const hits = new Set<number>();
-
-        for (const [skill, node] of Object.entries(data.nodes)) {
-            if (node.ascendancyName && node.ascendancyName !== ascendancy) {
-                continue;
-            }
-
-            // An allocated "any attribute" node carries no Str/Dex/Int text on
-            // the base node - the pick lives in allocation. Resolve the chosen
-            // option so searching "intelligence" rings the node it was set to.
-            const chosen = chosenAttributeOption(node, allocation ?? undefined);
-
-            const matches =
-                node.name?.toLowerCase().includes(query) ||
-                node.stats?.some((stat) =>
-                    stat.toLowerCase().includes(query),
-                ) ||
-                chosen?.name.toLowerCase().includes(query) ||
-                chosen?.stats?.some((stat) =>
-                    stat.toLowerCase().includes(query),
-                );
-
-            if (matches) {
-                hits.add(Number(skill));
-            }
-        }
-
-        return hits;
-    }, [search, data, ascendancy, allocation]);
+    const searchMatches = useMemo<Set<number>>(
+        () => searchTreeNodes(data, search, ascendancy, allocation),
+        [search, data, ascendancy, allocation],
+    );
 
     // Frame every match (main tree only - ascendancy nodes sit off-canvas unless
     // their disc is open). Fired on submit so typing doesn't pan on every keypress.
@@ -919,7 +827,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
 
     // Live per-mode usage for the counters. Weapon-set counters show whenever a
     // set is in use, or always while editing so the budgets are visible up front.
-    const usage = pointUsage(allocation?.allocated ?? [], weaponSets);
+    const usage = usageOf(allocation?.allocated ?? [], weaponSets);
     const showWeaponSets = editable || usage.setI > 0 || usage.setII > 0;
 
     // Ascendancy points spent in the active disc, gauged against the flat cap.
@@ -1185,728 +1093,5 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                 )}
             </div>
         </div>
-    );
-}
-
-/* ===================================================================== chrome */
-
-/**
- * Node-name search: the same bronze {@link PLAQUE} shell as the rest of the
- * rail. Typing highlights matches live on the tree; Enter frames them. The match
- * count reads out at the end.
- */
-function SearchBox({
-    value,
-    onValue,
-    onSubmit,
-    matchCount,
-}: {
-    value: string;
-    onValue: (value: string) => void;
-    onSubmit: () => void;
-    matchCount: number;
-}) {
-    return (
-        <div className="relative min-w-[12rem] flex-1 md:w-64 md:flex-none">
-            <div
-                className={`flex h-10 items-center gap-1 pr-1 pl-3.5 transition-colors focus-within:border-[#a9842f] ${PLAQUE}`}
-            >
-                <SearchGlyph />
-                <input
-                    type="text"
-                    name="node-search"
-                    value={value}
-                    onChange={(event) => onValue(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                            event.preventDefault();
-                            onSubmit();
-                        }
-                    }}
-                    placeholder="Search name or stat…"
-                    aria-label="Search passive nodes by name or stat"
-                    spellCheck={false}
-                    // Same split as the PoB import field: typed text in plain Fontin
-                    // at a larger size, the placeholder in the bar's SmallCaps face.
-                    style={INPUT_FONT}
-                    className="h-full min-w-0 flex-1 bg-transparent text-base font-medium tracking-wide text-[#f5ecd8] outline-none placeholder:[font-family:'Fontin_SmallCaps',_'Cinzel',_serif] placeholder:text-sm placeholder:text-[#8a7850]"
-                />
-                {value !== '' && (
-                    <button
-                        type="button"
-                        onClick={() => onValue('')}
-                        title="Clear search"
-                        aria-label="Clear search"
-                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#8a7850] transition-colors hover:bg-[#f0c869]/10 hover:text-[#ecc878] focus-visible:text-[#ecc878] focus-visible:outline-none"
-                    >
-                        <ClearGlyph />
-                    </button>
-                )}
-                <Divider />
-                <span className="shrink-0 px-2 text-base font-medium tracking-wide text-[#f5ecd8] tabular-nums">
-                    {matchCount}
-                    <span className="text-[#ecc878]">
-                        {matchCount === 1 ? ' hit' : ' hits'}
-                    </span>
-                </span>
-            </div>
-        </div>
-    );
-}
-
-/**
- * The point budgets in one compact plaque, doubling as the paint toggle: each
- * segment is a budget (Basic, Weapon set I/II) showing its `used/limit`, coloured
- * in its mode tint. While editing the segments are radio buttons picking the
- * paint target (the active one glows filled); read-only they just read out.
- * Ascendancy, which isn't a paint mode, is appended as a static count. No ring
- * gauges - the numbers carry the read-out, so the bar fits a phone.
- */
-function BudgetBar({
-    mode,
-    onMode,
-    basic,
-    basicLimit,
-    weaponSets,
-    ascendancy,
-}: {
-    mode: AllocMode;
-    /** Paint-mode setter while editing; null read-only (segments aren't buttons). */
-    onMode: ((mode: AllocMode) => void) | null;
-    basic: number;
-    basicLimit: number;
-    /** Per-set usage + shared cap, or null to hide the weapon-set segments. */
-    weaponSets: { setI: number; setII: number; limit: number } | null;
-    /** Ascendancy usage + cap, or null to hide it. */
-    ascendancy: { used: number; limit: number } | null;
-}) {
-    const segments: {
-        value: AllocMode;
-        label: string;
-        color: string;
-        used: number;
-        limit: number;
-    }[] = [
-        {
-            value: 0,
-            label: 'Basic',
-            color: '#ecc878',
-            used: basic,
-            limit: basicLimit,
-        },
-    ];
-
-    if (weaponSets) {
-        segments.push(
-            {
-                value: 1,
-                label: 'I',
-                color: WEAPON_SET_HEX[1],
-                used: weaponSets.setI,
-                limit: weaponSets.limit,
-            },
-            {
-                value: 2,
-                label: 'II',
-                color: WEAPON_SET_HEX[2],
-                used: weaponSets.setII,
-                limit: weaponSets.limit,
-            },
-        );
-    }
-
-    const segmentLabel = (
-        label: string,
-        used: number,
-        limit: number,
-        active: boolean,
-    ): React.JSX.Element => (
-        <span className="flex items-center gap-1.5">
-            <span>{label}</span>
-            <span
-                className="text-[13px] tabular-nums"
-                style={{
-                    color: active
-                        ? '#0b0805'
-                        : used > limit
-                          ? '#e0a04f'
-                          : '#f5ecd8',
-                }}
-            >
-                {used}/{limit}
-            </span>
-        </span>
-    );
-
-    return (
-        <div
-            className={`flex h-10 items-center gap-2 ${PLAQUE}`}
-            role={onMode ? 'radiogroup' : undefined}
-            aria-label="Point budgets"
-        >
-            <span className="pl-2 text-[11px] font-semibold tracking-[0.14em] text-[#8a7850] uppercase">
-                Points
-            </span>
-            <Divider />
-            <div className="flex items-center gap-0.5">
-                {segments.map((segment) => {
-                    const active = mode === segment.value;
-                    const className =
-                        'flex h-7 items-center rounded-full px-2.5 text-sm font-semibold tracking-wide transition-colors';
-                    const style: CSSProperties = active
-                        ? { color: '#0b0805', background: segment.color }
-                        : { color: segment.color };
-
-                    return onMode ? (
-                        <button
-                            key={segment.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={active}
-                            onClick={() => onMode(segment.value)}
-                            className={className}
-                            style={style}
-                        >
-                            {segmentLabel(
-                                segment.label,
-                                segment.used,
-                                segment.limit,
-                                active,
-                            )}
-                        </button>
-                    ) : (
-                        <span
-                            key={segment.value}
-                            className={className}
-                            style={style}
-                        >
-                            {segmentLabel(
-                                segment.label,
-                                segment.used,
-                                segment.limit,
-                                active,
-                            )}
-                        </span>
-                    );
-                })}
-
-                {ascendancy && (
-                    <>
-                        <Divider />
-                        <span
-                            className="flex h-7 items-center rounded-full px-2.5 text-sm font-semibold tracking-wide"
-                            style={{ color: ASCENDANCY_HEX }}
-                            aria-label="Ascendancy points"
-                        >
-                            {segmentLabel(
-                                'Asc',
-                                ascendancy.used,
-                                ascendancy.limit,
-                                false,
-                            )}
-                        </span>
-                    </>
-                )}
-            </div>
-        </div>
-    );
-}
-
-/**
- * Wipe-the-whole-build button, in the same bronze plaque as the rest of the
- * canvas chrome. Clears every allocated node - basic, both weapon sets and the
- * ascendancy - in one click.
- */
-function ClearBuildButton({ onClear }: { onClear: () => void }) {
-    return (
-        <div className={`flex h-10 items-center ${PLAQUE}`}>
-            <button
-                type="button"
-                onClick={onClear}
-                title="Clear the whole build"
-                aria-label="Clear the whole build"
-                className="flex h-8 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold tracking-[0.14em] text-[#b39a64] uppercase transition-colors hover:bg-[#eb6060]/15 hover:text-[#eb6060] focus-visible:bg-[#eb6060]/15 focus-visible:text-[#eb6060] focus-visible:outline-none"
-            >
-                <ClearGlyph />
-                Clear
-            </button>
-        </div>
-    );
-}
-
-/**
- * Zoom + fullscreen as one engraved bar. View-only, both modes. Renders just the
- * plaque; the caller positions it.
- */
-function ZoomBar({
-    onZoomIn,
-    onZoomOut,
-    fullscreen,
-    onToggleFullscreen,
-}: {
-    onZoomIn: () => void;
-    onZoomOut: () => void;
-    fullscreen: boolean;
-    onToggleFullscreen: () => void;
-}) {
-    return (
-        <div className={`flex h-10 items-center gap-0.5 ${PLAQUE}`}>
-            <button
-                type="button"
-                onClick={onZoomIn}
-                title="Zoom in"
-                aria-label="Zoom in"
-                className={`${ICON_SEGMENT} text-lg leading-none`}
-            >
-                +
-            </button>
-            <button
-                type="button"
-                onClick={onZoomOut}
-                title="Zoom out"
-                aria-label="Zoom out"
-                className={`${ICON_SEGMENT} text-lg leading-none`}
-            >
-                −
-            </button>
-            <Divider />
-            <button
-                type="button"
-                onClick={onToggleFullscreen}
-                title={fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen'}
-                aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                className={ICON_SEGMENT}
-            >
-                <FullscreenIcon active={fullscreen} />
-            </button>
-        </div>
-    );
-}
-
-/** Magnifier glyph for the node search. */
-function SearchGlyph() {
-    return (
-        <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="shrink-0 text-[#8a7850]"
-            aria-hidden="true"
-        >
-            <circle cx="11" cy="11" r="7" />
-            <path d="M21 21l-4.3-4.3" />
-        </svg>
-    );
-}
-
-/** Sliders glyph for the mobile "Tools" toggle. */
-function ToolsGlyph() {
-    return (
-        <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="shrink-0"
-            aria-hidden="true"
-        >
-            <path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0" />
-            <circle cx="16" cy="6" r="2" />
-            <circle cx="8" cy="12" r="2" />
-            <circle cx="18" cy="18" r="2" />
-        </svg>
-    );
-}
-
-/* ================================================================== tooltip */
-
-const TOOLTIP_FRAME_URL: string | null = null;
-const TOOLTIP_FRAME_SLICE = 28;
-
-const ATTRIBUTE_PICKS: {
-    key: 'any' | 'str' | 'dex' | 'int';
-    label: string;
-    color: string;
-}[] = [
-    { key: 'any', label: 'Any', color: '#caa45c' },
-    { key: 'str', label: 'Strength', color: '#e06a6a' },
-    { key: 'dex', label: 'Dexterity', color: '#79c46a' },
-    { key: 'int', label: 'Intelligence', color: '#6aa6e0' },
-];
-
-const RARITY_TEXT: Record<string, string> = {
-    NORMAL: '#d6d6d6',
-    MAGIC: '#8888ff',
-    RARE: '#e8e84a',
-    UNIQUE: '#cf7a3a',
-};
-
-const TOOLTIP_TITLE: Record<NodeKind, string> = {
-    keystone: '#e7a23a',
-    notable: '#efe8d6',
-    mastery: '#b9a9ff',
-    jewel: '#efe8d6',
-    attribute: '#efe8d6',
-    normal: '#efe8d6',
-    classStart: '#e9c98a',
-    ascendancyStart: '#e9c98a',
-    ascendancyNormal: '#c5cdd9',
-    ascendancyNotable: '#e9c98a',
-};
-
-/**
- * Node tooltip styled like the in-game / Path of Building tooltip: an ornate
- * bronze frame, a kind-coloured title and the granted modifiers in passive-blue.
- * Follows the cursor, or pins above a node when a picker is anchored to it.
- */
-function NodeTooltip({
-    node,
-    kind,
-    pointer,
-    stage,
-    allocated,
-    attributeOption,
-    jewel,
-    anchor,
-    pick,
-}: {
-    node: TreeNode;
-    kind: NodeKind;
-    pointer: { x: number; y: number };
-    stage: HTMLElement | null;
-    allocated: boolean;
-    attributeOption?: NodeOption;
-    jewel?: JewelInfo;
-    anchor?: { x: number; y: number };
-    pick?: {
-        value?: 'str' | 'dex' | 'int';
-        onPick: (attribute: 'any' | 'str' | 'dex' | 'int') => void;
-        onClear: () => void;
-    };
-}) {
-    const [hoverPick, setHoverPick] = useState<string | null>(null);
-    const tipRef = useRef<HTMLDivElement>(null);
-    const [tip, setTip] = useState({ w: 0, h: 0 });
-    const width = stage?.clientWidth ?? 0;
-    const height = stage?.clientHeight ?? 0;
-
-    const stats = attributeOption ? attributeOption.stats : node.stats;
-
-    // Measure the rendered tooltip so its position can be clamped inside the
-    // stage - without the real size, an anchored or edge-of-screen tooltip would
-    // overflow the viewport (the whole point on a phone).
-    useLayoutEffect(() => {
-        const element = tipRef.current;
-
-        if (!element) {
-            return;
-        }
-
-        const next = { w: element.offsetWidth, h: element.offsetHeight };
-
-        // Only commit a real size change - the effect re-runs on every cursor move,
-        // and a same-size update would spin an extra render each time.
-        setTip((prev) =>
-            prev.w === next.w && prev.h === next.h ? prev : next,
-        );
-    }, [node, anchor, pointer.x, pointer.y, width, height, pick, jewel]);
-
-    // Place the tooltip and clamp it to the stage. Anchored (touch / picker): pin
-    // above the node, flipping below when there's no room. Cursor (desktop hover):
-    // offset from the pointer, flipping side/edge before it would spill out.
-    const margin = 8;
-    const gap = 14;
-    const offset = 18;
-    const clampPos = (value: number, size: number, extent: number): number =>
-        Math.max(
-            margin,
-            Math.min(value, Math.max(margin, extent - size - margin)),
-        );
-
-    let left: number;
-    let top: number;
-
-    if (anchor) {
-        left = clampPos(anchor.x - tip.w / 2, tip.w, width);
-        const above = anchor.y - gap - tip.h;
-        top = clampPos(above >= margin ? above : anchor.y + gap, tip.h, height);
-    } else {
-        left =
-            pointer.x + offset + tip.w > width - margin
-                ? pointer.x - offset - tip.w
-                : pointer.x + offset;
-        top =
-            pointer.y + offset + tip.h > height - margin
-                ? pointer.y - offset - tip.h
-                : pointer.y + offset;
-        left = clampPos(left, tip.w, width);
-        top = clampPos(top, tip.h, height);
-    }
-
-    // Hidden until measured, so it never flashes at an unclamped position.
-    const style: CSSProperties = { left, top, opacity: tip.w ? 1 : 0 };
-
-    const body = (
-        <>
-            <div
-                className="px-4 pt-2.5 pb-1.5 text-center text-xl sm:px-5 sm:text-2xl"
-                style={{
-                    color: TOOLTIP_TITLE[kind],
-                    fontFamily: "'Fontin SmallCaps', 'Cinzel', serif",
-                }}
-            >
-                {node.name || `#${node.skill}`}
-            </div>
-
-            <div
-                className="mx-4 mb-2 h-px"
-                style={{
-                    background:
-                        'linear-gradient(90deg,transparent,rgba(201,160,90,0.55),transparent)',
-                }}
-            />
-
-            {stats.length > 0 && (
-                <ul className="space-y-1 px-4 pb-2.5 text-left text-sm leading-snug sm:px-5 sm:text-lg">
-                    {stats.map((stat, index) => (
-                        <li key={index} className="text-[#aeb6ff]">
-                            {highlightNumbers(stat)}
-                        </li>
-                    ))}
-                </ul>
-            )}
-
-            {node.flavourText && (
-                <div className="px-4 pb-2.5 text-left text-sm text-[#9a8b6e] italic sm:px-5 sm:text-lg">
-                    {node.flavourText}
-                </div>
-            )}
-
-            {jewel && (
-                <div className="px-5 pb-3 text-center">
-                    {jewel.icon && (
-                        <img
-                            src={jewel.icon}
-                            alt=""
-                            className="mx-auto mb-1.5 h-10 w-10 object-contain"
-                            onError={(event) => {
-                                event.currentTarget.style.display = 'none';
-                            }}
-                        />
-                    )}
-                    <div
-                        className="text-xl"
-                        style={{
-                            color: RARITY_TEXT[jewel.rarity] ?? '#d6d6d6',
-                        }}
-                    >
-                        {jewel.name || jewel.baseType}
-                    </div>
-                    {jewel.name &&
-                        jewel.baseType &&
-                        jewel.name !== jewel.baseType && (
-                            <div className="text-sm text-[#9a8b6e]">
-                                {jewel.baseType}
-                            </div>
-                        )}
-                    {jewel.mods.length > 0 && (
-                        <ul className="mt-1.5 space-y-1 text-left text-lg leading-snug">
-                            {jewel.mods.map((mod, index) => (
-                                <li key={index} className="text-[#aeb6ff]">
-                                    {highlightNumbers(mod)}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-            )}
-
-            {pick ? (
-                <div
-                    className="px-4 pt-0.5 pb-3"
-                    style={{ pointerEvents: 'none' }}
-                >
-                    <div className="pointer-events-auto flex flex-col gap-1.5">
-                        {ATTRIBUTE_PICKS.map((option) => {
-                            const active = (pick.value ?? 'any') === option.key;
-                            const hover = hoverPick === option.key;
-
-                            return (
-                                <button
-                                    key={option.key}
-                                    type="button"
-                                    onClick={() => pick.onPick(option.key)}
-                                    onPointerEnter={() =>
-                                        setHoverPick(option.key)
-                                    }
-                                    onPointerLeave={() =>
-                                        setHoverPick((current) =>
-                                            current === option.key
-                                                ? null
-                                                : current,
-                                        )
-                                    }
-                                    className="w-full rounded-[3px] border px-2.5 py-1 text-center text-sm font-semibold tracking-[0.06em] transition-all"
-                                    style={{
-                                        color: active
-                                            ? '#0a0a0a'
-                                            : option.color,
-                                        backgroundColor: active
-                                            ? option.color
-                                            : hover
-                                              ? `${option.color}26`
-                                              : 'transparent',
-                                        borderColor:
-                                            active || hover
-                                                ? option.color
-                                                : `${option.color}66`,
-                                        boxShadow: active
-                                            ? `0 0 10px ${option.color}77`
-                                            : 'none',
-                                    }}
-                                >
-                                    {option.label}
-                                </button>
-                            );
-                        })}
-                        <button
-                            type="button"
-                            onClick={pick.onClear}
-                            className="mt-0.5 w-full rounded-[3px] border border-[#46454d] px-2.5 py-1 text-center text-xs font-semibold tracking-[0.16em] text-[#a7acb8] uppercase transition-all hover:bg-[#a7acb8] hover:text-[#0a0a0a]"
-                        >
-                            Clear path
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                allocated && (
-                    <div className="px-5 pb-2.5 text-center text-xs tracking-[0.16em] text-[#6f9f8f] uppercase">
-                        Allocated
-                    </div>
-                )
-            )}
-        </>
-    );
-
-    // Width capped to the viewport so a wide node never spills off a phone; left/
-    // top are computed (and clamped) above, so no translate is needed.
-    const base =
-        'pointer-events-none absolute z-20 w-max max-w-[min(92vw,42rem)] shadow-xl shadow-black/70 transition-opacity duration-75';
-    const font: CSSProperties = { fontFamily: "'Fontin', serif" };
-
-    if (TOOLTIP_FRAME_URL) {
-        return (
-            <div
-                ref={tipRef}
-                className={base}
-                style={{
-                    ...style,
-                    ...font,
-                    borderStyle: 'solid',
-                    borderWidth: TOOLTIP_FRAME_SLICE,
-                    borderImage: `url(${TOOLTIP_FRAME_URL}) ${TOOLTIP_FRAME_SLICE} fill stretch`,
-                }}
-            >
-                {body}
-            </div>
-        );
-    }
-
-    return (
-        <div ref={tipRef} className={base} style={{ ...style, ...font }}>
-            <div
-                className="relative rounded-[4px] p-[2.5px]"
-                style={{
-                    background:
-                        'linear-gradient(150deg,#9a7c42 0%,#4a3c20 35%,#241d10 70%,#5a4827 100%)',
-                    boxShadow:
-                        '0 0 0 1px rgba(0,0,0,0.75), 0 10px 26px rgba(0,0,0,0.6)',
-                }}
-            >
-                <div
-                    className="rounded-[2.5px] bg-gradient-to-b from-[#16130d] to-[#070605] pt-0.5"
-                    style={{
-                        boxShadow:
-                            'inset 0 0 0 1px rgba(201,160,90,0.22), inset 0 1px 10px rgba(0,0,0,0.7)',
-                    }}
-                >
-                    {body}
-                </div>
-                <TooltipCorner className="absolute -top-px -left-px" />
-                <TooltipCorner className="absolute -top-px -right-px rotate-90" />
-                <TooltipCorner className="absolute -right-px -bottom-px rotate-180" />
-                <TooltipCorner className="absolute -bottom-px -left-px -rotate-90" />
-            </div>
-        </div>
-    );
-}
-
-function TooltipCorner({ className }: { className?: string }) {
-    return (
-        <svg
-            className={className}
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            aria-hidden="true"
-        >
-            <path
-                d="M1.5 15 V5 Q1.5 1.5 5 1.5 H15"
-                stroke="#caa45c"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-            />
-            <path
-                d="M4 8 L8 4"
-                stroke="#e6c87e"
-                strokeWidth="1"
-                strokeLinecap="round"
-            />
-            <path d="M3.5 3.5 l1.6 1.6 -1.6 1.6 -1.6 -1.6 z" fill="#eccd84" />
-        </svg>
-    );
-}
-
-function highlightNumbers(text: string) {
-    return text.split(/(\d+(?:\.\d+)?)/g).map((part, index) =>
-        /^\d/.test(part) ? (
-            <span key={index} className="font-medium text-[#d4d9ff]">
-                {part}
-            </span>
-        ) : (
-            <span key={index}>{part}</span>
-        ),
-    );
-}
-
-function FullscreenIcon({ active }: { active: boolean }) {
-    return (
-        <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-        >
-            {active ? (
-                <path d="M9 3v3a3 3 0 0 1-3 3H3m18 0h-3a3 3 0 0 1-3-3V3M3 15h3a3 3 0 0 1 3 3v3m6 0v-3a3 3 0 0 1 3-3h3" />
-            ) : (
-                <path d="M3 9V5a2 2 0 0 1 2-2h4M21 9V5a2 2 0 0 0-2-2h-4M3 15v4a2 2 0 0 0 2 2h4m12-6v4a2 2 0 0 1-2 2h-4" />
-            )}
-        </svg>
     );
 }
