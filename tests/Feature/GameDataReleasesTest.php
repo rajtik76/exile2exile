@@ -1,6 +1,8 @@
 <?php
 
+use App\Jobs\StageGameData;
 use App\Services\GameDataReleases;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
@@ -283,4 +285,51 @@ test('poe2:link-game-data refuses to replace a real directory without --force', 
     $this->artisan('poe2:link-game-data')->assertFailed();
 
     expect(is_link($public.'/tree/current'))->toBeFalse();
+});
+
+test('poe2:restage-data dispatches StageGameData for an explicit version, unforced', function () {
+    fakeGameDataRoot();
+    Bus::fake();
+
+    $this->artisan('poe2:restage-data', ['version' => '4.5.5.0'])->assertSuccessful();
+
+    Bus::assertDispatched(StageGameData::class, fn ($job) => $job->version === '4.5.5.0' && $job->force === false);
+});
+
+test('poe2:restage-data --force dispatches StageGameData with force set', function () {
+    fakeGameDataRoot();
+    Bus::fake();
+
+    $this->artisan('poe2:restage-data', ['version' => '4.5.5.0', '--force' => true])->assertSuccessful();
+
+    Bus::assertDispatched(StageGameData::class, fn ($job) => $job->version === '4.5.5.0' && $job->force === true);
+});
+
+test('poe2:restage-data defaults to the currently live version when none is given', function () {
+    fakeGameDataRoot();
+    fakeGameDataRelease('4.5.5.0');
+    app(GameDataReleases::class)->activate('4.5.5.0');
+    Bus::fake();
+
+    $this->artisan('poe2:restage-data')->assertSuccessful();
+
+    Bus::assertDispatched(StageGameData::class, fn ($job) => $job->version === '4.5.5.0');
+});
+
+test('poe2:restage-data fails when no version is given and nothing is live', function () {
+    fakeGameDataRoot();
+    Bus::fake();
+
+    $this->artisan('poe2:restage-data')->assertFailed();
+
+    Bus::assertNotDispatched(StageGameData::class);
+});
+
+test('poe2:restage-data rejects a malformed version', function () {
+    fakeGameDataRoot();
+    Bus::fake();
+
+    $this->artisan('poe2:restage-data', ['version' => '../evil'])->assertFailed();
+
+    Bus::assertNotDispatched(StageGameData::class);
 });

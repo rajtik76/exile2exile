@@ -22,7 +22,9 @@ use RuntimeException;
  *
  * Re-dispatching for an already staged version skips the extraction and only
  * re-triggers the CI validation, so the watcher can safely nudge a release that
- * never went live (a lost dispatch, a failed run fixed later).
+ * never went live (a lost dispatch, a failed run fixed later). Pass force to
+ * re-run the extraction anyway - needed when only the extractor packages
+ * changed (poe2:restage-data), since the game patch itself did not move.
  */
 class StageGameData implements ShouldQueue
 {
@@ -33,7 +35,7 @@ class StageGameData implements ShouldQueue
     /** The extractor downloads and re-encodes the whole art set; give it headroom. */
     public int $timeout = 1800;
 
-    public function __construct(public string $version) {}
+    public function __construct(public string $version, public bool $force = false) {}
 
     /**
      * Seconds to wait between retries.
@@ -56,7 +58,7 @@ class StageGameData implements ShouldQueue
             throw new RuntimeException("refusing to stage an invalid version: {$this->version}");
         }
 
-        if (! $releases->has($this->version)) {
+        if ($this->force || ! $releases->has($this->version)) {
             $this->extract($releases);
         }
 
