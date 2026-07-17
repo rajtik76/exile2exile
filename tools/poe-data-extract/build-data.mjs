@@ -19,12 +19,14 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Worker } from 'node:worker_threads';
 
-import { createCdnSource, buildStatIndex, encodePng } from '@poe2-toolkit/ggpk';
-import { extractItems } from '@poe2-toolkit/item-extractor';
-import { extractGems } from '@poe2-toolkit/gem-extractor';
-import { extractRunes } from '@poe2-toolkit/rune-extractor';
-import { extractMods } from '@poe2-toolkit/mod-extractor';
+import {
+    createCdnSource,
+    buildStatIndex,
+    encodePng,
+    mapConcurrent,
+} from '@poe2-toolkit/ggpk';
 
 import {
     buildModCatalogue,
@@ -132,9 +134,13 @@ async function buildTooltipHeaderIcons() {
     const icons = {};
     let missing = 0;
 
-    for (const [outPath, ddsPath] of Object.entries(TOOLTIP_HEADER_TEXTURES)) {
+    const entries = Object.entries(TOOLTIP_HEADER_TEXTURES);
+    const decoded = await mapConcurrent(entries, 16, async ([outPath, ddsPath]) => {
         const img = await source.dds(ddsPath);
+        return { outPath, img };
+    });
 
+    for (const { outPath, img } of decoded) {
         if (!img) {
             missing += 1;
             continue;
@@ -167,12 +173,41 @@ async function buildTooltipHeaderIcons() {
     return { icons, report: { packed: Object.keys(icons).length, missing } };
 }
 
-const tooltipHeader = await buildTooltipHeaderIcons();
+// The four table extractors (items/gems/runes/mods) are CPU-bound - table
+// parsing plus sharp DDS/PNG decode - so overlapping them with a plain
+// Promise.all on the main thread wouldn't help; Node's JS execution is
+// single-threaded and that work doesn't yield to the event loop. Each runs on
+// its own worker thread instead, giving genuine multi-core use. Every worker
+// builds its own `source` over the same on-disk cacheDir (safe: worst case on
+// a cold entry is a duplicate CDN fetch, never corruption) since a CdnSource
+// itself isn't structured-clone-safe across threads.
+const WORKER_PATH = fileURLToPath(new URL('./extract-worker.mjs', import.meta.url));
 
-const items = await extractItems(source);
-const gems = await extractGems(source);
-const runes = await extractRunes(source);
-const modData = (await extractMods(source)).data;
+function runExtractor(name) {
+    return new Promise((resolvePromise, reject) => {
+        const worker = new Worker(WORKER_PATH, {
+            workerData: { name, patch, cacheDir: CACHE_DIR, tablesDir: TABLES_DIR },
+        });
+        worker.once('message', (result) => {
+            resolvePromise(result);
+        });
+        worker.once('error', reject);
+        worker.once('exit', (code) => {
+            if (code !== 0) {
+                reject(new Error(`extract-worker "${name}" exited with code ${code}`));
+            }
+        });
+    });
+}
+
+const [tooltipHeader, items, gems, runes, modExtract] = await Promise.all([
+    buildTooltipHeaderIcons(),
+    runExtractor('items'),
+    runExtractor('gems'),
+    runExtractor('runes'),
+    runExtractor('mods'),
+]);
+const modData = modExtract.data;
 
 // Essence-granted mods carry no positive spawn weight (an essence targets item
 // classes directly), so their class gate is joined from the EssenceMods table.
