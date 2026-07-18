@@ -1,8 +1,7 @@
 import { expect, test } from 'vitest';
 import { itemErrors } from '@/lib/itemRules';
-import type { ModInfo, ModMap } from '@/lib/modLines';
 import { MAX_ITEM_NAME_LENGTH } from '@/types/planner';
-import type { ItemPlan } from '@/types/planner';
+import type { ItemMod, ItemPlan } from '@/types/planner';
 
 function item(overrides: Partial<ItemPlan> = {}): ItemPlan {
     return {
@@ -20,45 +19,40 @@ function item(overrides: Partial<ItemPlan> = {}): ItemPlan {
     };
 }
 
-/** A resolved mod, defaulting to a single-range life prefix. */
-function mod(overrides: Partial<ModInfo> = {}): ModInfo {
+/** A matched stat, defaulting to a single-range life prefix. */
+function stat(overrides: Partial<ItemMod> = {}): ItemMod {
     return {
-        id: 'IncreasedLife1',
-        name: '',
-        group: 'IncreasedLife',
+        modId: 'IncreasedLife1',
+        text: '+15 to maximum Life',
+        name: null,
         type: 'prefix',
+        family: 'IncreasedLife',
         tier: 1,
-        level: 1,
-        stats: ['+(10-19) to maximum Life'],
         rolls: [{ stat: 'base_maximum_life', min: 10, max: 19 }],
-        families: ['IncreasedLife'],
+        values: [15],
         ...overrides,
     };
 }
 
-/** A mod map built from the given mods, keyed by id. */
-function modMap(...mods: ModInfo[]): ModMap {
-    return Object.fromEntries(mods.map((entry) => [entry.id, entry]));
-}
-
-const fireResist = mod({
-    id: 'FireResist1',
-    type: 'suffix',
-    group: 'FireResistance',
-    stats: ['+(6-10)% to Fire Resistance'],
-    rolls: [{ stat: 'base_maximum_mana', min: 6, max: 10 }],
-    families: ['FireResistance'],
-});
+const fireResist = (overrides: Partial<ItemMod> = {}) =>
+    stat({
+        modId: 'FireResist1',
+        text: '+8% to Fire Resistance',
+        type: 'suffix',
+        family: 'FireResistance',
+        rolls: [{ stat: 'base_maximum_mana', min: 6, max: 10 }],
+        values: [8],
+        ...overrides,
+    });
 
 test('a legal item has no errors', () => {
     expect(
         itemErrors(
             'body',
             item({
-                stats: [{ modId: 'FireResist1', values: [8] }],
+                stats: [fireResist()],
                 sockets: [{ type: 'rune', id: 'RuneA' }],
             }),
-            modMap(fireResist),
         ),
     ).toEqual([]);
 });
@@ -66,13 +60,13 @@ test('a legal item has no errors', () => {
 test('a rare flask or charm is an error, a rare gear item is not', () => {
     const rare = item({ rarity: 'rare' });
 
-    expect(itemErrors('flask1', rare, {})).toContain(
+    expect(itemErrors('flask1', rare)).toContain(
         'A flask or charm cannot be rare.',
     );
-    expect(itemErrors('charm2', rare, {})).toContain(
+    expect(itemErrors('charm2', rare)).toContain(
         'A flask or charm cannot be rare.',
     );
-    expect(itemErrors('body', rare, {})).not.toContain(
+    expect(itemErrors('body', rare)).not.toContain(
         'A flask or charm cannot be rare.',
     );
 });
@@ -82,26 +76,43 @@ test('an item name above the max length is an error', () => {
         name: 'x'.repeat(MAX_ITEM_NAME_LENGTH + 1),
     });
 
-    expect(itemErrors('body', over, {})).toContain(
+    expect(itemErrors('body', over)).toContain(
         `Item name cannot exceed ${MAX_ITEM_NAME_LENGTH} characters.`,
     );
     expect(
-        itemErrors(
-            'body',
-            item({ name: 'x'.repeat(MAX_ITEM_NAME_LENGTH) }),
-            {},
-        ),
+        itemErrors('body', item({ name: 'x'.repeat(MAX_ITEM_NAME_LENGTH) })),
     ).toEqual([]);
 });
 
 test('a value outside its tier range is an error', () => {
     const errors = itemErrors(
         'body',
-        item({ stats: [{ modId: 'FireResist1', values: [99] }] }),
-        modMap(fireResist),
+        item({ stats: [fireResist({ values: [99] })] }),
     );
 
     expect(errors).toContain("A modifier's value is outside its tier's range.");
+});
+
+test('an unmatched (plain-text) stat is never an error', () => {
+    const errors = itemErrors(
+        'body',
+        item({
+            stats: [
+                {
+                    modId: null,
+                    text: 'Some custom or dead-affix line',
+                    name: null,
+                    type: null,
+                    family: null,
+                    tier: null,
+                    rolls: null,
+                    values: [],
+                },
+            ],
+        }),
+    );
+
+    expect(errors).toEqual([]);
 });
 
 test('a normal item with any modifier is an error', () => {
@@ -109,9 +120,8 @@ test('a normal item with any modifier is an error', () => {
         'body',
         item({
             rarity: 'normal',
-            stats: [{ modId: 'FireResist1', values: [8] }],
+            stats: [fireResist()],
         }),
-        modMap(fireResist),
     );
 
     expect(errors).toContain('A normal item cannot carry modifiers.');
@@ -123,17 +133,18 @@ test('a magic item carries at most one prefix', () => {
         item({
             rarity: 'magic',
             stats: [
-                { modId: 'IncreasedLife1', values: [15] },
-                { modId: 'IncreasedLife2', values: [25] },
+                stat({
+                    modId: 'IncreasedLife1',
+                    family: 'IncreasedLife1',
+                }),
+                stat({
+                    modId: 'IncreasedLife2',
+                    family: 'IncreasedLife2',
+                    rolls: [{ stat: 'base_maximum_life', min: 20, max: 29 }],
+                    values: [25],
+                }),
             ],
         }),
-        modMap(
-            mod(),
-            mod({
-                id: 'IncreasedLife2',
-                rolls: [{ stat: 'base_maximum_life', min: 20, max: 29 }],
-            }),
-        ),
     );
 
     expect(errors).toContain('Magic items carry at most 1 prefix modifier.');
@@ -144,17 +155,15 @@ test('two modifiers from the same family are an error', () => {
         'body',
         item({
             stats: [
-                { modId: 'IncreasedLife1', values: [15] },
-                { modId: 'IncreasedLife2', values: [25] },
+                stat({ modId: 'IncreasedLife1', family: 'IncreasedLife' }),
+                stat({
+                    modId: 'IncreasedLife2',
+                    family: 'IncreasedLife',
+                    rolls: [{ stat: 'base_maximum_life', min: 20, max: 29 }],
+                    values: [25],
+                }),
             ],
         }),
-        modMap(
-            mod(),
-            mod({
-                id: 'IncreasedLife2',
-                rolls: [{ stat: 'base_maximum_life', min: 20, max: 29 }],
-            }),
-        ),
     );
 
     expect(errors).toContain('Two modifiers share a mutual-exclusion group.');
@@ -170,9 +179,9 @@ test('more sockets than the slot allows is an error', () => {
 
     // Three fit a helmet (two natural plus one from a Vaal corruption), four do not.
     expect(
-        itemErrors('helmet', item({ sockets: sockets.slice(0, 3) }), {}),
+        itemErrors('helmet', item({ sockets: sockets.slice(0, 3) })),
     ).toEqual([]);
-    expect(itemErrors('helmet', item({ sockets }), {})).toContain(
+    expect(itemErrors('helmet', item({ sockets }))).toContain(
         'This slot holds at most 3 rune sockets.',
     );
 
@@ -185,7 +194,6 @@ test('more sockets than the slot allows is an error', () => {
                 base: { type: 'unique', id: 'Greymake' },
                 sockets,
             }),
-            {},
         ),
     ).toEqual([]);
 });
@@ -194,7 +202,7 @@ test('any socket on jewellery or a belt is an error', () => {
     const withSocket = item({ sockets: [{ type: 'rune', id: 'A' }] });
 
     for (const slot of ['amulet', 'ring1', 'ring2', 'belt']) {
-        expect(itemErrors(slot, withSocket, {})).toContain(
+        expect(itemErrors(slot, withSocket)).toContain(
             'This slot cannot hold rune sockets.',
         );
     }
@@ -205,9 +213,8 @@ test('a unique with author modifiers is an error, but its properties are allowed
         'body',
         item({
             rarity: 'unique',
-            stats: [{ modId: 'IncreasedLife1', values: [100] }],
+            stats: [stat({ values: [100] })],
         }),
-        modMap(mod()),
     );
     // A unique's defences are the only way to record them, so they're legal.
     const withProps = itemErrors(
@@ -223,7 +230,6 @@ test('a unique with author modifiers is an error, but its properties are allowed
                 block: 0,
             },
         }),
-        {},
     );
 
     expect(withMod).toContain(
@@ -244,7 +250,6 @@ test('quality above the ceiling is an error, 73% is legal', () => {
                 block: 0,
             },
         }),
-        {},
     );
 
     // "+X% to Maximum Quality" mods and implicits stack well past the ordinary 20%
@@ -262,7 +267,6 @@ test('quality above the ceiling is an error, 73% is legal', () => {
                     block: 0,
                 },
             }),
-            {},
         ),
     ).toEqual([]);
 });
@@ -279,7 +283,6 @@ test('all three defence types at once are legal (triple-hybrid bases exist)', ()
                 block: 0,
             },
         }),
-        {},
     );
 
     expect(errors).toEqual([]);
@@ -297,7 +300,6 @@ test('a hybrid item with two defence types is legal', () => {
                 block: 0,
             },
         }),
-        {},
     );
 
     expect(errors).toEqual([]);
@@ -311,7 +313,6 @@ test('a clean unique is legal', () => {
                 rarity: 'unique',
                 base: { type: 'unique', id: 'Bramblejack' },
             }),
-            {},
         ),
     ).toEqual([]);
 });

@@ -8,8 +8,8 @@ import EditorSection from '@/components/planner/equipment/EditorSection';
 import {
     clampedProp,
     countModTypes,
+    familiesInUse as computeFamiliesInUse,
     fullTypesInUse as computeFullTypes,
-    groupsInUse as computeGroupsInUse,
     normalizeItem,
     visiblePropFields,
     withBasePicked,
@@ -20,7 +20,6 @@ import Socket from '@/components/planner/equipment/Socket';
 import { MOD_TYPE_STYLE } from '@/components/planner/equipment/style';
 import UniqueModRow from '@/components/planner/equipment/UniqueModRow';
 import ModPicker from '@/components/planner/ModPicker';
-import { useMods } from '@/components/planner/ModsContext';
 import ReferencePicker from '@/components/planner/ReferencePicker';
 import { useReferences } from '@/components/planner/ReferencesContext';
 import { TextInput } from '@/components/planner/ui/Field';
@@ -28,8 +27,6 @@ import { Modal } from '@/components/planner/ui/Overlay';
 import { Divider } from '@/components/planner/ui/Text';
 import { deriveRarity } from '@/lib/itemRarity';
 import { itemErrors } from '@/lib/itemRules';
-import { defaultModValues } from '@/lib/modLines';
-import type { ModInfo, ModMap } from '@/lib/modLines';
 import { refKey } from '@/lib/planReferences';
 import type { PlanReference } from '@/lib/planReferences';
 import { weaponStatLines } from '@/lib/weaponStats';
@@ -41,7 +38,7 @@ import {
     RARITY_COLOR,
     SLOT_MAX_SOCKETS,
 } from '@/types/planner';
-import type { ItemPlan, ItemProps, RuneRef } from '@/types/planner';
+import type { ItemMod, ItemPlan, ItemProps, RuneRef } from '@/types/planner';
 
 const NUMBER_INPUT =
     'pl-text-sm w-full rounded-[var(--pl-radius)] border border-[var(--pl-input-border)] bg-[var(--pl-input-bg)] px-2 py-1 text-[var(--pl-text)] outline-none focus-visible:border-[var(--pl-focus)]';
@@ -130,7 +127,6 @@ export default function SlotEditor({
     onClose: () => void;
 }) {
     const { map, addReference } = useReferences();
-    const { map: modMap, addMod } = useMods();
     const [pickerOpen, setPickerOpen] = useState(!item.base);
     const [modPickerOpen, setModPickerOpen] = useState(false);
     const [socketPicker, setSocketPicker] = useState<number | null>(null);
@@ -183,7 +179,7 @@ export default function SlotEditor({
         : undefined;
     // Rarity is derived, never chosen (unique base → Unique; else the prefix/suffix
     // count decides). commit() keeps the stored item.rarity in sync on every change.
-    const rarity = deriveRarity(item.base, item.stats, modMap);
+    const rarity = deriveRarity(item.base, item.stats);
     const rarityColor = RARITY_COLOR[rarity];
     const isUnique = item.base?.type === 'unique';
     // A unique can carry more sockets than its slot's rares (Greymake wears four on a
@@ -201,7 +197,7 @@ export default function SlotEditor({
         slot.flask || slot.trinket
             ? MODS_PER_RARITY.magic
             : MODS_PER_RARITY.rare;
-    const modCounts = countModTypes(item.stats, modMap);
+    const modCounts = countModTypes(item.stats);
 
     const implicits = reference?.implicits ?? [];
     // A unique's own mods/implicits, structured - rendered with editable value inputs
@@ -216,13 +212,13 @@ export default function SlotEditor({
 
     // The derived weapon-stat lines (base WeaponTypes row + local mods + quality);
     // empty for anything that isn't a weapon (or a Spirit-granting sceptre).
-    const weaponLines = weaponStatLines(reference, item, modMap);
+    const weaponLines = weaponStatLines(reference, item);
 
     // Done stays disabled while the item is illegal (an already-committed error, e.g.
     // too many affixes) or a unique-mod field holds an uncommitted invalid value - the
     // author fixes it (or clears the slot) first, so a broken item never reaches the
     // form. The server re-validates the whole request on submit either way.
-    const errors = itemErrors(slot.key, item, modMap, reference);
+    const errors = itemErrors(slot.key, item, reference);
     const doneDisabled = errors.length > 0 || hasInvalidInput;
 
     // Unlike Done, closing (✕ / Esc / clicking the backdrop) always works - Cancel
@@ -243,12 +239,9 @@ export default function SlotEditor({
     }
 
     // Every mutation flows through commit so the stored rarity always matches the base
-    // and mods, and mods stay grouped prefixes-first (suffixes below). `extra` folds in
-    // a mod not yet in the shared map (a fresh pick). See normalizeItem.
-    function commit(next: ItemPlan, extra?: ModMap): void {
-        const lookup = extra ? { ...modMap, ...extra } : modMap;
-
-        onChange(normalizeItem(next, lookup));
+    // and mods, and mods stay grouped prefixes-first (suffixes below). See normalizeItem.
+    function commit(next: ItemPlan): void {
+        onChange(normalizeItem(next));
     }
 
     function pickBase(picked: PlanReference): void {
@@ -284,47 +277,32 @@ export default function SlotEditor({
         commit(withUniqueModValues(item, key, values));
     }
 
-    function addModifier(mod: ModInfo): void {
-        addMod(mod);
-        commit(
-            {
-                ...item,
-                stats: [
-                    ...item.stats,
-                    { modId: mod.id, values: defaultModValues(mod) },
-                ],
-            },
-            { [mod.id]: mod },
-        );
+    function addModifier(mod: ItemMod): void {
+        commit({ ...item, stats: [...item.stats, mod] });
         setModPickerOpen(false);
     }
 
-    function replaceModifier(index: number, mod: ModInfo): void {
-        addMod(mod);
-        commit(
-            {
-                ...item,
-                stats: item.stats.map((stat, position) =>
-                    position === index
-                        ? { modId: mod.id, values: defaultModValues(mod) }
-                        : stat,
-                ),
-            },
-            { [mod.id]: mod },
-        );
+    function replaceModifier(index: number, mod: ItemMod): void {
+        commit({
+            ...item,
+            stats: item.stats.map((stat, position) =>
+                position === index ? mod : stat,
+            ),
+        });
     }
 
-    // Affix groups already on the item - a group can hold only one mod, so the picker
-    // hides any group already present (skipping `exceptIndex`, the row being changed).
-    function groupsInUse(exceptIndex?: number): string[] {
-        return computeGroupsInUse(item.stats, modMap, exceptIndex);
+    // Mutual-exclusion families already on the item - two mods sharing one can't both be
+    // on it, so the picker hides any family already present (skipping `exceptIndex`, the
+    // row being changed).
+    function familiesInUse(exceptIndex?: number): string[] {
+        return computeFamiliesInUse(item.stats, exceptIndex);
     }
 
     // Generation types already at their cap (e.g. 3 prefixes) - the picker hides them so
     // an over-cap mod can't be added. `exceptIndex` is the row being changed, whose own
     // type is freed for the swap.
     function fullTypesInUse(exceptIndex?: number): Array<'prefix' | 'suffix'> {
-        return computeFullTypes(item.stats, modMap, maxPerType, exceptIndex);
+        return computeFullTypes(item.stats, maxPerType, exceptIndex);
     }
 
     function setSocket(index: number, rune: RuneRef | null): void {
@@ -685,12 +663,9 @@ export default function SlotEditor({
                                                 // A rule splits the prefix block from the
                                                 // suffix block (stats are sorted that way).
                                                 const dividesHere =
-                                                    modMap[stat.modId]?.type ===
-                                                        'suffix' &&
-                                                    modMap[
-                                                        item.stats[index - 1]
-                                                            ?.modId
-                                                    ]?.type === 'prefix';
+                                                    stat.type === 'suffix' &&
+                                                    item.stats[index - 1]
+                                                        ?.type === 'prefix';
 
                                                 return (
                                                     <Fragment key={index}>
@@ -730,11 +705,6 @@ export default function SlotEditor({
                                                         )}
                                                         <ModRow
                                                             stat={stat}
-                                                            mod={
-                                                                modMap[
-                                                                    stat.modId
-                                                                ]
-                                                            }
                                                             base={
                                                                 item.base
                                                                     ?.type ===
@@ -746,34 +716,17 @@ export default function SlotEditor({
                                                             categories={
                                                                 slot.categories
                                                             }
-                                                            excludeGroups={groupsInUse(
+                                                            excludeFamilies={familiesInUse(
                                                                 index,
                                                             )}
                                                             fullTypes={fullTypesInUse(
                                                                 index,
                                                             )}
-                                                            onReplace={(
-                                                                picked,
-                                                            ) =>
+                                                            onChange={(next) =>
                                                                 replaceModifier(
                                                                     index,
-                                                                    picked,
+                                                                    next,
                                                                 )
-                                                            }
-                                                            onChange={(next) =>
-                                                                commit({
-                                                                    ...item,
-                                                                    stats: item.stats.map(
-                                                                        (
-                                                                            current,
-                                                                            position,
-                                                                        ) =>
-                                                                            position ===
-                                                                            index
-                                                                                ? next
-                                                                                : current,
-                                                                    ),
-                                                                })
                                                             }
                                                             onRemove={() =>
                                                                 commit({
@@ -820,9 +773,9 @@ export default function SlotEditor({
                                                             categories={
                                                                 slot.categories
                                                             }
-                                                            excludeGroups={groupsInUse()}
+                                                            excludeFamilies={familiesInUse()}
                                                             fullTypes={fullTypesInUse()}
-                                                            onPick={addModifier}
+                                                            onSave={addModifier}
                                                             onClose={() =>
                                                                 setModPickerOpen(
                                                                     false,

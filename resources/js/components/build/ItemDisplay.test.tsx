@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
 import { HoverTooltip, ItemCard } from '@/components/build/ItemDisplay';
 import type { Item } from '@/components/build/ItemDisplay';
@@ -49,41 +49,20 @@ test('a property at 0 or absent is hidden', () => {
     expect(screen.queryByText('Quality:')).toBeNull();
 });
 
-test('holding Alt swaps the summed lines for the per-affix P/S-tier breakdown', () => {
+test('explicit mod lines render as plain text, one per line', () => {
     render(
         <ItemCard
             item={item({
-                explicitMods: ['135% increased Armour and Evasion'],
-                modDetails: [
-                    {
-                        type: 'prefix',
-                        tier: 7,
-                        lines: ['94(92-100)% increased Armour and Evasion'],
-                    },
-                    {
-                        type: 'suffix',
-                        tier: 6,
-                        lines: ['+34(31-35)% to Cold Resistance'],
-                    },
+                explicitMods: [
+                    '135% increased Armour and Evasion',
+                    '+34% to Cold Resistance',
                 ],
             })}
         />,
     );
 
-    // Default: the summed line shows.
     expect(screen.getByText('135% increased Armour and Evasion')).toBeTruthy();
-
-    fireEvent.keyDown(window, { key: 'Alt' });
-
-    // Alt held: per-affix breakdown with P<tier>/S<tier> badges.
-    expect(screen.getByText('P7')).toBeTruthy();
-    expect(screen.getByText('S6')).toBeTruthy();
-    expect(
-        screen.getByText('94(92-100)% increased Armour and Evasion'),
-    ).toBeTruthy();
-
-    fireEvent.keyUp(window, { key: 'Alt' });
-    expect(screen.queryByText('P7')).toBeNull();
+    expect(screen.getByText('+34% to Cold Resistance')).toBeTruthy();
 });
 
 test('a corrupted item shows the red Corrupted footer', () => {

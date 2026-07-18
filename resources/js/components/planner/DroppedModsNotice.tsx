@@ -1,16 +1,21 @@
-import { EQUIPMENT_SLOTS } from '@/types/planner';
+import { EQUIPMENT_SLOTS, WEAPON_SWAP_SLOTS } from '@/types/planner';
 
 /** Planner slot key → its paper-doll label ("gloves" → "Gloves"). */
 const SLOT_LABEL: Record<string, string> = Object.fromEntries(
-    EQUIPMENT_SLOTS.map((slot) => [slot.key, slot.label]),
+    [...EQUIPMENT_SLOTS, ...WEAPON_SWAP_SLOTS].map((slot) => [
+        slot.key,
+        slot.label,
+    ]),
 );
 
 /**
- * A dismissible notice listing the author-mod lines a PoB import could not map to a game
- * affix, grouped by the item they came from and shown verbatim, line by line. The import
- * leaves these off rather than inventing a roll (PoB folds item quality into a defence
- * line, and a few wordings have no GGPK affix to reverse-match), so this is how the author
- * sees exactly what - and on which item - was not carried over. It stays until dismissed.
+ * A dismissible notice listing the mod lines a PoB import could not explain, grouped by
+ * the item they came from and shown verbatim, line by line. Ordinary equipment mods are
+ * never dropped any more - an unrecognised wording is kept as a plain-text stat on the
+ * item instead (see `PobPlanMapper::matchMods` / `plainTextStats`), so this notice now
+ * only ever fires for a UNIQUE item's own fixed mod lines: the handful neither its synced
+ * catalogue nor the general affix matcher can explain (PoB folding item quality into a
+ * composite value, or genuine flavour text with no roll at all). It stays until dismissed.
  */
 export default function DroppedModsNotice({
     dropped,
@@ -37,13 +42,14 @@ export default function DroppedModsNotice({
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="pl-text-sm font-medium text-[var(--pl-text-strong)]">
-                        {total} modifier{total === 1 ? '' : 's'} couldn't be
-                        imported
+                        {total} unique modifier{total === 1 ? '' : 's'} couldn't
+                        be imported
                     </p>
                     <p className="pl-text-xs mt-0.5 text-[var(--pl-muted)]">
-                        PoB shows composite values (item quality folded into a
-                        roll) and some wordings that don't map to a game affix.
-                        These lines were left off - everything else imported.
+                        A unique's own fixed mods - PoB shows composite values
+                        (item quality folded into a roll) and a few wordings
+                        that don't map to a rolled value. These lines were left
+                        off - everything else imported.
                     </p>
                 </div>
                 <button

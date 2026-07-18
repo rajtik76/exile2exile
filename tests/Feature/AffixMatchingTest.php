@@ -14,6 +14,21 @@ use App\Support\Planner\Matching\MatchContext;
  * renderings and aggregate decomposition - not which real GGPK affixes exist.
  */
 
+/** A full stat snapshot as {@see AffixMatcher::match} now returns it. */
+function affixSnapshot(string $modId, array $values, string $text, string $name, string $type, string $family, int $tier, array $rolls): array
+{
+    return [
+        'modId' => $modId,
+        'text' => $text,
+        'name' => $name,
+        'type' => $type,
+        'family' => $family,
+        'tier' => $tier,
+        'rolls' => $rolls,
+        'values' => $values,
+    ];
+}
+
 /** A one-stat affix candidate in the matcher's flattened shape. */
 function pureCandidate(string $id, string $type, string $template, int $min, int $max, string $family): array
 {
@@ -60,8 +75,8 @@ describe('AggregateSplitter', function () {
 
         expect($unmatched)->toBe([])
             ->and($context->stats)->toBe([
-                ['modId' => 'EsNatural', 'values' => [80]],
-                ['modId' => 'EsCraft', 'values' => [67]],
+                ['modId' => 'EsNatural', 'values' => [80], 'text' => '80% increased Energy Shield'],
+                ['modId' => 'EsCraft', 'values' => [67], 'text' => '67% increased Energy Shield'],
             ])
             ->and($context->counts['prefix'])->toBe(2);
     });
@@ -113,8 +128,8 @@ describe('AggregateSplitter', function () {
         // candidate list doesn't know sits alongside it (its family lookup falls back).
         $context = new MatchContext;
         $context->stats = [
-            ['modId' => 'LifePure', 'values' => [36]],
-            ['modId' => 'UnknownMod', 'values' => [1]],
+            ['modId' => 'LifePure', 'values' => [36], 'text' => '+36 to maximum Life'],
+            ['modId' => 'UnknownMod', 'values' => [1], 'text' => 'Unknown line'],
         ];
         $context->counts = ['prefix' => 1, 'suffix' => 1];
         $context->families = ['LifePure'];
@@ -123,10 +138,10 @@ describe('AggregateSplitter', function () {
 
         expect($unmatched)->toBe([])
             ->and($context->stats)->toBe([
-                ['modId' => 'UnknownMod', 'values' => [1]],
-                ['modId' => 'ArmourLifeHybrid', 'values' => [30, 10]],
-                ['modId' => 'ArmourPure', 'values' => [64]],
-                ['modId' => 'LifePure', 'values' => [26]],
+                ['modId' => 'UnknownMod', 'values' => [1], 'text' => 'Unknown line'],
+                ['modId' => 'ArmourLifeHybrid', 'values' => [30, 10], 'text' => "30% increased Armour\n+10 to maximum Life"],
+                ['modId' => 'ArmourPure', 'values' => [64], 'text' => '64% increased Armour'],
+                ['modId' => 'LifePure', 'values' => [26], 'text' => '+26 to maximum Life'],
             ])
             ->and($context->counts)->toBe(['prefix' => 3, 'suffix' => 1]);
     });
@@ -148,14 +163,14 @@ describe('AggregateSplitter', function () {
         ];
         $lines = ['94% increased Armour', '+36 to maximum Life'];
         $context = new MatchContext;
-        $context->stats = [['modId' => 'LifePure', 'values' => [36]]];
+        $context->stats = [['modId' => 'LifePure', 'values' => [36], 'text' => '+36 to maximum Life']];
         $context->counts = ['prefix' => 1, 'suffix' => 0];
         $context->families = ['LifePure'];
 
         $unmatched = new AggregateSplitter()->decompose(['94% increased Armour'], $lines, $candidates, 3, $context);
 
         expect($unmatched)->toBe(['94% increased Armour'])
-            ->and($context->stats)->toBe([['modId' => 'LifePure', 'values' => [36]]]);
+            ->and($context->stats)->toBe([['modId' => 'LifePure', 'values' => [36], 'text' => '+36 to maximum Life']]);
     });
 
     it('leaves a line without numbers or within the pure ceiling unsplit', function () {
@@ -213,7 +228,9 @@ describe('AffixMatcher', function () {
             'Item', ['default'], null, 3, false,
         );
 
-        expect($result['stats'])->toBe([['modId' => 'FireResist1', 'values' => [8]]])
+        expect($result['stats'])->toBe([
+            affixSnapshot('FireResist1', [8], '+8% to Fire Resistance', 'of the Kiln', 'suffix', 'FireResist', 1, [['stat' => 'fire_resist', 'min' => 5, 'max' => 10]]),
+        ])
             ->and($result['dropped'])->toBe(['+15% to Fire Resistance']);
     });
 
@@ -223,7 +240,12 @@ describe('AffixMatcher', function () {
         // Over every tier's ceiling but within 2x of the top tier: real roll inflated
         // by catalyst quality, stored clamped - but only where catalysts apply at all.
         expect($this->matcher->match([$line], 'Item', ['default'], null, 3, true))
-            ->toBe(['stats' => [['modId' => 'FireResist2', 'values' => [20]]], 'dropped' => []])
+            ->toBe([
+                'stats' => [
+                    affixSnapshot('FireResist2', [20], $line, 'of the Furnace', 'suffix', 'FireResist', 2, [['stat' => 'fire_resist', 'min' => 11, 'max' => 20]]),
+                ],
+                'dropped' => [],
+            ])
             ->and($this->matcher->match([$line], 'Item', ['default'], null, 3, false))
             ->toBe(['stats' => [], 'dropped' => [$line]]);
     });
@@ -243,9 +265,9 @@ describe('AffixMatcher', function () {
 
         expect($result['dropped'])->toBe([])
             ->and($result['stats'])->toBe([
-                ['modId' => 'ReducedCharges1', 'values' => [-45]],
-                ['modId' => 'ChargeGain1', 'values' => [150]],
-                ['modId' => 'InstantRecovery1', 'values' => [100]],
+                affixSnapshot('ReducedCharges1', [-45], '45% reduced Charges used', 'Sparing', 'prefix', 'ChargesUsed', 1, [['stat' => 'charges_used', 'min' => -60, 'max' => -40]]),
+                affixSnapshot('ChargeGain1', [150], '2.5 Charges gained per Second', 'Replenishing', 'prefix', 'ChargeGain', 1, [['stat' => 'charge_recovery_every_minute', 'min' => 120, 'max' => 180]]),
+                affixSnapshot('InstantRecovery1', [100], 'Instant Recovery', 'of Bursting', 'suffix', 'InstantRecovery', 1, [['stat' => 'instant_recovery', 'min' => 100, 'max' => 100]]),
             ]);
     });
 });

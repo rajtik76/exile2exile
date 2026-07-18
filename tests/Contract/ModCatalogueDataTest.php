@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Pob\ModCatalogue;
+use App\Support\Planner\PlanSchema;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -40,4 +41,46 @@ it('every catalogue mod carries a rendered stat line and well-formed rolls', fun
     }
 
     expect($broken)->toBe([]);
+});
+
+/**
+ * A stat saved before the frozen-snapshot shape existed carries only `{modId, values}`
+ * - no `text` at all. `PlanItemSchema::canonicalMod` must re-freeze it against the live
+ * catalogue rather than silently drop the mod the first time such a plan (predating
+ * `MigrateBuildPlanStatSnapshots`) is viewed or saved.
+ */
+it('canonicalize re-freezes an old-shape stat (modId + values, no text) instead of dropping it', function () {
+    $data = PlanSchema::canonicalize([
+        'tabs' => PlanSchema::baseTabs(),
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'slots' => [
+                        'body' => [
+                            'base' => ['type' => 'base', 'id' => 'Advanced Plate Vest'],
+                            'stats' => [
+                                ['modId' => 'IncreasedLife5', 'values' => [65]],
+                                // An id no longer in the catalogue can't be recovered
+                                // (no text was ever stored for it) and is dropped.
+                                ['modId' => 'ThisModIdIsNotReal', 'values' => [1]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    expect($data['sections']['act-1']['items']['slots']['body']['stats'])->toBe([
+        [
+            'modId' => 'IncreasedLife5',
+            'text' => '+65 to maximum Life',
+            'name' => 'Stout',
+            'type' => 'prefix',
+            'family' => 'IncreasedLife',
+            'tier' => 5,
+            'rolls' => [['stat' => 'base_maximum_life', 'min' => 60, 'max' => 69]],
+            'values' => [65],
+        ],
+    ]);
 });

@@ -224,8 +224,8 @@ test('canonicalize coerces equipment items and drops empty or unknown slots', fu
                             'rarity' => 'rare',
                             'base' => ['type' => 'base', 'id' => 'Advanced Plate Vest'],
                             'stats' => [
-                                ['modId' => 'IncreasedLife5', 'values' => [100]],
-                                ['modId' => '   ', 'values' => []],
+                                ['modId' => 'IncreasedLife5', 'text' => '+100 to maximum Life', 'values' => [100]],
+                                ['modId' => '   ', 'text' => '', 'values' => []],
                                 '+40 Spirit',
                             ],
                         ],
@@ -242,15 +242,17 @@ test('canonicalize coerces equipment items and drops empty or unknown slots', fu
 
     expect(array_keys($slots))->toBe(['helmet', 'body'])
         ->and($slots['body'])->toBe([
-            'rarity' => 'rare',
+            // Derived from its one (unmatched, typeless) stat, not the submitted
+            // "rare" - see PlanItemSchema::rarityOf.
+            'rarity' => 'magic',
             'base' => ['type' => 'base', 'id' => 'Advanced Plate Vest'],
             'name' => '',
             'corrupted' => false,
             'itemLevel' => null,
             'props' => ['quality' => 0, 'armour' => 0, 'evasion' => 0, 'energyShield' => 0, 'block' => 0],
-            // The blank-id entry and the bare string are dropped; only a real mod ref stays.
+            // The blank-text entry and the bare string are dropped; only a real snapshot stays.
             'stats' => [
-                ['modId' => 'IncreasedLife5', 'values' => [100]],
+                ['modId' => 'IncreasedLife5', 'text' => '+100 to maximum Life', 'name' => null, 'type' => null, 'family' => null, 'tier' => null, 'rolls' => null, 'values' => [100]],
             ],
             'uniqueMods' => [],
             'sockets' => [],
@@ -269,10 +271,10 @@ test('canonicalize keeps mod references and coerces their values', function () {
                             'rarity' => 'rare',
                             'base' => ['type' => 'base', 'id' => 'Advanced Plate Vest'],
                             'stats' => [
-                                ['modId' => 'IncreasedLife5', 'values' => [100]],
-                                ['modId' => 'AddedColdDamage3', 'values' => ['4', '7']],
+                                ['modId' => 'IncreasedLife5', 'text' => '+100 to maximum Life', 'values' => [100]],
+                                ['modId' => 'AddedColdDamage3', 'text' => 'Adds 4 to 7 Cold Damage', 'values' => ['4', '7']],
                                 ['values' => [10]],
-                                ['modId' => '', 'values' => []],
+                                ['modId' => '', 'text' => '', 'values' => []],
                                 'nope',
                             ],
                         ],
@@ -282,10 +284,10 @@ test('canonicalize keeps mod references and coerces their values', function () {
         ],
     ]);
 
-    // String-numeric values are coerced; entries with no mod id are dropped.
+    // String-numeric values are coerced; entries with no text are dropped.
     expect($data['sections']['act-1']['items']['slots']['body']['stats'])->toBe([
-        ['modId' => 'IncreasedLife5', 'values' => [100]],
-        ['modId' => 'AddedColdDamage3', 'values' => [4, 7]],
+        ['modId' => 'IncreasedLife5', 'text' => '+100 to maximum Life', 'name' => null, 'type' => null, 'family' => null, 'tier' => null, 'rolls' => null, 'values' => [100]],
+        ['modId' => 'AddedColdDamage3', 'text' => 'Adds 4 to 7 Cold Damage', 'name' => null, 'type' => null, 'family' => null, 'tier' => null, 'rolls' => null, 'values' => [4, 7]],
     ]);
 });
 
@@ -482,14 +484,18 @@ test('flask and charm slots are accepted equipment slots', function () {
 });
 
 test('a rare flask or charm is rejected but a rare gear item is allowed', function () {
-    expect(PlanSchema::itemErrors('flask1', ['rarity' => 'rare']))
+    // Rarity is derived from the stat count, not the submitted `rarity` (see
+    // PlanItemSchema::rarityOf) - 3+ stats is always rare.
+    $threeStats = [['text' => 'a'], ['text' => 'b'], ['text' => 'c']];
+
+    expect(PlanSchema::itemErrors('flask1', ['stats' => $threeStats]))
         ->toContain('A flask or charm cannot be rare.')
-        ->and(PlanSchema::itemErrors('charm2', ['rarity' => 'rare']))
+        ->and(PlanSchema::itemErrors('charm2', ['stats' => $threeStats]))
         ->toContain('A flask or charm cannot be rare.')
-        ->and(PlanSchema::itemErrors('body', ['rarity' => 'rare']))
+        ->and(PlanSchema::itemErrors('body', ['stats' => $threeStats]))
         ->not->toContain('A flask or charm cannot be rare.')
-        // Magic and normal flasks are fine.
-        ->and(PlanSchema::itemErrors('flask1', ['rarity' => 'magic']))
+        // A flask with 1-2 stats derives magic, which is fine.
+        ->and(PlanSchema::itemErrors('flask1', ['stats' => [['text' => 'a']]]))
         ->not->toContain('A flask or charm cannot be rare.');
 });
 

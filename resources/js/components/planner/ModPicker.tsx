@@ -1,12 +1,16 @@
-import { useRef, useState } from 'react';
-import Button from '@/components/planner/Button';
 import SearchPicker from '@/components/planner/SearchPicker';
+import { renderModLines } from '@/lib/modLines';
 import type { ModInfo, ModRoll } from '@/lib/modLines';
 import planner from '@/routes/planner';
+import type { ItemMod } from '@/types/planner';
 
 /** One tier of an affix in a search result. */
 interface ModTier {
     id: string;
+    /** The real GGG affix name (e.g. "of Decay") - what `BuildFilterBuilder` keys a
+     *  trade filter's `HasExplicitMod` block on, distinct from the group's own
+     *  number-free `label`. */
+    name: string;
     tier: number | null;
     level: number;
     stats: string[];
@@ -30,13 +34,10 @@ interface ModGroup {
     tiers: ModTier[];
 }
 
-/**
- * One navigable row: either an affix group (first step, expands to its tiers) or a
- * single tier of the expanded group (second step, the actual pick).
- */
-type ModOption =
-    | { kind: 'group'; group: ModGroup }
-    | { kind: 'tier'; group: ModGroup; tier: ModTier };
+/** One suggestion row: one tier of one affix, or the free-typed text itself. */
+type Suggestion =
+    | { kind: 'tier'; group: ModGroup; tier: ModTier }
+    | { kind: 'text'; text: string };
 
 const TYPE_STYLE: Record<'prefix' | 'suffix', React.CSSProperties> = {
     prefix: { color: '#8fb3ff', backgroundColor: '#8fb3ff20' },
@@ -51,11 +52,14 @@ const CRAFT_BADGES = [
     ['influence', 'Influence', '#e09a70'],
 ] as const;
 
+/** The always-present "commit exactly what you typed" row's stable key. */
+const CUSTOM_KEY = 'custom';
+
 /**
  * Word-based match, mirroring the server's affix search: every whitespace-separated
  * term must appear somewhere in the haystack, in any order. A plain substring test
- * would drop tiers the first step just offered ("to attack" finds the affix by words,
- * but is not a contiguous substring of "+3 to Level of all Attack Skills").
+ * would drop tiers the search just offered ("to attack" finds the affix by words, but
+ * is not a contiguous substring of "+3 to Level of all Attack Skills").
  */
 export function matchesTerms(haystack: string, query: string): boolean {
     const hay = haystack.toLowerCase();
@@ -67,7 +71,7 @@ export function matchesTerms(haystack: string, query: string): boolean {
         .every((term) => hay.includes(term));
 }
 
-/** Turn a picked tier into the resolved mod stored + rendered on the item. */
+/** Turn a picked tier into its resolved mod (for rendering its concrete text). */
 function toModInfo(group: ModGroup, tier: ModTier): ModInfo {
     return {
         id: tier.id,
@@ -83,59 +87,62 @@ function toModInfo(group: ModGroup, tier: ModTier): ModInfo {
 }
 
 /**
- * The item modifier picker: searches the real GGPK affixes a base can roll (filtered to
- * the base, or the slot's categories before a base is picked). Two steps - pick an affix,
- * then a tier - both navigable by arrow keys via the shared {@link SearchPicker}, so it
- * matches the reference picker. Affixes already on the item are hidden via `excludeGroups`.
+ * A picked tier's frozen snapshot at its default (minimum) roll - the same shape
+ * `PlanItemSchema::canonicalMod` stores server-side. Mirrors `ModCatalogue::modSnapshot`:
+ * `text` is the tier's rendered line(s) joined by "\n", `family` its first mutual-
+ * exclusion group.
+ */
+function toItemMod(group: ModGroup, tier: ModTier): ItemMod {
+    const mod = toModInfo(group, tier);
+    const values = mod.rolls.map((roll) => roll.min);
+
+    return {
+        modId: mod.id,
+        text: renderModLines(mod, values).join('\n'),
+        name: tier.name,
+        type: mod.type,
+        family: mod.families[0] ?? null,
+        tier: mod.tier,
+        rolls: mod.rolls,
+        values,
+    };
+}
+
+/**
+ * The item modifier picker: a free-text box (type, or paste a whole line straight out
+ * of PoB) with live typeahead suggestions from the real GGPK affixes a base can roll.
+ * Clicking a suggestion commits its exact wording at its tier's default roll; picking
+ * nothing and confirming the typed text instead commits it verbatim as a plain-text
+ * line (no `modId`) - the server stores it either way (see `PlanItemSchema::canonicalMod`),
+ * so an unrecognised wording or a dead affix is never a blocker, just unmatched.
  */
 export default function ModPicker({
     base,
     categories,
     type,
-    excludeGroups = [],
+    excludeFamilies = [],
     fullTypes = [],
-    initialGroup,
-    onPick,
+    initialText = '',
+    onSave,
     onClose,
 }: {
     base: string | null;
     categories: string[];
     /** Restrict the offered affixes to this generation type (the section being filled). */
     type?: 'prefix' | 'suffix';
-    /** Affix groups already on the item - hidden, since a group holds only one mod. */
-    excludeGroups?: string[];
+    /** Mutual-exclusion families already on the item - hidden, mirroring the server's
+     *  one-mod-per-family rule (see `ModCatalogue::modErrors`). A stat only carries its
+     *  frozen `family`, not the affix's own tier-ladder id, so exclusion is family-wide
+     *  rather than the single exact wording a `Change` row is replacing. */
+    excludeFamilies?: string[];
     /** Generation types already at their cap (e.g. 3 prefixes) - hidden entirely. */
     fullTypes?: Array<'prefix' | 'suffix'>;
-    /** When changing an existing mod, the group of the current mod - the picker opens
-     * straight on its tier ladder; the back button returns to the affix list with this
-     * row pre-highlighted, so every other affix stays reachable. */
-    initialGroup?: string;
-    onPick: (mod: ModInfo) => void;
+    /** Prefills the search box - the current stat's own text when changing one. */
+    initialText?: string;
+    onSave: (mod: ItemMod) => void;
     onClose: () => void;
 }) {
-    // The affix whose tier ladder is open (second step), or null while listing affixes.
-    const [expanded, setExpanded] = useState<ModGroup | null>(null);
-    // Auto-expand to `initialGroup` runs once, on the first affix-list fetch.
-    const autoExpanded = useRef(false);
-
-    async function search(query: string): Promise<ModOption[]> {
-        // Second step: the expanded affix's tiers, filtered by the search box.
-        if (expanded) {
-            const needle = query.trim();
-            const tiers = needle
-                ? expanded.tiers.filter((tier) =>
-                      matchesTerms(tier.stats.join(' '), needle),
-                  )
-                : expanded.tiers;
-
-            return tiers.map((tier) => ({
-                kind: 'tier',
-                group: expanded,
-                tier,
-            }));
-        }
-
-        // First step: the affixes the base can roll.
+    async function search(query: string): Promise<Suggestion[]> {
         const url = planner.mods.url({
             query: {
                 base: base ?? undefined,
@@ -149,135 +156,98 @@ export default function ModPicker({
             headers: { Accept: 'application/json' },
         });
 
-        if (!response.ok) {
-            return [];
-        }
+        const body: { results?: ModGroup[] } = response.ok
+            ? await response.json()
+            : {};
 
-        const body: { results?: ModGroup[] } = await response.json();
-        const exclude = new Set(excludeGroups);
+        const exclude = new Set(excludeFamilies);
         const fullType = new Set(fullTypes);
 
-        const options: ModOption[] = (body.results ?? [])
-            .filter(
-                (group) =>
-                    !exclude.has(group.group) &&
-                    !fullType.has(group.type) &&
-                    (!type || group.type === type),
-            )
-            .map((group) => ({ kind: 'group', group }));
+        const groups = (body.results ?? []).filter(
+            (group) =>
+                !group.tiers.some((tier) =>
+                    tier.families.some((family) => exclude.has(family)),
+                ) &&
+                !fullType.has(group.type) &&
+                (!type || group.type === type),
+        );
 
-        // First open of a "change" picker: jump straight to the current mod's ladder.
-        // The back button returns to this list (current affix pre-highlighted there).
-        if (!autoExpanded.current && initialGroup) {
-            autoExpanded.current = true;
-            const match = options.find(
-                (option) =>
-                    option.kind === 'group' &&
-                    option.group.group === initialGroup,
-            );
+        // Every matching tier, across every matching affix - a flat list, not a
+        // group/tier drilldown, so a click commits a concrete wording in one step.
+        const tiers: Suggestion[] = groups.flatMap((group) =>
+            [...group.tiers]
+                .sort((a, b) => (a.tier ?? 0) - (b.tier ?? 0))
+                .map((tier) => ({ kind: 'tier' as const, group, tier })),
+        );
 
-            if (match && match.kind === 'group') {
-                setExpanded(match.group);
-            }
-        }
+        // Always offer "use exactly what you typed" - the fallback for a wording the
+        // catalogue doesn't know (a typo, or an affix a future patch has dropped).
+        const trimmed = query.trim();
 
-        return options;
+        return trimmed === ''
+            ? tiers
+            : [...tiers, { kind: 'text', text: trimmed }];
     }
 
-    function select(option: ModOption): void {
-        if (option.kind === 'group') {
-            setExpanded(option.group);
+    function select(option: Suggestion): void {
+        if (option.kind === 'text') {
+            onSave({
+                modId: null,
+                text: option.text,
+                name: null,
+                type: null,
+                family: null,
+                tier: null,
+                rolls: null,
+                values: [],
+            });
         } else {
-            onPick(toModInfo(option.group, option.tier));
+            onSave(toItemMod(option.group, option.tier));
         }
-    }
 
-    const header = expanded ? (
-        <div className="mb-2 flex items-start gap-2 px-1.5">
-            <span className="flex w-8 shrink-0 justify-start">
-                <Button
-                    icon
-                    onClick={() => setExpanded(null)}
-                    title="Back to all modifiers"
-                >
-                    <svg
-                        viewBox="0 0 16 16"
-                        aria-hidden
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="size-[1.1em]"
-                    >
-                        <path d="M10 4 L6 8 L10 12" />
-                    </svg>
-                </Button>
-            </span>
-            <span className="pl-text-xs min-w-0 flex-1 pt-1 font-medium break-words text-[var(--pl-text)]">
-                {expanded.label}
-            </span>
-        </div>
-    ) : undefined;
+        onClose();
+    }
 
     return (
-        <SearchPicker<ModOption>
-            // Remount on step change so the affix query doesn't linger as a tier
-            // filter (and vice versa) - each step starts with a blank search box.
-            key={
-                expanded
-                    ? `tiers:${expanded.group}|${expanded.type}`
-                    : 'affixes'
-            }
+        <SearchPicker<Suggestion>
             width={440}
-            highlightKey={
-                !expanded && initialGroup ? `g:${initialGroup}` : undefined
-            }
+            initialQuery={initialText}
             search={search}
+            // The typed-text fallback stays pre-highlighted only when opening blank (the
+            // "add a new mod" flow), so Enter right after typing commits it without an
+            // arrow key - arrowing away still reaches every real suggestion underneath.
+            // A "Change" reopen seeds `initialText` with the row's own current text, most
+            // often an already-matched mod's - pre-highlighting the fallback there would
+            // let a bare Enter silently downgrade a matched affix to plain text, so it's
+            // left to an explicit pick instead.
+            highlightKey={initialText === '' ? CUSTOM_KEY : undefined}
             keyOf={(option) =>
-                option.kind === 'group'
-                    ? `g:${option.group.group}`
-                    : `t:${option.tier.id}`
+                option.kind === 'text' ? CUSTOM_KEY : `t:${option.tier.id}`
             }
             onSelect={select}
             onClose={onClose}
-            placeholder={
-                expanded
-                    ? 'Filter tiers…'
-                    : 'Search modifiers (life, cold res…)'
-            }
-            header={header}
+            placeholder="Type or paste a modifier line…"
             emptyText="No modifiers roll here."
             deps={[
-                expanded,
                 base,
                 categories.join(','),
                 type,
-                excludeGroups.join(','),
+                excludeFamilies.join(','),
                 fullTypes.join(','),
             ]}
             renderOption={(option) =>
-                option.kind === 'group' ? (
+                option.kind === 'text' ? (
+                    <span className="pl-text-sm min-w-0 flex-1 text-[var(--pl-muted)] italic">
+                        Use as typed: “{option.text}”
+                    </span>
+                ) : (
                     <>
                         <span
                             className="pl-text-2xs mt-0.5 rounded-xs px-1 py-px font-semibold uppercase"
                             style={TYPE_STYLE[option.group.type]}
                         >
                             {option.group.type === 'prefix' ? 'P' : 'S'}
-                        </span>
-                        <span className="pl-text-sm min-w-0 flex-1 break-words text-[var(--pl-text)]">
-                            {option.group.label}
-                        </span>
-                        <span className="pl-text-2xs shrink-0 whitespace-nowrap text-[var(--pl-faint)]">
-                            {option.group.tiers.length}T ›
-                        </span>
-                    </>
-                ) : (
-                    <>
-                        <span className="pl-text-2xs mt-0.5 w-8 shrink-0 text-[var(--pl-faint)]">
-                            {option.tier.tier !== null
-                                ? `T${option.tier.tier}`
-                                : '-'}
+                            {option.tier.tier ?? ''}
                         </span>
                         <span className="pl-text-xs min-w-0 flex-1 break-words text-[var(--pl-text)]">
                             {option.tier.stats.join(', ')}

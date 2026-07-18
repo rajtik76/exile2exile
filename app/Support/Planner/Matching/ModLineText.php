@@ -46,4 +46,35 @@ final class ModLineText
     {
         return is_float($value) && floor($value) === $value ? (int) $value : $value;
     }
+
+    /**
+     * Render a set of number-free templates back into display text by substituting each
+     * "#" placeholder with the corresponding value in order, magnitude only (the
+     * template's own wording already carries the sign, e.g. "reduced"). Best effort: used
+     * to reconstruct a readable line for a modifier with no single literal source line -
+     * an aggregate-split synthetic stat, or a stored plan being backfilled with no
+     * original text - unlike a real matched line, which keeps its exact literal wording
+     * instead of going through this.
+     *
+     * @param  list<string>  $templates
+     * @param  list<int|float>  $values
+     */
+    public static function render(array $templates, array $values): string
+    {
+        $lines = [];
+        $index = 0;
+
+        foreach ($templates as $template) {
+            $line = $template;
+
+            while (str_contains($line, '#') && array_key_exists($index, $values)) {
+                $line = preg_replace('/#/', (string) self::asWhole(abs($values[$index])), $line, 1) ?? $line;
+                $index++;
+            }
+
+            $lines[] = $line;
+        }
+
+        return implode("\n", $lines);
+    }
 }

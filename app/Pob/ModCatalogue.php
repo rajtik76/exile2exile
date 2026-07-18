@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Pob;
 
+use App\Support\Planner\Matching\ModLineText;
 use Closure;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Facades\Storage;
@@ -85,6 +86,50 @@ final class ModCatalogue
     }
 
     /**
+     * Freeze a matched modifier (id + rolled values) into the plan's stored shape: every
+     * field a caller could ever need to display or re-validate it later, copied out of
+     * the catalogue at write time rather than kept as a live reference. This is the seam
+     * that makes a stored plan immune to a future GGPK patch renaming or dropping the
+     * id - nothing here is ever resolved against the catalogue again.
+     *
+     * $text is the exact line(s) as rendered (kept verbatim, e.g. by the reverse-matcher);
+     * when the caller has none to offer (a blank string), one is best-effort rendered from
+     * the mod's own template instead. Falls back to a bare, unmatched-looking snapshot
+     * when the id is unknown, so a caller can still store the text rather than lose it.
+     *
+     * @param  list<int|float>  $values
+     * @return array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}
+     */
+    public function modSnapshot(string $modId, array $values, string $text): array
+    {
+        $mod = $this->index()[$modId] ?? null;
+
+        if ($mod === null) {
+            return [
+                'modId' => null,
+                'text' => $text,
+                'name' => null,
+                'type' => null,
+                'family' => null,
+                'tier' => null,
+                'rolls' => null,
+                'values' => [],
+            ];
+        }
+
+        return [
+            'modId' => $mod['id'],
+            'text' => $text !== '' ? $text : ModLineText::render(array_map(ModLineText::template(...), $mod['stats']), $values),
+            'name' => $mod['name'],
+            'type' => $mod['type'],
+            'family' => $mod['families'][0] ?? null,
+            'tier' => $mod['tier'],
+            'rolls' => $mod['rolls'],
+            'values' => $values,
+        ];
+    }
+
+    /**
      * Search the affixes that can roll on a base (its {@see IconResolver::itemTags}),
      * grouped into tier ladders. Each group is one affix (a GGG ModType) with its tiers
      * ascending; the search matches the affix wording (numbers ignored), ranked prefix
@@ -99,7 +144,7 @@ final class ModCatalogue
      * @param  ?string  $modDomain  the base's mod domain; null = match none
      * @param  list<string>  $baseTags  the base's mod-matching tags; empty = match none
      * @param  ?string  $itemClass  the base's GGPK item class, gating essence-only mods; null = lenient
-     * @return list<array{group: string, type: string, label: string, tiers: list<array{id: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, desecrated: bool, essence: bool, genesis: bool, influence: bool, ladder: bool}>}>
+     * @return list<array{group: string, type: string, label: string, tiers: list<array{id: string, name: string, tier: ?int, level: int, stats: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, desecrated: bool, essence: bool, genesis: bool, influence: bool, ladder: bool}>}>
      */
     public function search(?string $modDomain, array $baseTags, string $query, int $limit = 60, ?string $itemClass = null): array
     {
@@ -141,6 +186,12 @@ final class ModCatalogue
 
             $groups[$key]['tiers'][] = [
                 'id' => $mod['id'],
+                // The real GGG affix name (e.g. "of Decay"), distinct from the group's
+                // own number-free `label` - a manually picked tier freezes this straight
+                // into its stat snapshot (see ModPicker.tsx's `toItemMod`), the same
+                // field {@see modSnapshot} fills in for an import-matched one, so
+                // BuildFilterBuilder sees a real affix name either way.
+                'name' => $mod['name'],
                 'tier' => $mod['tier'],
                 'level' => $mod['level'],
                 'stats' => $mod['stats'],
@@ -191,6 +242,11 @@ final class ModCatalogue
      * - that the modifier can actually roll on it. Uniques are handled by the shape rules
      * (they carry no author mods) and are skipped here.
      *
+     * A stat with no `modId` is a plain-text line the author's mod couldn't be matched
+     * to a known affix at write time (an unrecognised wording, or one a future GGPK patch
+     * has since dropped) - it carries no family/tier/range to check, so it is skipped
+     * entirely rather than rejected; only a *non-empty but unknown* id is an error.
+     *
      * @param  list<mixed>  $stats  the item's raw author modifiers (untrusted shape)
      * @param  ?string  $modDomain  the base's mod domain, or null when no base is chosen
      * @param  list<string>  $baseTags  the base's tags, or empty when no base is chosen
@@ -210,6 +266,11 @@ final class ModCatalogue
 
         foreach ($stats as $stat) {
             $modId = is_array($stat) && is_string($stat['modId'] ?? null) ? $stat['modId'] : '';
+
+            if ($modId === '') {
+                continue;
+            }
+
             $mod = $this->index()[$modId] ?? null;
 
             if ($mod === null) {
@@ -257,10 +318,13 @@ final class ModCatalogue
      * Heist, …) carry a positive default weight and would otherwise leak through the
      * tag gate alone.
      *
-     * Essence-only mods fail the weight gate by definition (an essence targets item
-     * classes directly and the mod's weights are all zero), so they fall back to the
-     * catalogue's `itemClasses` gate. A null $itemClass (no base chosen, or a caller
-     * without class data) is lenient.
+     * A mod carrying a non-empty `itemClasses` list must also match the base's GGPK item
+     * class, tag weight notwithstanding - most mods carry none (unrestricted), but a
+     * cross-slot spawn tag (e.g. "runeforged", shared by every runeforged equipment
+     * slot) needs this AND on top of the tag OR to stay slot-scoped. Essence-only mods
+     * fail the weight gate by definition (an essence targets item classes directly and
+     * the mod's weights are all zero), so they rely on this same check exclusively. A
+     * null $itemClass (no base chosen, or a caller without class data) is lenient.
      *
      * Any other weight-gated-out tier falls back to its ladder: desecration bumps a
      * mod past its natural ceiling, either into a tier that zeroes the slot's own tag
@@ -279,23 +343,46 @@ final class ModCatalogue
             return false;
         }
 
+        // A positive tag weight is normally sufficient on its own, but a mod whose spawn
+        // tag is shared across every equipment slot (e.g. a runeforging-only pool gated
+        // on the cross-slot "runeforged" tag, not a slot-specific one) still needs its
+        // itemClasses list respected as an AND - not just for essence mods, otherwise a
+        // Gloves-only pool leaks onto a runeforged Body Armour too.
         if (($this->matchingWeight($mod, $baseTags)['weight'] ?? 0) > 0) {
-            return true;
+            return $this->classAllows($mod, $itemClass);
         }
 
         if (($mod['essence'] ?? false) === true) {
-            $classes = $mod['itemClasses'] ?? [];
-
-            return $classes === [] || $itemClass === null || in_array($itemClass, $classes, true);
+            return $this->classAllows($mod, $itemClass);
         }
 
         if (($mod['group'] ?? null) === null) {
             return false;
         }
 
-        return $naturalLadders !== null
+        // Same AND as the weight/essence branches above: a natural-ladder sibling's
+        // weight can come from an always-carried tag (desecration/genesis/influence,
+        // see matchingWeight()) that ignores baseTags entirely - without this gate, a
+        // mod sharing a group with such a sibling would roll on every item class
+        // regardless of its own itemClasses restriction.
+        $ladderRolls = $naturalLadders !== null
             ? isset($naturalLadders[$mod['group'].'|'.$mod['type']])
             : $this->ladderRollsOn($mod, $baseTags);
+
+        return $ladderRolls && $this->classAllows($mod, $itemClass);
+    }
+
+    /**
+     * Whether a mod's itemClasses allowlist (when it carries one) includes the base's
+     * GGPK item class - an empty list or an unknown base class means unrestricted.
+     *
+     * @param  array{itemClasses?: list<string>}  $mod
+     */
+    private function classAllows(array $mod, ?string $itemClass): bool
+    {
+        $classes = $mod['itemClasses'] ?? [];
+
+        return $classes === [] || $itemClass === null || in_array($itemClass, $classes, true);
     }
 
     /**

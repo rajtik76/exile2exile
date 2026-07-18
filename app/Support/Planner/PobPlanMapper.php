@@ -9,6 +9,7 @@ use App\Pob\Data\EquippedItem;
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
 use App\Support\Planner\Matching\AffixMatcher;
+use App\Support\Planner\Matching\ModLineText;
 use App\Support\Planner\Matching\UniqueModMatcher;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -21,11 +22,14 @@ use Illuminate\Support\Str;
  * The mapping is exact where the snapshot already carries GGPK identifiers (passive
  * node ids, gem ids, base-type and rune names) and best-effort where it carries only
  * PoB's rendered mod text: an item's author modifiers are reverse-matched against the
- * GGPK affix catalogue ({@see AffixMatcher} over {@see ModCatalogue}) and any line
- * that doesn't resolve to a known affix with an in-range roll is dropped, so the
- * produced plan is always valid (it passes the same {@see PlanSchema}/{@see ModCatalogue}
- * rules the editor enforces). Uniques carry their own mods in-game, so their author-mod
- * lines are matched against the synced unique catalogue instead ({@see UniqueModMatcher}).
+ * GGPK affix catalogue ({@see AffixMatcher} over {@see ModCatalogue}), each match frozen
+ * into a full snapshot rather than a live id reference. A line that doesn't resolve to a
+ * known affix with an in-range roll is not dropped either - it is stored as a plain-text
+ * stat (no modId, just the literal wording), so the produced plan is always valid (it
+ * passes the same {@see PlanSchema}/{@see ModCatalogue} rules the editor enforces) without
+ * ever silently losing what the author's item actually carries. Uniques carry their own
+ * mods in-game, so their author-mod lines are matched against the synced unique catalogue
+ * instead ({@see UniqueModMatcher}).
  *
  * The result is pre-canonical: the caller runs it through {@see PlanSchema::canonicalize}
  * before storing, which drops empty items/slots and normalises everything else.
@@ -33,15 +37,17 @@ use Illuminate\Support\Str;
 final class PobPlanMapper
 {
     /**
-     * PoB's equipment slot names mapped to the planner's slot keys. Weapon-swap slots,
-     * the third ring and any flask/charm beyond the planner's paper-doll are dropped
-     * (they have no home in the fixed slot set).
+     * PoB's equipment slot names mapped to the planner's slot keys. The third ring and
+     * any flask/charm beyond the planner's paper-doll are dropped (they have no home in
+     * the fixed slot set).
      *
      * @var array<string, string>
      */
     private const array SLOT_MAP = [
         'Weapon 1' => 'weapon1',
         'Weapon 2' => 'weapon2',
+        'Weapon 1 Swap' => 'weapon1swap',
+        'Weapon 2 Swap' => 'weapon2swap',
         'Helmet' => 'helmet',
         'Body Armour' => 'body',
         'Gloves' => 'gloves',
@@ -75,9 +81,12 @@ final class PobPlanMapper
     private ?array $ascendancyIndex = null;
 
     /**
-     * Author-mod lines the last {@see map} could not reverse-match to a GGPK affix, kept
-     * per planner slot so the caller can tell the author what the import left off (a
-     * hybrid it can't split, quality-inflated defences, unknown wording).
+     * Author-mod lines the last {@see map} could not attach anywhere at all, kept per
+     * planner slot so the caller can tell the author what the import left off entirely.
+     * An equipment item's own unmatched lines no longer end up here - they are stored as
+     * plain-text stats instead (see {@see matchMods}) - so this now only ever collects the
+     * rare unique-item line neither the synced unique catalogue nor the general affix
+     * pool can explain (see {@see matchUniqueMods}).
      *
      * @var array<string, list<string>>
      */
@@ -89,7 +98,7 @@ final class PobPlanMapper
 
     public function __construct(
         private readonly IconResolver $icons,
-        ModCatalogue $mods,
+        private readonly ModCatalogue $mods,
     ) {
         $this->affixMatcher = new AffixMatcher($mods);
         $this->uniqueMatcher = new UniqueModMatcher($icons);
@@ -235,7 +244,7 @@ final class PobPlanMapper
      * Pelt" on a "Slipstrike Vest") and defensive properties (quality, armour, evasion,
      * energy shield, block) come across for every rarity.
      *
-     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: ?int, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<float>}>, sockets: list<array{type: string, id: string}>}
+     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: ?int, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<float>}>, sockets: list<array{type: string, id: string}>}
      */
     private function item(EquippedItem $item, string $slotKey): array
     {
@@ -291,26 +300,64 @@ final class PobPlanMapper
 
     /**
      * Reverse-match a unique's rendered mod lines to its synced catalogue lines via
-     * {@see UniqueModMatcher}, recording anything unmatched as dropped for the slot.
+     * {@see UniqueModMatcher}. A unique's own text isn't the only place its ordinary
+     * (non-flavour) mods can be confirmed - many are plainly-worded GGPK affixes too
+     * (e.g. a flat "Adds # to # Physical Damage"), so whatever the per-unique catalogue
+     * leaves unmatched gets a second pass through the general {@see AffixMatcher}
+     * against the unique's own base type, uncapped (a unique's fixed mods aren't bound
+     * by a rare's prefix/suffix budget). Whatever neither explains is recorded as
+     * dropped for the slot.
      *
      * @return list<array{key: string, values: list<float>}>
      */
     private function matchUniqueMods(EquippedItem $item, string $slotKey): array
     {
         $result = $this->uniqueMatcher->match($item->name, $item->mods);
+        $matched = $result['matched'];
+        $unmatched = $result['unmatched'];
 
-        $this->recordDropped($slotKey, $result['unmatched']);
+        if ($unmatched !== []) {
+            $fallback = $this->affixMatcher->match(
+                $unmatched,
+                $this->icons->itemModDomain($item->baseType),
+                $this->icons->itemTags($item->baseType),
+                $this->icons->itemClass($item->baseType),
+                PHP_INT_MAX,
+                false,
+            );
 
-        return $result['matched'];
+            foreach ($fallback['stats'] as $stat) {
+                if ($stat['modId'] === null) {
+                    continue;
+                }
+
+                // The unique-mod catalogue keys on the number-free template of its own
+                // lines; the fallback's frozen snapshot already carries the exact
+                // rendered text, so the same template reduction applies to it directly -
+                // no live catalogue lookup needed here either.
+                $matched[] = [
+                    'key' => implode("\n", array_map(ModLineText::template(...), explode("\n", $stat['text']))),
+                    'values' => $stat['values'],
+                ];
+            }
+
+            $unmatched = $fallback['dropped'];
+        }
+
+        $this->recordDropped($slotKey, $unmatched);
+
+        return $matched;
     }
 
     /**
      * Reverse-match an item's rendered author-mod lines to GGPK affix ids via
      * {@see AffixMatcher}, feeding it the base's domain/tags/class, the rarity's
-     * prefix/suffix cap and whether the slot takes catalysts. Lines that don't resolve
-     * are recorded as dropped for the slot and left off.
+     * prefix/suffix cap and whether the slot takes catalysts. A line that doesn't
+     * resolve is not dropped: it is kept as a plain-text stat (no modId, just its
+     * literal wording), so nothing the author's item actually carries is ever silently
+     * lost - only genuinely blank input produces an empty list.
      *
-     * @return list<array{modId: string, values: list<int|float>}>
+     * @return list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>
      */
     private function matchMods(EquippedItem $item, string $rarity, string $slotKey): array
     {
@@ -323,9 +370,33 @@ final class PobPlanMapper
             in_array($slotKey, self::CATALYST_SLOTS, true),
         );
 
-        $this->recordDropped($slotKey, $result['dropped']);
+        return [...$result['stats'], ...$this->plainTextStats($result['dropped'])];
+    }
 
-        return $result['stats'];
+    /**
+     * Turn author-mod lines the reverse-match couldn't explain into plain-text stats:
+     * no modId (so no family/tier/range rule ever applies to them), the literal line as
+     * `text`, and whatever numbers the line itself contains as a best-effort `values` -
+     * empty when it has none, which is fine, nothing relies on it.
+     *
+     * @param  list<string>  $lines
+     * @return list<array{modId: null, text: string, name: null, type: null, family: null, tier: null, rolls: null, values: list<int|float>}>
+     */
+    private function plainTextStats(array $lines): array
+    {
+        return array_map(
+            static fn (string $line): array => [
+                'modId' => null,
+                'text' => $line,
+                'name' => null,
+                'type' => null,
+                'family' => null,
+                'tier' => null,
+                'rolls' => null,
+                'values' => ModLineText::numbers($line),
+            ],
+            $lines,
+        );
     }
 
     /**

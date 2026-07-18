@@ -402,16 +402,38 @@ final class PobImport implements BuildDecoder
             }
         }
 
-        $rawModLines = $modStart === null
-            ? []
-            : array_map($this->stripModTags(...), array_slice($lines, $modStart));
+        // A socketed rune/soul core injects its own granted-stat lines into the item's
+        // rendered text (tagged {rune}, alone or alongside {enchant}) - those are the
+        // rune's stats (already captured separately by parseRunes()), not the item's own,
+        // and real PoB never shows them as part of the item's mod list either. Dropped
+        // before the implicit/explicit split, so the split still lines up with PoB's
+        // "Implicits: N" count for the lines that remain.
+        $modLines = $modStart === null ? [] : array_slice($lines, $modStart);
+        $runeGrantedInImplicitRange = 0;
+        $rawModLines = [];
 
-        // "Corrupted"/"Mirrored" are item flags PoB appends after the mods, not
-        // modifier lines; they are trailing, so implicit counting is safe.
-        $corrupted = in_array('Corrupted', $rawModLines, true);
+        foreach ($modLines as $i => $line) {
+            if ($this->hasRuneTag($line)) {
+                if ($i < $implicitsCount) {
+                    $runeGrantedInImplicitRange++;
+                }
+
+                continue;
+            }
+
+            $rawModLines[] = $this->stripModTags($line);
+        }
+
+        $implicitsCount -= $runeGrantedInImplicitRange;
+
+        // These are item flags PoB appends after the mods, not modifier lines; they
+        // are trailing, so implicit counting is safe. See PathOfBuilding-PoE2's
+        // Item.lua ParseItemText for the canonical set.
+        $flagLines = ['Corrupted', 'Twice Corrupted', 'Mirrored', 'Sanctified', 'Desecrated Prefix', 'Desecrated Suffix'];
+        $corrupted = in_array('Corrupted', $rawModLines, true) || in_array('Twice Corrupted', $rawModLines, true);
         $mods = array_values(array_filter(
             $rawModLines,
-            static fn (string $line): bool => ! in_array($line, ['Corrupted', 'Mirrored'], true),
+            static fn (string $line): bool => ! in_array($line, $flagLines, true),
         ));
 
         return new EquippedItem(
@@ -461,6 +483,19 @@ final class PobImport implements BuildDecoder
     private function stripModTags(string $mod): string
     {
         return trim((string) preg_replace('/^(?:\{[^}]*\}\s*)+/', '', $mod));
+    }
+
+    /**
+     * Whether a mod line's leading tag group carries {rune}, marking it as a stat a
+     * socketed rune/soul core grants rather than a mod belonging to the item itself.
+     */
+    private function hasRuneTag(string $mod): bool
+    {
+        if (! preg_match('/^((?:\{[^}]*\}\s*)+)/', $mod, $match)) {
+            return false;
+        }
+
+        return str_contains($match[1], '{rune}');
     }
 
     /**

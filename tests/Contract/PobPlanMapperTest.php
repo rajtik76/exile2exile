@@ -26,6 +26,11 @@ const MERC_BUILD = 'mercenary-lvl86-witchhunter-leech-hybrid.txt';
 // roll, flask charge gain rendered per second, and the instant-recovery hybrid.
 const DESECRATED_BUILD = 'mercenary-lvl97-witchhunter-desecrated-corrupted.txt';
 
+// A lvl100 Monk whose boots carry a desecrated resistance line ahead of a hybrid
+// evasion/energy-shield/stun-threshold affix rendered as three separate lines
+// (regression fixture for the order-dependent aggregate-splitter bug below).
+const MONK_BUILD = 'monk-lvl100-runeforged-desecrated-corrupted.txt';
+
 it('maps the build class and resolves the ascendancy to its live tree id', function () {
     $data = mapFixture(WITCH_BUILD);
 
@@ -110,9 +115,12 @@ it('matches a divided roll (leech %) in display scale, not the raw stat value', 
 
     // "Leech 7.24% of Physical Attack Damage as Life" resolves to a real leech affix and
     // keeps its fractional display value - the affix's tier ranges are display-scale, so
-    // the value falls in range (a raw-scale range like 700-790 would drop it).
+    // the value falls in range (a raw-scale range like 700-790 would drop it). More than
+    // one affix id can carry the LifeLeech family (the natural ladder and a trade-verified
+    // overlay both cover Gloves), so the family - not a specific id prefix - is what
+    // identifies the match here.
     $leech = collect($gloves['stats'])->first(
-        fn (array $stat): bool => str_starts_with((string) $stat['modId'], 'LifeLeech'),
+        fn (array $stat): bool => $stat['family'] === 'LifeLeech',
     );
 
     expect($leech)->not->toBeNull()
@@ -299,17 +307,22 @@ it('matches essence-only and desecrated weapon mods when the extract carries the
         ->and($weapon['AbyssModGenWeaponAmanamuSuffixSpiritReservationEfficiency'] ?? null)->toBe([7]);
 })->skip(fn (): bool => ! catalogueCarriesCraftOnlyMods(), 'live extract predates craft-only mods');
 
-it('drops only the wordings the GGPK extract does not carry', function () {
+it('never drops an equipment mod line - unmatched wordings are kept as plain text instead', function () {
     $snapshot = (new PobImport)->import(file_get_contents(dirname(__DIR__, 2).'/resources/pob/poe2/'.DESECRATED_BUILD));
     $mapper = new PobPlanMapper(new IconResolver, new ModCatalogue);
-    $mapper->map($snapshot);
+    $data = $mapper->map($snapshot);
 
     // Corrupted flag lines, desecrated dual resistances, catalyst-inflated rolls and
-    // flask renders all resolve. On a current extract only "+5 to Level of all Attack
-    // Skills" remains - no Mods row rolls above +3, so the render cannot be explained;
-    // an older extract also lacks the essence/desecrated weapon mods entirely.
-    expect($mapper->droppedMods())->toBe([
-        'weapon1' => catalogueCarriesCraftOnlyMods()
+    // flask renders all resolve to real affixes. On a current extract only "+5 to Level
+    // of all Attack Skills" doesn't - no Mods row rolls above +3, so the render cannot
+    // be explained; an older extract also lacks the essence/desecrated weapon mods
+    // entirely. Either way nothing is lost anymore: an unmatched line is stored as a
+    // plain-text stat (no modId) rather than reported as dropped.
+    $weapon1 = $data['sections'][PlanSchema::SINGLE_KEY]['items']['slots']['weapon1'];
+    $plainText = collect($weapon1['stats'])->filter(fn (array $stat): bool => $stat['modId'] === null)->pluck('text')->values()->all();
+
+    expect($plainText)->toBe(
+        catalogueCarriesCraftOnlyMods()
             ? ['+5 to Level of all Attack Skills']
             : [
                 '7% increased Spirit Reservation Efficiency of Skills',
@@ -317,7 +330,44 @@ it('drops only the wordings the GGPK extract does not carry', function () {
                 '+5 to Level of all Attack Skills',
                 '22% chance to gain Onslaught on Killing Hits with this Weapon',
             ],
-    ]);
+    )
+        ->and($mapper->droppedMods())->toBe([]);
+});
+
+it('matches a hybrid affix\'s companion stat even when a preceding unrelated line already matched', function () {
+    $snapshot = (new PobImport)->import(file_get_contents(dirname(__DIR__, 2).'/resources/pob/poe2/'.MONK_BUILD));
+    $mapper = new PobPlanMapper(new IconResolver, new ModCatalogue);
+    $data = $mapper->map($snapshot);
+
+    $boots = $data['sections'][PlanSchema::SINGLE_KEY]['items']['slots']['boots'];
+    $stunThreshold = collect($boots['stats'])->first(
+        fn (array $stat): bool => in_array(61, $stat['values'], true),
+    );
+
+    // "+61 to Stun Threshold" is the companion stat of a hybrid rendered as its own
+    // line, with a desecrated resistance line ahead of it in the render order. It
+    // must resolve into the hybrid, not disappear as a leftover "already explained
+    // elsewhere" duplicate.
+    expect($stunThreshold)->not->toBeNull()
+        ->and($mapper->droppedMods())->not->toHaveKey('boots');
+});
+
+it('falls back to the general GGPK affix pool for a plainly-worded unique mod its own catalogue misses', function () {
+    // The unique-catalogue path (PobUniqueStore) needs container-resolved services,
+    // unlike the GGPK-only paths above - a bare `new` here would find no synced
+    // catalogue for Skysliver at all, short-circuiting before the fallback ever runs.
+    $snapshot = app(PobImport::class)->import(file_get_contents(dirname(__DIR__, 2).'/resources/pob/poe2/'.MONK_BUILD));
+    $mapper = app(PobPlanMapper::class);
+    $data = $mapper->map($snapshot);
+
+    $weapon1 = $data['sections'][PlanSchema::SINGLE_KEY]['items']['slots']['weapon1'];
+
+    // Skysliver's "Adds 1 to 107 Lightning Damage" isn't in the synced PoB-uniques
+    // catalogue, but it's a perfectly ordinary GGPK weapon affix - the fallback must
+    // find it there instead of leaving it dropped.
+    expect($weapon1['base'])->toBe(['type' => 'unique', 'id' => 'Skysliver'])
+        ->and($weapon1['uniqueMods'])->toContain(['key' => 'Adds # to # Lightning Damage', 'values' => [1, 107]])
+        ->and($mapper->droppedMods())->not->toHaveKey('weapon1');
 });
 
 it('leaves a unique item without author mods but keeps its properties', function () {

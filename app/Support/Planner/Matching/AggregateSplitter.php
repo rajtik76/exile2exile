@@ -32,9 +32,22 @@ final class AggregateSplitter
         $aggregates = $this->aggregateValues($lines);
         $stillUnmatched = [];
 
+        // A hybrid split can fully explain a *different* unmatched line too (its
+        // companion stat, when the companion's whole value came from the hybrid, no
+        // separate pure tier needed) - e.g. splitting "111% increased Evasion and
+        // Energy Shield" can fully account for a same-pass "+61 to Stun Threshold"
+        // line. That companion's template is recorded here so its own turn through
+        // this loop doesn't re-report it as still unmatched: its value already lives
+        // in $context->stats via the hybrid, so re-adding it would be double-counted.
+        $consumedTemplates = [];
+
         foreach ($unmatched as $line) {
             $template = ModLineText::template($line);
             $values = ModLineText::numbers($line);
+
+            if (in_array($template, $consumedTemplates, true)) {
+                continue;
+            }
 
             if ($values === [] || ! $this->exceedsPureCeiling($candidates, $template, $values)) {
                 $stillUnmatched[] = $line;
@@ -42,13 +55,16 @@ final class AggregateSplitter
                 continue;
             }
 
+            $consumedCompanion = null;
             $split = (count($values) === 1
-                ? $this->splitAggregate($template, $values[0], $aggregates, $candidates, $maxPerType, $context)
+                ? $this->splitAggregate($template, $values[0], $aggregates, $candidates, $maxPerType, $context, $consumedCompanion)
                 : null)
                 ?? $this->splitPurePair($template, $values, $candidates, $maxPerType, $context);
 
             if ($split === null) {
                 $stillUnmatched[] = $line;
+            } elseif ($consumedCompanion !== null) {
+                $consumedTemplates[] = $consumedCompanion;
             }
         }
 
@@ -144,9 +160,9 @@ final class AggregateSplitter
      * Commit a pure-pair decomposition when the per-type caps and one-mod-per-family
      * rule still hold with both mods added. Returns whether it was applied.
      *
-     * @param  array{id: string, type: string, families: list<string>}  $first
+     * @param  array{id: string, type: string, families: list<string>, statTemplates: list<string>}  $first
      * @param  list<int|float>  $firstValues
-     * @param  array{id: string, type: string, families: list<string>}  $second
+     * @param  array{id: string, type: string, families: list<string>, statTemplates: list<string>}  $second
      * @param  list<int|float>  $secondValues
      */
     private function applyPurePair(array $first, array $firstValues, array $second, array $secondValues, int $maxPerType, MatchContext $context): bool
@@ -167,8 +183,10 @@ final class AggregateSplitter
 
         $context->counts = $counts;
         $context->families = $families;
-        $context->stats[] = ['modId' => $first['id'], 'values' => $firstValues];
-        $context->stats[] = ['modId' => $second['id'], 'values' => $secondValues];
+        // No single literal line explains either half of a summed pair on its own, so
+        // the text is best-effort rendered from the affix's own template.
+        $context->stats[] = ['modId' => $first['id'], 'values' => $firstValues, 'text' => ModLineText::render($first['statTemplates'], $firstValues)];
+        $context->stats[] = ['modId' => $second['id'], 'values' => $secondValues, 'text' => ModLineText::render($second['statTemplates'], $secondValues)];
 
         return true;
     }
@@ -205,7 +223,7 @@ final class AggregateSplitter
      * @param  array<string, int|float>  $aggregates
      * @param  list<AffixCandidate>  $candidates
      */
-    private function splitAggregate(string $template, int|float $total, array $aggregates, array $candidates, int $maxPerType, MatchContext $context): ?bool
+    private function splitAggregate(string $template, int|float $total, array $aggregates, array $candidates, int $maxPerType, MatchContext $context, ?string &$consumedCompanion = null): ?bool
     {
         foreach ($candidates as $hybrid) {
             if ($hybrid['statCount'] !== 2 || ! in_array($template, $hybrid['statTemplates'], true)) {
@@ -250,19 +268,26 @@ final class AggregateSplitter
                         continue;
                     }
 
+                    $hybridValues = $this->orderedValues($hybrid, $primaryIndex, $primary, $companion);
                     $additions = [
-                        ['modId' => $hybrid['id'], 'values' => $this->orderedValues($hybrid, $primaryIndex, $primary, $companion), 'type' => $hybrid['type'], 'families' => $hybrid['families']],
+                        ['modId' => $hybrid['id'], 'values' => $hybridValues, 'type' => $hybrid['type'], 'families' => $hybrid['families'], 'text' => ModLineText::render($hybrid['statTemplates'], $hybridValues)],
                     ];
 
                     if ($purePrimary !== null) {
-                        $additions[] = ['modId' => $purePrimary, 'values' => [$total - $primary], 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $purePrimary)];
+                        $primaryValues = [$total - $primary];
+                        $additions[] = ['modId' => $purePrimary, 'values' => $primaryValues, 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $purePrimary), 'text' => ModLineText::render($this->statTemplatesOf($candidates, $purePrimary), $primaryValues)];
                     }
 
                     if ($pureCompanion !== null) {
-                        $additions[] = ['modId' => $pureCompanion, 'values' => [$companionTotal - $companion], 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $pureCompanion)];
+                        $companionValues = [$companionTotal - $companion];
+                        $additions[] = ['modId' => $pureCompanion, 'values' => $companionValues, 'type' => $hybrid['type'], 'families' => $this->familiesOf($candidates, $pureCompanion), 'text' => ModLineText::render($this->statTemplatesOf($candidates, $pureCompanion), $companionValues)];
                     }
 
                     if ($this->applySplit($companionTemplate, $additions, $maxPerType, $candidates, $context)) {
+                        if ($pureCompanion === null) {
+                            $consumedCompanion = $companionTemplate;
+                        }
+
                         return true;
                     }
                 }
@@ -289,7 +314,7 @@ final class AggregateSplitter
      * result still fits the per-type cap and every family stays unique. Returns whether it
      * was applied.
      *
-     * @param  list<array{modId: string, values: list<int|float>, type: string, families: list<string>}>  $additions
+     * @param  list<array{modId: string, values: list<int|float>, type: string, families: list<string>, text: string}>  $additions
      * @param  list<AffixCandidate>  $candidates
      */
     private function applySplit(string $companionTemplate, array $additions, int $maxPerType, array $candidates, MatchContext $context): bool
@@ -325,7 +350,7 @@ final class AggregateSplitter
         }
 
         foreach ($additions as $addition) {
-            $keptStats[] = ['modId' => $addition['modId'], 'values' => $addition['values']];
+            $keptStats[] = ['modId' => $addition['modId'], 'values' => $addition['values'], 'text' => $addition['text']];
         }
 
         $context->stats = $keptStats;
@@ -368,6 +393,21 @@ final class AggregateSplitter
         foreach ($candidates as $candidate) {
             if ($candidate['id'] === $modId) {
                 return $candidate['families'];
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  list<AffixCandidate>  $candidates
+     * @return list<string>
+     */
+    private function statTemplatesOf(array $candidates, string $modId): array
+    {
+        foreach ($candidates as $candidate) {
+            if ($candidate['id'] === $modId) {
+                return $candidate['statTemplates'];
             }
         }
 

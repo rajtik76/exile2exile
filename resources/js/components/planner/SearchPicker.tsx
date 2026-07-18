@@ -35,6 +35,7 @@ export default function SearchPicker<T>({
     anchorEl,
     width = POPOVER_WIDTH,
     highlightKey,
+    initialQuery = '',
 }: {
     /** Fetch the options for a query; resolve to [] for a blank query if none apply. */
     search: (query: string) => Promise<T[]>;
@@ -61,8 +62,11 @@ export default function SearchPicker<T>({
     /** Pre-highlight the row whose `keyOf` equals this, once results load (e.g. the
      * currently-set mod when re-opening its picker). Others stay fully selectable. */
     highlightKey?: string;
+    /** The search box's starting value - every other picker opens blank; the item
+     *  modifier picker seeds it with the row's current text when changing one. */
+    initialQuery?: string;
 }) {
-    const [query, setQuery] = useState('');
+    const [query, setQuery] = useState(initialQuery);
     const [results, setResults] = useState<T[]>([]);
     const [loading, setLoading] = useState(false);
     const requestId = useRef(0);

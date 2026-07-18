@@ -55,3 +55,10 @@ test('matchConcrete rejects a line with the wrong number of values', function ()
 
     expect($line->matchConcrete('+110 to maximum Life and +5 to Spirit'))->toBeNull();
 });
+
+test('matchConcrete tolerates PoB templating a countable noun in the singular while the export pluralises it', function () {
+    $line = UniqueModLine::parse('Has (1-3) Charm Slot');
+
+    expect($line->matchConcrete('Has 3 Charm Slots'))->toBe([3.0])
+        ->and($line->matchConcrete('Has 1 Charm Slot'))->toBe([1.0]);
+});

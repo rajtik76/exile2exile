@@ -3,14 +3,12 @@ import {
     referenceToDisplayItem,
     toDisplayItem,
 } from '@/components/planner/equipment/displayItem';
-import type { ModMap } from '@/lib/modLines';
 import { refKey } from '@/lib/planReferences';
 import type { PlanReference, ReferenceMap } from '@/lib/planReferences';
 import { EQUIPMENT_SLOTS } from '@/types/planner';
 import type { ItemPlan } from '@/types/planner';
 
 const slot = EQUIPMENT_SLOTS.find((s) => s.key === 'body')!;
-const emptyModMap: ModMap = {};
 
 function item(overrides: Partial<ItemPlan> = {}): ItemPlan {
     return {
@@ -87,7 +85,7 @@ test('a unique item shows its synced base type, distinct from its own name', () 
         }),
     };
 
-    const display = toDisplayItem(slot, plan, map, emptyModMap);
+    const display = toDisplayItem(slot, plan, map);
 
     expect(display.name).toBe('Constricting Command');
     expect(display.baseType).toBe('Viper Cap');
@@ -101,7 +99,7 @@ test('a unique with no synced base type falls back to its own name (no false sub
         }),
     };
 
-    const display = toDisplayItem(slot, plan, map, emptyModMap);
+    const display = toDisplayItem(slot, plan, map);
 
     expect(display.baseType).toBe('Constricting Command');
 });
@@ -128,13 +126,12 @@ test('a unique item with no stored value shows its synced mod lines as ranges', 
         }),
     };
 
-    const display = toDisplayItem(slot, plan, map, emptyModMap);
+    const display = toDisplayItem(slot, plan, map);
 
     expect(display.explicitMods).toEqual([
         '+(80-120) to maximum Life',
         '(8-12) Life Regeneration per second',
     ]);
-    expect(display.modDetails).toEqual([]);
 });
 
 test('a unique item substitutes its stored rolled value into the matching mod line', () => {
@@ -162,7 +159,7 @@ test('a unique item substitutes its stored rolled value into the matching mod li
         }),
     };
 
-    const display = toDisplayItem(slot, plan, map, emptyModMap);
+    const display = toDisplayItem(slot, plan, map);
 
     expect(display.explicitMods).toEqual([
         '+110 to maximum Life',
@@ -176,7 +173,7 @@ test('a unique whose sync has no mods yet still renders, just without them', () 
         [refKey('unique', 'Constricting Command')]: uniqueRef(),
     };
 
-    const display = toDisplayItem(slot, plan, map, emptyModMap);
+    const display = toDisplayItem(slot, plan, map);
 
     expect(display.explicitMods).toEqual([]);
     expect(display.name).toBe('Constricting Command');
@@ -208,17 +205,28 @@ test('a unique carries its synced implicit lines as implicitMods, substituted th
         }),
     };
 
-    const display = toDisplayItem(slot, plan, map, emptyModMap);
+    const display = toDisplayItem(slot, plan, map);
 
     expect(display.implicitMods).toEqual(['+35 to maximum Life']);
     expect(display.explicitMods).toEqual(['10% reduced Movement Speed']);
 });
 
-test('a rare item still aggregates its authored stats, unaffected by the unique path', () => {
+test("a rare item shows its stats' own frozen text, unaffected by the unique path", () => {
     const plan = item({
         rarity: 'rare',
         base: { type: 'base', id: 'Viper Cap' },
-        stats: [{ modId: 'Life1', values: [15] }],
+        stats: [
+            {
+                modId: 'Life1',
+                text: '+15 to maximum Life',
+                name: null,
+                type: 'prefix',
+                family: 'IncreasedLife',
+                tier: 1,
+                rolls: [{ stat: 'base_maximum_life', min: 10, max: 19 }],
+                values: [15],
+            },
+        ],
     });
     const map: ReferenceMap = {
         [refKey('base', 'Viper Cap')]: {
@@ -227,21 +235,38 @@ test('a rare item still aggregates its authored stats, unaffected by the unique 
             name: 'Viper Cap',
         },
     };
-    const modMap: ModMap = {
-        Life1: {
-            id: 'Life1',
-            name: '',
-            group: 'IncreasedLife',
-            type: 'prefix',
-            tier: 1,
-            level: 1,
-            stats: ['+(10-19) to maximum Life'],
-            rolls: [{ stat: 'base_maximum_life', min: 10, max: 19 }],
-            families: ['IncreasedLife'],
+
+    const display = toDisplayItem(slot, plan, map);
+
+    expect(display.explicitMods).toEqual(['+15 to maximum Life']);
+});
+
+test('an unmatched (plain-text) stat still shows its own text', () => {
+    const plan = item({
+        rarity: 'rare',
+        base: { type: 'base', id: 'Viper Cap' },
+        stats: [
+            {
+                modId: null,
+                text: 'Some custom or dead-affix line',
+                name: null,
+                type: null,
+                family: null,
+                tier: null,
+                rolls: null,
+                values: [],
+            },
+        ],
+    });
+    const map: ReferenceMap = {
+        [refKey('base', 'Viper Cap')]: {
+            type: 'base',
+            id: 'Viper Cap',
+            name: 'Viper Cap',
         },
     };
 
-    const display = toDisplayItem(slot, plan, map, modMap);
+    const display = toDisplayItem(slot, plan, map);
 
-    expect(display.explicitMods).toEqual(['+15 to maximum Life']);
+    expect(display.explicitMods).toEqual(['Some custom or dead-affix line']);
 });

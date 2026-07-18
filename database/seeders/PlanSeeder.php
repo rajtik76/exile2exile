@@ -422,7 +422,7 @@ class PlanSeeder extends Seeder
      * a distinct family, valued at the midpoint of a mid tier so it always sits inside the
      * range {@see ModCatalogue::modErrors} enforces.
      *
-     * @return list<array{modId: string, values: list<int>}>
+     * @return list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>
      */
     private function rollAffixes(IconResolver $icons, ModCatalogue $catalogue, string $base): array
     {
@@ -466,7 +466,10 @@ class PlanSeeder extends Seeder
                     $tier['rolls'],
                 );
 
-                $stats[] = ['modId' => $tier['id'], 'values' => $values];
+                // A frozen snapshot, not a live reference - see ModCatalogue::modSnapshot.
+                // No literal rendered line exists for a seeded item, so the empty text
+                // triggers the catalogue's own best-effort render from the tier's template.
+                $stats[] = $catalogue->modSnapshot($tier['id'], $values, '');
                 $usedFamilies = [...$usedFamilies, ...$tier['families']];
                 $count++;
             }

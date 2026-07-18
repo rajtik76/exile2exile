@@ -3,7 +3,6 @@ import { ItemCard } from '@/components/build/ItemDisplay';
 import { CursorTooltip, rarityTone } from '@/components/build/tooltip';
 import { toDisplayItem } from '@/components/planner/equipment/displayItem';
 import type { SlotDef } from '@/components/planner/equipment/displayItem';
-import type { ModMap } from '@/lib/modLines';
 import { refKey } from '@/lib/planReferences';
 import type { ReferenceMap } from '@/lib/planReferences';
 import type { ItemPlan } from '@/types/planner';
@@ -16,12 +15,10 @@ import type { ItemPlan } from '@/types/planner';
 export default function PriorityStrip({
     items,
     map,
-    modMap,
     onHover,
 }: {
     items: Array<{ slot: SlotDef; item: ItemPlan }>;
     map: ReferenceMap;
-    modMap: ModMap;
     /** Report which slot is hovered so its paper-doll tile can highlight (null = none). */
     onHover: (slotKey: string | null) => void;
 }) {
@@ -131,7 +128,6 @@ export default function PriorityStrip({
                             activeEntry.slot,
                             activeEntry.item,
                             map,
-                            modMap,
                         )}
                     />
                 </CursorTooltip>

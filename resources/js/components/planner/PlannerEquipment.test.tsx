@@ -153,7 +153,18 @@ test('the editor refuses to close on an illegal item', () => {
                 energyShield: 0,
                 block: 0,
             },
-            stats: [{ modId: 'IncreasedLife1', values: [100] }],
+            stats: [
+                {
+                    modId: 'IncreasedLife1',
+                    text: '+100 to maximum Life',
+                    name: null,
+                    type: 'prefix',
+                    family: 'IncreasedLife',
+                    tier: 1,
+                    rolls: [{ stat: 'base_maximum_life', min: 10, max: 100 }],
+                    values: [100],
+                },
+            ],
             uniqueMods: [],
             sockets: [],
             priority: null,
@@ -179,6 +190,85 @@ test('the editor refuses to close on an illegal item', () => {
 
     // Clicking Done leaves the editor open (Properties section still present).
     fireEvent.click(screen.getByText('Done'));
+    expect(screen.getByText('Properties')).toBeTruthy();
+});
+
+test('the Swap toggle shows the swap weapon set in the same doll cells', () => {
+    const slots: Record<string, ItemPlan> = {
+        weapon1: {
+            rarity: 'unique',
+            base: { type: 'unique', id: 'Bramblejack' },
+            name: '',
+            corrupted: false,
+            itemLevel: null,
+            props: {
+                quality: 0,
+                armour: 0,
+                evasion: 0,
+                energyShield: 0,
+                block: 0,
+            },
+            stats: [],
+            uniqueMods: [],
+            sockets: [],
+            priority: null,
+        },
+    };
+
+    render(
+        <ReferencesProvider map={textRefs}>
+            <PlannerEquipment editable={false} slots={slots} />
+        </ReferencesProvider>,
+    );
+
+    // The main set's weapon shows by default.
+    expect(screen.getAllByText('Bramblejack').length).toBeGreaterThan(0);
+
+    // The toggle is rendered twice - once above the weapon tile, once above the
+    // off-hand - either copy switches the whole doll.
+    fireEvent.click(screen.getAllByRole('button', { name: 'II' })[0]);
+
+    // Switching to the swap set clears the visible tile (weapon1swap is empty) and
+    // relabels the doll cell for it.
+    expect(screen.queryByText('Bramblejack')).toBeNull();
+    expect(screen.getByText('Weapon (Swap)')).toBeTruthy();
+});
+
+test('switching weapon sets closes an editor left open on the other set', () => {
+    render(
+        <ReferencesProvider map={{}}>
+            <PlannerEquipment editable slots={{}} onChange={() => {}} />
+        </ReferencesProvider>,
+    );
+
+    // Open the main weapon's editor.
+    fireEvent.click(screen.getAllByText('Weapon')[0]);
+    expect(screen.getByText('Properties')).toBeTruthy();
+
+    // Switch to the swap set - weapon1's cell now renders weapon1swap, a different
+    // slot key, so the editor open for weapon1 must close rather than linger.
+    fireEvent.click(screen.getAllByRole('button', { name: 'II' })[0]);
+    expect(screen.queryByText('Properties')).toBeNull();
+
+    // Switching back to the main set must not silently reopen the editor - it should
+    // still be closed until the author clicks the tile again.
+    fireEvent.click(screen.getAllByRole('button', { name: 'I' })[0]);
+    expect(screen.queryByText('Properties')).toBeNull();
+});
+
+test('switching weapon sets leaves an editor open on an unrelated slot alone', () => {
+    render(
+        <ReferencesProvider map={{}}>
+            <PlannerEquipment editable slots={{}} onChange={() => {}} />
+        </ReferencesProvider>,
+    );
+
+    // Open the helmet's editor - nothing to do with the weapon-set toggle.
+    fireEvent.click(screen.getByText('Helmet'));
+    expect(screen.getByText('Properties')).toBeTruthy();
+
+    // Toggling the weapon set must not close an editor open elsewhere.
+    fireEvent.click(screen.getAllByRole('button', { name: 'II' })[0]);
     expect(screen.getByText('Properties')).toBeTruthy();
 });
 

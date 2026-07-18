@@ -45,17 +45,34 @@ export interface ItemProps {
 }
 
 /**
- * One modifier on a planned item: a reference to a real GGPK affix (`Mods.Id`, which
- * encodes the tier) plus the author's rolled values (one per range in the tier). The
- * wording, ranges and generation type resolve live from the mod catalogue.
+ * One modifier on a planned item: a frozen snapshot taken at write time (mirrors the
+ * server's `PlanItemSchema::canonicalMod` / `ModCatalogue::modSnapshot`), not a live
+ * reference into the mod catalogue - a future GGPK patch renaming or dropping the affix
+ * can never invalidate an already-stored plan. `text` is the only field guaranteed to be
+ * present and is the sole source of truth for display; every other field is metadata kept
+ * from the match (used only for live rarity/family/value-range checks while `modId` still
+ * resolves against the current catalogue). `modId` is null for a plain-text line the
+ * author typed (or pasted from PoB) that couldn't be matched to a known affix - it is
+ * still stored and shown, just carries no tier/family/rolls to validate.
  */
-export interface ItemStat {
-    modId: string;
+export interface ItemMod {
+    /** Debug/reference only - never relied on to resolve; null when unmatched. */
+    modId: string | null;
+    /** The rendered line(s) (joined by "\n" for a multi-stat mod) - always present. */
+    text: string;
+    /** The GGG affix name, null when unmatched. */
+    name: string | null;
+    type: 'prefix' | 'suffix' | null;
+    /** Mutual-exclusion group id, null when unmatched. */
+    family: string | null;
+    tier: number | null;
+    /** One entry per rolled value, in text order; null when unmatched. */
+    rolls: { stat: string; min: number; max: number }[] | null;
     values: number[];
 }
 
 /**
- * One rolled value on a UNIQUE item's own (fixed) mod - the counterpart to {@link ItemStat}
+ * One rolled value on a UNIQUE item's own (fixed) mod - the counterpart to {@link ItemMod}
  * for a unique, which carries no author-picked affixes. `key` names one of the unique's
  * synced Path of Building mod lines (stable across a value changing - see the server's
  * `UniqueModLine`); `values` is empty for a line with no numeric range (flavour text).
@@ -98,7 +115,7 @@ export interface ItemPlan {
      */
     itemLevel: number | null;
     props: ItemProps;
-    stats: ItemStat[];
+    stats: ItemMod[];
     /** A unique item's own rolled mod values (see {@link UniqueModStat}); empty otherwise. */
     uniqueMods: UniqueModStat[];
     sockets: (RuneRef | null)[];
@@ -349,8 +366,27 @@ export const EQUIPMENT_SLOTS: Array<{
     },
 ];
 
-/** Total equipment slots, and thus the count of distinct gearing-priority numbers. */
-export const MAX_PRIORITY = EQUIPMENT_SLOTS.length;
+/**
+ * The weapon-swap set's slots: the same grid cells and base categories as `weapon1`/
+ * `weapon2`, since only one set is ever shown on the doll at a time (the author toggles
+ * between them). Kept out of {@link EQUIPMENT_SLOTS} - that array drives the doll's
+ * fixed layout, and both weapon pairs would otherwise claim the same grid cells.
+ */
+export const WEAPON_SWAP_SLOTS: Array<(typeof EQUIPMENT_SLOTS)[number]> = [
+    {
+        ...EQUIPMENT_SLOTS.find((slot) => slot.key === 'weapon1')!,
+        key: 'weapon1swap',
+        label: 'Weapon (Swap)',
+    },
+    {
+        ...EQUIPMENT_SLOTS.find((slot) => slot.key === 'weapon2')!,
+        key: 'weapon2swap',
+        label: 'Off-hand (Swap)',
+    },
+];
+
+/** Total equipment slots (including the swap weapon pair), and thus the count of distinct gearing-priority numbers. */
+export const MAX_PRIORITY = EQUIPMENT_SLOTS.length + WEAPON_SWAP_SLOTS.length;
 
 /** Slot keys with no rare tier in the game (flasks and charms cap at magic). */
 export const NO_RARE_SLOTS = new Set(
@@ -393,6 +429,8 @@ export const MAX_ITEM_SOCKETS = 4;
 export const SLOT_MAX_SOCKETS: Record<string, number> = {
     weapon1: 4,
     weapon2: 4,
+    weapon1swap: 4,
+    weapon2swap: 4,
     body: 4,
     helmet: 3,
     gloves: 3,

@@ -1,35 +1,32 @@
 import { deriveRarity } from '@/lib/itemRarity';
-import type { ModMap } from '@/lib/modLines';
 import type { PlanReference } from '@/lib/planReferences';
 import { MAX_ITEM_QUALITY } from '@/types/planner';
-import type { ItemPlan, ItemProps, ItemStat } from '@/types/planner';
+import type { ItemMod, ItemPlan, ItemProps } from '@/types/planner';
 
 /**
  * Pure transforms and queries behind the slot editor: every edit of an
  * {@link ItemPlan} flows through these so the stored rarity always matches the
  * base and mods, and the affix rules (one mod per group, per-type caps, the
- * defence-field gating) live in one testable place.
+ * defence-field gating) live in one testable place. Each stat carries its own
+ * frozen `type`/`family` (see {@link ItemMod}), so none of this needs a live
+ * catalogue lookup any more.
  */
 
 /**
  * The item with its invariants restored: mods grouped prefixes-first (stable
  * within each type) and the stored rarity re-derived from the base and mods.
- * Every editor mutation flows through this. `lookup` must already contain a
- * freshly picked mod (the editor folds it in before committing).
+ * Every editor mutation flows through this.
  */
-export function normalizeItem(item: ItemPlan, lookup: ModMap): ItemPlan {
-    const rank = (stat: ItemStat): number => {
-        const type = lookup[stat.modId]?.type;
-
-        return type === 'prefix' ? 0 : type === 'suffix' ? 1 : 2;
-    };
+export function normalizeItem(item: ItemPlan): ItemPlan {
+    const rank = (stat: ItemMod): number =>
+        stat.type === 'prefix' ? 0 : stat.type === 'suffix' ? 1 : 2;
     // Array.sort is stable, so mods keep their order within each affix type.
     const stats = [...item.stats].sort((a, b) => rank(a) - rank(b));
 
     return {
         ...item,
         stats,
-        rarity: deriveRarity(item.base, stats, lookup),
+        rarity: deriveRarity(item.base, stats),
     };
 }
 
@@ -86,25 +83,24 @@ export function clampedProp(key: keyof ItemProps, value: number): number {
 }
 
 /**
- * Affix groups already on the item - a group can hold only one mod, so the
- * picker hides any group already present (skipping `exceptIndex`, the row
- * being changed).
+ * Mutual-exclusion families already on the item - two mods sharing one can't both be
+ * on it, so the picker hides any family already present (skipping `exceptIndex`, the
+ * row being changed). An unmatched stat carries no family, so it never excludes
+ * anything.
  */
-export function groupsInUse(
-    stats: ItemStat[],
-    modMap: ModMap,
+export function familiesInUse(
+    stats: ItemMod[],
     exceptIndex?: number,
 ): string[] {
     return stats
         .filter((_, position) => position !== exceptIndex)
-        .map((stat) => modMap[stat.modId]?.group)
-        .filter((group): group is string => !!group);
+        .map((stat) => stat.family)
+        .filter((family): family is string => !!family);
 }
 
-/** Prefix/suffix counts across the item's resolved mods (unresolved ids don't count). */
+/** Prefix/suffix counts across the item's mods (an unmatched stat doesn't count). */
 export function countModTypes(
-    stats: ItemStat[],
-    modMap: ModMap,
+    stats: ItemMod[],
     exceptIndex?: number,
 ): { prefix: number; suffix: number } {
     const counts = { prefix: 0, suffix: 0 };
@@ -114,10 +110,8 @@ export function countModTypes(
             return;
         }
 
-        const mod = modMap[stat.modId];
-
-        if (mod) {
-            counts[mod.type] += 1;
+        if (stat.type) {
+            counts[stat.type] += 1;
         }
     });
 
@@ -130,12 +124,11 @@ export function countModTypes(
  * changed, whose own type is freed for the swap.
  */
 export function fullTypesInUse(
-    stats: ItemStat[],
-    modMap: ModMap,
+    stats: ItemMod[],
     maxPerType: number,
     exceptIndex?: number,
 ): Array<'prefix' | 'suffix'> {
-    const counts = countModTypes(stats, modMap, exceptIndex);
+    const counts = countModTypes(stats, exceptIndex);
 
     return (['prefix', 'suffix'] as const).filter(
         (kind) => counts[kind] >= maxPerType,

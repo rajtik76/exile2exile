@@ -1,16 +1,23 @@
-import type { ModMap } from '@/lib/modLines';
-import type { ItemPlan, ItemRarity, ItemStat } from '@/types/planner';
+import type { ItemMod, ItemPlan, ItemRarity } from '@/types/planner';
 
 /**
- * An item's rarity - derived, never chosen. A unique base is Unique; otherwise the
- * prefix/suffix count decides: none is Normal, up to one of each is Magic, anything
- * beyond that is Rare. `lookup` resolves each stat to its mod (for the prefix/suffix
- * type); a mod missing from the map is ignored until it resolves.
+ * An item's rarity - derived, never chosen. A unique base is Unique; otherwise each
+ * stat's own frozen `type` (see {@link ItemMod}) decides: with every stat matched
+ * (a known prefix/suffix), the exact count is exact - none is Normal, up to one of
+ * each is Magic, anything beyond that is Rare. A stat with no `type` (unmatched
+ * plain text) could be either, so once one is present the split can't be read
+ * exactly - the total count alone still pins down 0 (Normal) and 3+ (Rare, past
+ * Magic's 1 prefix + 1 suffix cap); 1-2 falls back to Magic, the overwhelmingly
+ * common case (a 1-2 mod item deliberately built as Rare rather than Magic is rare
+ * enough to not warrant an author-facing override for it).
+ *
+ * There is no fixed ceiling on the other end - a rune ("+1 Suffix Modifier allowed")
+ * or a corruption can push a real Rare item's affix count past its base 3+3, so nothing
+ * here rejects a high count.
  */
 export function deriveRarity(
     base: ItemPlan['base'],
-    stats: ItemStat[],
-    lookup: ModMap,
+    stats: ItemMod[],
 ): ItemRarity {
     if (base?.type === 'unique') {
         return 'unique';
@@ -18,24 +25,27 @@ export function deriveRarity(
 
     let prefixes = 0;
     let suffixes = 0;
+    let unknown = 0;
 
     for (const stat of stats) {
-        const mod = lookup[stat.modId];
-
-        if (mod?.type === 'prefix') {
+        if (stat.type === 'prefix') {
             prefixes += 1;
-        } else if (mod?.type === 'suffix') {
+        } else if (stat.type === 'suffix') {
             suffixes += 1;
+        } else {
+            unknown += 1;
         }
     }
 
-    if (prefixes === 0 && suffixes === 0) {
+    const total = prefixes + suffixes + unknown;
+
+    if (total === 0) {
         return 'normal';
     }
 
-    if (prefixes <= 1 && suffixes <= 1) {
-        return 'magic';
+    if (unknown === 0) {
+        return prefixes <= 1 && suffixes <= 1 ? 'magic' : 'rare';
     }
 
-    return 'rare';
+    return total <= 2 ? 'magic' : 'rare';
 }

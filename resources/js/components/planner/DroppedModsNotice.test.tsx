@@ -19,7 +19,9 @@ test('lists dropped mods grouped by item label, line by line', () => {
     expect(screen.getByText('135% increased Armour and Evasion')).toBeTruthy();
     expect(screen.getByText('+34% to Cold Resistance')).toBeTruthy();
     // The count spans every item's lines.
-    expect(screen.getByText(/3 modifiers couldn't be imported/)).toBeTruthy();
+    expect(
+        screen.getByText(/3 unique modifiers couldn't be imported/),
+    ).toBeTruthy();
 });
 
 test('dismiss button fires onDismiss', () => {

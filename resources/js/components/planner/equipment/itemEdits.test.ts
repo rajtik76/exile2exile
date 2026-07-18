@@ -1,25 +1,17 @@
 import { expect, test } from 'vitest';
-import type { ModMap } from '@/lib/modLines';
 import type { PlanReference } from '@/lib/planReferences';
 import { MAX_ITEM_QUALITY } from '@/types/planner';
-import type { ItemPlan } from '@/types/planner';
+import type { ItemMod, ItemPlan } from '@/types/planner';
 import {
     clampedProp,
     countModTypes,
+    familiesInUse,
     fullTypesInUse,
-    groupsInUse,
     normalizeItem,
     visiblePropFields,
     withBasePicked,
     withUniqueModValues,
 } from './itemEdits';
-
-const MODS = {
-    LifePrefix: { type: 'prefix', group: 'Life' },
-    ArmourPrefix: { type: 'prefix', group: 'Armour' },
-    FireSuffix: { type: 'suffix', group: 'FireResist' },
-    ColdSuffix: { type: 'suffix', group: 'ColdResist' },
-} as unknown as ModMap;
 
 function item(overrides: Partial<ItemPlan> = {}): ItemPlan {
     return {
@@ -47,19 +39,36 @@ function reference(overrides: Partial<PlanReference> = {}): PlanReference {
     } as PlanReference;
 }
 
+/** A matched stat with a given id, type and mutual-exclusion family. */
+function stat(
+    id: string,
+    type: 'prefix' | 'suffix' | null,
+    family: string | null = id,
+): ItemMod {
+    return {
+        modId: type ? id : null,
+        text: id,
+        name: null,
+        type,
+        family: type ? family : null,
+        tier: null,
+        rolls: null,
+        values: [],
+    };
+}
+
 test('normalizeItem groups prefixes first (stable) and re-derives the rarity', function () {
     const normalized = normalizeItem(
         item({
             stats: [
-                { modId: 'FireSuffix', values: [10] },
-                { modId: 'LifePrefix', values: [20] },
-                { modId: 'ColdSuffix', values: [15] },
+                stat('FireSuffix', 'suffix', 'FireResist'),
+                stat('LifePrefix', 'prefix', 'Life'),
+                stat('ColdSuffix', 'suffix', 'ColdResist'),
             ],
         }),
-        MODS,
     );
 
-    expect(normalized.stats.map((stat) => stat.modId)).toEqual([
+    expect(normalized.stats.map((s) => s.modId)).toEqual([
         'LifePrefix',
         'FireSuffix',
         'ColdSuffix',
@@ -68,37 +77,35 @@ test('normalizeItem groups prefixes first (stable) and re-derives the rarity', f
     expect(normalized.rarity).toBe('rare');
 
     const light = normalizeItem(
-        item({ stats: [{ modId: 'LifePrefix', values: [20] }] }),
-        MODS,
+        item({ stats: [stat('LifePrefix', 'prefix', 'Life')] }),
     );
 
     expect(light.rarity).toBe('magic');
-    expect(normalizeItem(item({ stats: [] }), MODS).rarity).toBe('normal');
+    expect(normalizeItem(item({ stats: [] })).rarity).toBe('normal');
 });
 
-test('normalizeItem sorts a still-unresolved mod after the known affixes', function () {
+test('normalizeItem sorts a still-unmatched mod after the known affixes', function () {
     const normalized = normalizeItem(
         item({
             stats: [
-                { modId: 'Unresolved', values: [] },
-                { modId: 'FireSuffix', values: [10] },
-                { modId: 'LifePrefix', values: [20] },
+                stat('Unresolved', null),
+                stat('FireSuffix', 'suffix', 'FireResist'),
+                stat('LifePrefix', 'prefix', 'Life'),
             ],
         }),
-        MODS,
     );
 
-    expect(normalized.stats.map((stat) => stat.modId)).toEqual([
+    expect(normalized.stats.map((s) => s.modId)).toEqual([
         'LifePrefix',
         'FireSuffix',
-        'Unresolved',
+        null,
     ]);
 });
 
 test('picking a unique drops author mods and stale rolled values', function () {
     const next = withBasePicked(
         item({
-            stats: [{ modId: 'LifePrefix', values: [20] }],
+            stats: [stat('LifePrefix', 'prefix', 'Life')],
             uniqueMods: [{ key: 'old-line', values: [80] }],
         }),
         reference({ type: 'unique', id: 'Thornguard' }),
@@ -189,31 +196,31 @@ test('clamps quality to its cap and floors every property at zero', function () 
     expect(clampedProp('armour', 5000)).toBe(5000);
 });
 
-test('lists the affix groups in use, skipping the row being changed', function () {
+test('lists the mutual-exclusion families in use, skipping the row being changed', function () {
     const stats = [
-        { modId: 'LifePrefix', values: [] },
-        { modId: 'FireSuffix', values: [] },
-        { modId: 'Unresolved', values: [] },
+        stat('LifePrefix', 'prefix', 'Life'),
+        stat('FireSuffix', 'suffix', 'FireResist'),
+        stat('Unresolved', null),
     ];
 
-    expect(groupsInUse(stats, MODS)).toEqual(['Life', 'FireResist']);
-    expect(groupsInUse(stats, MODS, 0)).toEqual(['FireResist']);
+    expect(familiesInUse(stats)).toEqual(['Life', 'FireResist']);
+    expect(familiesInUse(stats, 0)).toEqual(['FireResist']);
 });
 
 test('reports the generation types at their cap, freeing the row being swapped', function () {
     const stats = [
-        { modId: 'LifePrefix', values: [] },
-        { modId: 'FireSuffix', values: [] },
-        { modId: 'ColdSuffix', values: [] },
+        stat('LifePrefix', 'prefix', 'Life'),
+        stat('FireSuffix', 'suffix', 'FireResist'),
+        stat('ColdSuffix', 'suffix', 'ColdResist'),
     ];
 
-    expect(countModTypes(stats, MODS)).toEqual({ prefix: 1, suffix: 2 });
+    expect(countModTypes(stats)).toEqual({ prefix: 1, suffix: 2 });
     // Magic caps (1 + 1): both types full.
-    expect(fullTypesInUse(stats, MODS, 1)).toEqual(['prefix', 'suffix']);
+    expect(fullTypesInUse(stats, 1)).toEqual(['prefix', 'suffix']);
     // Swapping the lone prefix frees its type (the two suffixes stay full).
-    expect(fullTypesInUse(stats, MODS, 1, 0)).toEqual(['suffix']);
+    expect(fullTypesInUse(stats, 1, 0)).toEqual(['suffix']);
     // Rare caps (3 + 3): nothing full.
-    expect(fullTypesInUse(stats, MODS, 3)).toEqual([]);
+    expect(fullTypesInUse(stats, 3)).toEqual([]);
 });
 
 test('gates the defence fields by the resolved base and falls back to the shield heuristic', function () {

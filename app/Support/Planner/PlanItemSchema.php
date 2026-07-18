@@ -29,6 +29,12 @@ final class PlanItemSchema
     /** Most author-typed modifier lines an item may carry. */
     private const int MAX_ITEM_STATS = 20;
 
+    /**
+     * The lowest mod count that forces rare: magic's hard cap is 1 prefix + 1 suffix (2
+     * total, see {@see ModCatalogue::MODS_PER_TYPE}), so nothing above that can be magic.
+     */
+    private const int MIN_MODS_FOR_RARE = 3;
+
     /** Most rune sockets an item may carry (a corrupted weapon/body: 3 natural + 1 Vaal). */
     private const int MAX_ITEM_SOCKETS = 4;
 
@@ -66,7 +72,7 @@ final class PlanItemSchema
      * @var list<string>
      */
     public const array EQUIPMENT_SLOTS = [
-        'weapon1', 'weapon2', 'helmet', 'amulet', 'body',
+        'weapon1', 'weapon2', 'weapon1swap', 'weapon2swap', 'helmet', 'amulet', 'body',
         'ring1', 'ring2', 'gloves', 'boots', 'belt',
         'flask1', 'flask2', 'charm1', 'charm2', 'charm3',
     ];
@@ -83,7 +89,7 @@ final class PlanItemSchema
      * Distinct gearing-priority numbers an author can assign - one per equipment slot,
      * so the whole gearing order is expressible without a collision.
      */
-    public const int MAX_PRIORITY = 15;
+    public const int MAX_PRIORITY = 17;
 
     /**
      * Per-slot rune-socket ceiling. Weapons and body armour take the most, smaller
@@ -94,7 +100,7 @@ final class PlanItemSchema
      * @var array<string, int>
      */
     public const array SLOT_MAX_SOCKETS = [
-        'weapon1' => 4, 'weapon2' => 4, 'body' => 4,
+        'weapon1' => 4, 'weapon2' => 4, 'weapon1swap' => 4, 'weapon2swap' => 4, 'body' => 4,
         'helmet' => 3, 'gloves' => 3, 'boots' => 3,
         'belt' => 0, 'amulet' => 0, 'ring1' => 0, 'ring2' => 0,
         'flask1' => 0, 'flask2' => 0,
@@ -107,7 +113,7 @@ final class PlanItemSchema
      * slots are dropped.
      *
      * @param  array<int|string, mixed>  $slots
-     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
+     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
      */
     public static function canonicalSlots(array $slots): array
     {
@@ -161,6 +167,15 @@ final class PlanItemSchema
         $sockets = is_array($item['sockets'] ?? null) ? $item['sockets'] : [];
         $props = is_array($item['props'] ?? null) ? $item['props'] : [];
 
+        // The author's own `rarity` input is never trusted here, same as
+        // {@see canonicalItem} - it is re-derived from the base/stats so a forged
+        // payload can't slip a rarity its own equipment wouldn't actually produce
+        // (e.g. a flask claiming `normal` while carrying 3 stats, to dodge the
+        // {@see NO_RARE_SLOTS} rule below).
+        $rawBase = is_array($item['base'] ?? null) ? $item['base'] : null;
+        $rarity = self::rarityOf($rawBase, $stats);
+        $isUnique = $rarity === 'unique';
+
         $name = $item['name'] ?? '';
 
         if (is_string($name) && mb_strlen($name) > self::MAX_ITEM_NAME_LENGTH) {
@@ -173,7 +188,7 @@ final class PlanItemSchema
             $errors[] = 'Quality cannot exceed '.self::MAX_ITEM_QUALITY.'%.';
         }
 
-        if (($item['rarity'] ?? null) === 'rare' && in_array($slot, self::NO_RARE_SLOTS, true)) {
+        if ($rarity === 'rare' && in_array($slot, self::NO_RARE_SLOTS, true)) {
             $errors[] = 'A flask or charm cannot be rare.';
         }
 
@@ -181,7 +196,7 @@ final class PlanItemSchema
 
         // A unique can carry more sockets than its slot's rares (Greymake and The
         // Bringer of Rain wear four on a helmet), so uniques take the global ceiling.
-        if (($item['rarity'] ?? null) === 'unique' && $maxSockets > 0) {
+        if ($isUnique && $maxSockets > 0) {
             $maxSockets = self::MAX_ITEM_SOCKETS;
         }
 
@@ -196,8 +211,6 @@ final class PlanItemSchema
         // (uniqueMods), never an author-picked affix (stats). Its level requirement and
         // defensive properties are legitimate to record though (the planner holds no base
         // defence data - typing them is the only way to plan a unique's armour/ES).
-        $isUnique = ($item['rarity'] ?? null) === 'unique';
-
         if ($isUnique && $stats !== []) {
             $errors[] = 'A unique item carries its own modifiers and cannot add more.';
         }
@@ -214,13 +227,10 @@ final class PlanItemSchema
      * no mod lines and no runes).
      *
      * @param  array<string, mixed>  $entry
-     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: string, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
+     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
      */
     private static function canonicalItem(array $entry): ?array
     {
-        $rarity = $entry['rarity'] ?? null;
-        $rarity = in_array($rarity, self::ITEM_RARITIES, true) ? (string) $rarity : 'rare';
-
         $base = null;
         $rawBase = $entry['base'] ?? null;
 
@@ -243,6 +253,8 @@ final class PlanItemSchema
                 $stats[] = $mod;
             }
         }
+
+        $rarity = self::rarityOf($base, $stats);
 
         $uniqueMods = [];
         $rawUniqueMods = is_array($entry['uniqueMods'] ?? null) ? $entry['uniqueMods'] : [];
@@ -279,6 +291,62 @@ final class PlanItemSchema
             'sockets' => $sockets,
             'priority' => $priority,
         ];
+    }
+
+    /**
+     * An item's rarity, derived from its base and stats - never taken from the author's
+     * own `rarity` input, so it can't drift out of sync with what the item actually
+     * carries (or be forged to dodge a rarity-gated rule, see {@see itemErrors}). Mirrors
+     * the frontend's `deriveRarity` (`itemRarity.ts`) exactly, so what the editor shows
+     * while authoring is what gets stored. Works on both raw (author-submitted) and
+     * already-canonicalised base/stats - both carry the same `base.type`/`stat.type`
+     * shape.
+     *
+     * A unique base is always unique. Otherwise each stat carries its own frozen `type`
+     * (see {@see canonicalMod}) when it matched a known GGPK affix; an unmatched
+     * (author-typed) stat carries none. With every stat matched, the prefix/suffix split
+     * is exact: none is normal, up to one of each is magic, anything past that is rare.
+     * Once at least one stat is unmatched the split can't be read exactly - the total
+     * count alone still pins down 0 (normal) and {@see MIN_MODS_FOR_RARE}+ (rare, past
+     * magic's 1 prefix + 1 suffix cap); 1-2 falls back to magic, the overwhelmingly
+     * common case in practice.
+     *
+     * There is no fixed ceiling on the other end - a rune ("+1 Suffix Modifier allowed")
+     * or a corruption can push a real rare item's affix count past its base 3+3, so
+     * nothing here rejects a high count.
+     *
+     * @param  array{type?: mixed}|null  $base
+     * @param  list<array{type?: mixed}>  $stats
+     */
+    public static function rarityOf(?array $base, array $stats): string
+    {
+        if (($base['type'] ?? null) === 'unique') {
+            return 'unique';
+        }
+
+        $prefixes = 0;
+        $suffixes = 0;
+        $unknown = 0;
+
+        foreach ($stats as $stat) {
+            match ($stat['type'] ?? null) {
+                'prefix' => $prefixes++,
+                'suffix' => $suffixes++,
+                default => $unknown++,
+            };
+        }
+
+        $total = $prefixes + $suffixes + $unknown;
+
+        if ($total === 0) {
+            return 'normal';
+        }
+
+        if ($unknown === 0) {
+            return $prefixes <= 1 && $suffixes <= 1 ? 'magic' : 'rare';
+        }
+
+        return $total < self::MIN_MODS_FOR_RARE ? 'magic' : 'rare';
     }
 
     /**
@@ -358,12 +426,16 @@ final class PlanItemSchema
     }
 
     /**
-     * Coerce one modifier: a reference to a GGPK affix (`Mods.Id`) plus the author's
-     * rolled values (one per range in the tier). The wording, ranges and generation
-     * type are resolved live from {@see ModCatalogue}, so only the id and the
-     * values are stored. Returns null when there is no mod id.
+     * Coerce one modifier into its frozen shape - a matched GGPK affix's data copied out
+     * at write time (see {@see ModCatalogue::modSnapshot}), or a plain-text line when
+     * nothing matched. Unlike a live reference, none of this is ever resolved against the
+     * catalogue again, so a future GGPK patch renaming or dropping the affix can never
+     * invalidate an already-stored plan. `text` is the only field that must always be
+     * present - it is the sole source of truth for display when `modId` is null; every
+     * other field is metadata used only while `modId` still resolves (family/tier
+     * validation, `HasExplicitMod` names, …). Returns null when there is no text at all.
      *
-     * @return array{modId: string, values: list<int|float>}|null
+     * @return array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}|null
      */
     private static function canonicalMod(mixed $stat): ?array
     {
@@ -371,13 +443,66 @@ final class PlanItemSchema
             return null;
         }
 
+        $text = is_string($stat['text'] ?? null) ? trim((string) $stat['text']) : '';
         $modId = is_string($stat['modId'] ?? null) ? trim((string) $stat['modId']) : '';
 
-        if ($modId === '') {
+        // Backward compatibility: a stat saved before the frozen snapshot shape existed
+        // carries only `{modId, values}` - no `text` at all. Re-freeze it here from the
+        // live catalogue rather than dropping the mod outright - every view or save of
+        // an older plan (predating `MigrateBuildPlanStatSnapshots`) re-runs this until
+        // the backfill command persists its snapshot, but that's a cheap in-memory
+        // catalogue lookup, not a reason to strip the mod in the meantime.
+        if ($text === '' && $modId !== '') {
+            $stat = app(ModCatalogue::class)->modSnapshot($modId, self::canonicalValues($stat['values'] ?? null), '');
+            $text = trim($stat['text']);
+            $modId = is_string($stat['modId'] ?? null) ? trim((string) $stat['modId']) : '';
+        }
+
+        if ($text === '') {
             return null;
         }
 
-        return ['modId' => mb_substr($modId, 0, 120), 'values' => self::canonicalValues($stat['values'] ?? null)];
+        $name = is_string($stat['name'] ?? null) ? trim((string) $stat['name']) : '';
+        $type = in_array($stat['type'] ?? null, ['prefix', 'suffix'], true) ? (string) $stat['type'] : null;
+        $family = is_string($stat['family'] ?? null) ? trim((string) $stat['family']) : '';
+        $tier = is_numeric($stat['tier'] ?? null) ? (int) $stat['tier'] : null;
+
+        return [
+            'modId' => $modId !== '' ? mb_substr($modId, 0, 120) : null,
+            'text' => mb_substr($text, 0, 200),
+            'name' => $name !== '' ? mb_substr($name, 0, 120) : null,
+            'type' => $type,
+            'family' => $family !== '' ? mb_substr($family, 0, 120) : null,
+            'tier' => $tier,
+            'rolls' => self::canonicalRolls($stat['rolls'] ?? null),
+            'values' => self::canonicalValues($stat['values'] ?? null),
+        ];
+    }
+
+    /**
+     * Coerce one modifier's frozen roll ranges (one per value it carries), capped at the
+     * most ranges any tier carries. Returns null when there are none - the field only has
+     * meaning for a matched (non-plain-text) stat.
+     *
+     * @return list<array{stat: string, min: int|float, max: int|float}>|null
+     */
+    private static function canonicalRolls(mixed $rawRolls): ?array
+    {
+        if (! is_array($rawRolls)) {
+            return null;
+        }
+
+        $rolls = [];
+
+        foreach (array_slice(array_values($rawRolls), 0, 8) as $roll) {
+            if (! is_array($roll) || ! is_string($roll['stat'] ?? null) || ! is_numeric($roll['min'] ?? null) || ! is_numeric($roll['max'] ?? null)) {
+                continue;
+            }
+
+            $rolls[] = ['stat' => $roll['stat'], 'min' => $roll['min'] + 0, 'max' => $roll['max'] + 0];
+        }
+
+        return $rolls === [] ? null : $rolls;
     }
 
     /**

@@ -36,7 +36,7 @@ function seedBuild(): BuildPlan
                 'ring1' => [
                     'rarity' => 'rare',
                     'base' => ['type' => 'base', 'id' => 'Amethyst Ring'],
-                    'stats' => [['modId' => 'IncreasedLife9', 'values' => [130]]],
+                    'stats' => [['modId' => 'IncreasedLife9', 'text' => '+130 to maximum Life', 'name' => "Athlete's", 'values' => [130]]],
                 ],
             ]]]],
         ]),

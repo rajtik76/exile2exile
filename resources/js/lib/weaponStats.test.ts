@@ -1,8 +1,7 @@
 import { expect, test } from 'vitest';
-import type { ModMap } from '@/lib/modLines';
 import type { PlanReference } from '@/lib/planReferences';
 import { weaponStatLines } from '@/lib/weaponStats';
-import type { ItemPlan } from '@/types/planner';
+import type { ItemMod, ItemPlan } from '@/types/planner';
 
 function item(overrides: Partial<ItemPlan> = {}): ItemPlan {
     return {
@@ -39,49 +38,33 @@ function reference(overrides: Partial<PlanReference> = {}): PlanReference {
     };
 }
 
-const mods = {
-    AddedCold: {
-        rolls: [
-            { stat: 'local_minimum_added_cold_damage', min: 10, max: 12 },
-            { stat: 'local_maximum_added_cold_damage', min: 18, max: 22 },
-        ],
-    },
-    IncPhys: {
-        rolls: [{ stat: 'local_physical_damage_+%', min: 40, max: 60 }],
-    },
-    AttackSpeed: {
-        rolls: [{ stat: 'local_attack_speed_+%', min: 20, max: 25 }],
-    },
-    IncCrit: {
-        rolls: [{ stat: 'local_critical_strike_chance_+%', min: 20, max: 30 }],
-    },
-    ReloadSpeed: {
-        rolls: [{ stat: 'local_reload_speed_+%', min: 25, max: 25 }],
-    },
-    GlobalCold: {
-        rolls: [
-            { stat: 'attack_minimum_added_cold_damage', min: 10, max: 12 },
-            { stat: 'attack_maximum_added_cold_damage', min: 18, max: 22 },
-        ],
-    },
-    SpiritInc: {
-        rolls: [{ stat: 'local_spirit_+%', min: 20, max: 20 }],
-    },
-} as unknown as ModMap;
+/** A matched local-mod stat carrying just the frozen rolls weaponStats reads. */
+function stat(id: string, rolls: ItemMod['rolls'], values: number[]): ItemMod {
+    return {
+        modId: id,
+        text: id,
+        name: null,
+        type: 'prefix',
+        family: id,
+        tier: null,
+        rolls,
+        values,
+    };
+}
 
 function lineMap(lines: ReturnType<typeof weaponStatLines>) {
     return Object.fromEntries(lines.map((line) => [line.label, line]));
 }
 
 test('returns nothing for a non-weapon reference', () => {
-    expect(weaponStatLines(undefined, item(), {})).toEqual([]);
+    expect(weaponStatLines(undefined, item())).toEqual([]);
     expect(
-        weaponStatLines(reference({ weapon: null, spirit: 0 }), item(), {}),
+        weaponStatLines(reference({ weapon: null, spirit: 0 }), item()),
     ).toEqual([]);
 });
 
 test('renders the bare base stats, unmodified', () => {
-    const lines = lineMap(weaponStatLines(reference(), item(), {}));
+    const lines = lineMap(weaponStatLines(reference(), item()));
 
     expect(lines['Physical Damage']).toEqual({
         label: 'Physical Damage',
@@ -99,8 +82,26 @@ test('local added elemental damage becomes its own line; global added does not',
     const local = lineMap(
         weaponStatLines(
             reference(),
-            item({ stats: [{ modId: 'AddedCold', values: [11, 20] }] }),
-            mods,
+            item({
+                stats: [
+                    stat(
+                        'AddedCold',
+                        [
+                            {
+                                stat: 'local_minimum_added_cold_damage',
+                                min: 10,
+                                max: 12,
+                            },
+                            {
+                                stat: 'local_maximum_added_cold_damage',
+                                min: 18,
+                                max: 22,
+                            },
+                        ],
+                        [11, 20],
+                    ),
+                ],
+            }),
         ),
     );
 
@@ -113,8 +114,26 @@ test('local added elemental damage becomes its own line; global added does not',
     const global = lineMap(
         weaponStatLines(
             reference(),
-            item({ stats: [{ modId: 'GlobalCold', values: [11, 20] }] }),
-            mods,
+            item({
+                stats: [
+                    stat(
+                        'GlobalCold',
+                        [
+                            {
+                                stat: 'attack_minimum_added_cold_damage',
+                                min: 10,
+                                max: 12,
+                            },
+                            {
+                                stat: 'attack_maximum_added_cold_damage',
+                                min: 18,
+                                max: 22,
+                            },
+                        ],
+                        [11, 20],
+                    ),
+                ],
+            }),
         ),
     );
 
@@ -133,9 +152,20 @@ test('quality and local increased physical damage scale the physical line', () =
                     energyShield: 0,
                     block: 0,
                 },
-                stats: [{ modId: 'IncPhys', values: [50] }],
+                stats: [
+                    stat(
+                        'IncPhys',
+                        [
+                            {
+                                stat: 'local_physical_damage_+%',
+                                min: 40,
+                                max: 60,
+                            },
+                        ],
+                        [50],
+                    ),
+                ],
             }),
-            mods,
         ),
     );
 
@@ -153,11 +183,24 @@ test('local attack speed and crit chance modifiers scale their lines', () => {
             reference(),
             item({
                 stats: [
-                    { modId: 'AttackSpeed', values: [25] },
-                    { modId: 'IncCrit', values: [20] },
+                    stat(
+                        'AttackSpeed',
+                        [{ stat: 'local_attack_speed_+%', min: 20, max: 25 }],
+                        [25],
+                    ),
+                    stat(
+                        'IncCrit',
+                        [
+                            {
+                                stat: 'local_critical_strike_chance_+%',
+                                min: 20,
+                                max: 30,
+                            },
+                        ],
+                        [20],
+                    ),
                 ],
             }),
-            mods,
         ),
     );
 
@@ -187,7 +230,7 @@ test('a crossbow shows its reload time, sped up by local reload speed', () => {
         },
     });
 
-    const bare = lineMap(weaponStatLines(crossbow, item(), {}));
+    const bare = lineMap(weaponStatLines(crossbow, item()));
     expect(bare['Reload Time']).toEqual({
         label: 'Reload Time',
         value: '0.80 sec',
@@ -197,8 +240,15 @@ test('a crossbow shows its reload time, sped up by local reload speed', () => {
     const faster = lineMap(
         weaponStatLines(
             crossbow,
-            item({ stats: [{ modId: 'ReloadSpeed', values: [25] }] }),
-            mods,
+            item({
+                stats: [
+                    stat(
+                        'ReloadSpeed',
+                        [{ stat: 'local_reload_speed_+%', min: 25, max: 25 }],
+                        [25],
+                    ),
+                ],
+            }),
         ),
     );
     expect(faster['Reload Time'].value).toBe('0.64 sec');
@@ -217,7 +267,7 @@ test('a melee weapon shows its range in metres', () => {
         },
     });
 
-    const lines = lineMap(weaponStatLines(spear, item(), {}));
+    const lines = lineMap(weaponStatLines(spear, item()));
 
     expect(lines['Weapon Range']).toEqual({
         label: 'Weapon Range',
@@ -233,13 +283,20 @@ test('a sceptre has no weapon row but shows its Spirit, scaled by local spirit',
         spirit: 100,
     });
 
-    const bare = weaponStatLines(sceptre, item(), {});
+    const bare = weaponStatLines(sceptre, item());
     expect(bare).toEqual([{ label: 'Spirit', value: '100', modified: false }]);
 
     const scaled = weaponStatLines(
         sceptre,
-        item({ stats: [{ modId: 'SpiritInc', values: [20] }] }),
-        mods,
+        item({
+            stats: [
+                stat(
+                    'SpiritInc',
+                    [{ stat: 'local_spirit_+%', min: 20, max: 20 }],
+                    [20],
+                ),
+            ],
+        }),
     );
     expect(scaled).toEqual([{ label: 'Spirit', value: '120', modified: true }]);
 });

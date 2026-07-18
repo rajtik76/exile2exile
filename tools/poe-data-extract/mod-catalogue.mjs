@@ -35,6 +35,274 @@ const DESECRATED_DOMAIN = 'Unveiled';
 const STAT_SLOTS = [1, 2, 3, 4, 5, 6];
 
 /**
+ * The `HandWraps*` mod family (elemental "gained as extra" damage, onslaught chance,
+ * crit chance, resistances, attributes, life/mana, local defenses, leech, rarity) is
+ * GGG's affix pool for Runeforged gloves - confirmed against a real Runeforged Fists
+ * of Stone item (PoB headless import, all 9 disputed lines `recognised=true`) and
+ * against PoB's own ModItem.lua, which matches this exact family by text. Every tier
+ * carries `SpawnWeight_Tags: [0], SpawnWeight_Values: [0]` in the GGPK export - GGG
+ * ships the pool with zero natural weight everywhere, the same data PoB itself sees
+ * (its `weightVal = {0}`), and PoB never applies the weight gate on import (it parses
+ * item text against the full ModItem.lua dictionary regardless of weight). Nothing in
+ * the extracted tables (SpawnWeight_Tags/Values, GenerationWeights, EssenceMods,
+ * Expedition2*, .it metadata) ties the family to a base by any other route.
+ *
+ * This is a curated, hand-verified exception to "mod values are GGPK-only": only the
+ * pool -> base ASSOCIATION is manual here (GGPK carries none), every roll range and
+ * rendered line still comes straight from GGPK. The `runeforged` tag already exists on
+ * the affected bases (e.g. Runeforged Fists of Stone carries GGPK tag `runeforged`
+ * alongside its normal `gloves` tag) and is otherwise unused as a mod gate, so mods are
+ * synthetically granted a positive weight on that tag - reusing the app's existing
+ * tag-gate join instead of adding a new flag/field the picker and the import matcher
+ * would both need to learn about.
+ *
+ * The tag alone is not enough: `runeforged` is shared across every equipment class
+ * (Runeforged Rusted Cuirass, a body armour, carries it too - see
+ * Expedition2VerisiumCrafts, which converts ordinary bases of any class to their
+ * Runeforged counterpart via Verisium). A base's `spawnWeights` tags are matched as
+ * an OR (ModCatalogue::canRollOn(), app side) - any one shared positive-weight tag
+ * makes a mod eligible - so a bare `runeforged` weight would let this glove-only pool
+ * (HandWraps* = the hand-wraps/unarmed namespace) leak onto Runeforged body armour,
+ * rings, etc. Each entry also carries `itemClasses: ['Gloves']`; ModCatalogue::canRollOn()
+ * ANDs a non-empty itemClasses list against the base's own item class on top of the tag
+ * match (generalised from the essence-only path to apply to any positively-weighted mod).
+ *
+
+ * Excluded from this pool (each is its own mechanism, not a runeforged-gloves affix):
+ * `HandWrapsAbyssMod*` (Abyss jewel socket mods), `HandWrapsDecayInfluence*` (Decay
+ * influence), `HandWrapsMarksmanInfluence*` (Marksman ascendancy influence),
+ * `HandWrapsUnique*`/other `Unique`-generation entries (unique-item-only or base
+ * implicits, never craftable affixes), and `HandWrapsEssence*` (a separate craft-only
+ * bucket, already handled by the `essence` flag above).
+ */
+const RUNEFORGED_TAG = 'runeforged';
+const RUNEFORGED_HANDWRAPS_EXCLUDE_PREFIX = [
+    'HandWrapsAbyssMod',
+    'HandWrapsDecayInfluence',
+    'HandWrapsMarksmanInfluence',
+    'HandWrapsUnique',
+];
+const RUNEFORGED_HANDWRAPS_EXCLUDE_ID = new Set([
+    'HandWrapsAddedLightningDamageWhileUnarmedUniqueGloves_1',
+    'HandWrapsBaseUnarmedCriticalStrikeChanceUnique__2',
+    'HandWrapsDemigodIncreasedSkillSpeed1',
+    'HandWrapsImplicitLocalBaseEvasionAndEnergyShieldPerLevel',
+    'HandWrapsImplicitLocalBaseEvasionEnergyShieldAndWardPerLevel',
+    'HandWrapsImplicitLocalCopyPlayerLevelValue',
+    'HandWrapsThunderfistUnique__1',
+    'HandWrapsEssenceGoldDropped1',
+    'HandWrapsEssenceLightningRecoupLife1',
+    'HandWrapsEssenceLocalRuneAndSoulCoreEffect1',
+]);
+
+/**
+ * True for a `HandWraps*` mod id that belongs to the curated runeforged-gloves pool
+ * (see {@link RUNEFORGED_TAG} above) - i.e. it should be granted a synthetic positive
+ * weight on the `runeforged` tag rather than left at its native zero weight.
+ *
+ * @param {string} id
+ * @returns {boolean}
+ */
+function isRuneforgedHandWrapsMod(id) {
+    if (!id.startsWith('HandWraps')) {
+        return false;
+    }
+
+    if (RUNEFORGED_HANDWRAPS_EXCLUDE_PREFIX.some((prefix) => id.startsWith(prefix))) {
+        return false;
+    }
+
+    return !RUNEFORGED_HANDWRAPS_EXCLUDE_ID.has(id);
+}
+
+/**
+ * The `Alloy*` mod family turned out to need no overlay at all: it is a
+ * Verisium-crafted mechanism (its own P0/S0 tier slot, confirmed against real
+ * trade listings - `item-mod--crafted` CSS class, a "Verisium"/"of the Stars"
+ * affix label with "(Crafted)" - and NOT tied to the Runeforged base mechanism
+ * despite the shared currency name), but 48 of its 51 ids are independently
+ * referenced by `EssenceMods` and already flow through the existing `essence`
+ * flag / {@link buildEssenceClasses} itemClasses gate below - no Alloy-specific
+ * code needed. That essence-sourced scoping was spot-checked against 4 mods
+ * verified on real trade listings (Wand, Staff, Helmet, and the One Hand Mace/
+ * Spear/Talisman subset of the essence-granted Weapons category) and matched
+ * exactly, so it is trustworthy for the rest of the family too.
+ *
+ * `AlloyLocalWardIncreasePercent2` is patched in here: it shares both `ModType`
+ * and `Families` with `AlloyLocalWardIncreasePercent1` (an essence-covered id) -
+ * a tier-ladder relationship, the same kind every other mod family's tiers
+ * already share, not a guess.
+ */
+const ALLOY_TIER_SIBLING_ITEM_CLASSES = {
+    AlloyLocalWardIncreasePercent2: 'AlloyLocalWardIncreasePercent1',
+};
+
+/**
+ * The last two `Alloy*` ids had no essence reference and no tier sibling to
+ * inherit from, so they are patched in directly from a real trade listing:
+ * `AlloySpiritPresenceAreaOfEffectHybrid1` -> Body Armour ("increased Presence
+ * Area of Effect", S0, "of the Stars (>=25, Crafted)"); `AlloyManaNearbyAllyAttackSpeedHybrid1`
+ * -> Ring ("increased Attack Speed", S0, "of the Stars (>=45, Crafted)"). The
+ * latter needed care: the same rendered stat text ("increased Attack Speed")
+ * also belongs to an unrelated Jewel-only crafted mod ("of Alacrity", S1, no
+ * "(>=45)" gate) on real listings - confirmed distinct by affix name, not by
+ * matching the rendered stat text (which both mods share).
+ */
+const ALLOY_VERIFIED_ITEM_CLASSES = {
+    AlloySpiritPresenceAreaOfEffectHybrid1: ['Body Armour'],
+    AlloyManaNearbyAllyAttackSpeedHybrid1: ['Ring'],
+};
+
+/**
+ * A handful of otherwise-signal-less mods (zero-weight everywhere, no itemClasses,
+ * no route through essence/tier-sibling/runeforged) verified individually against
+ * real trade listings (pathofexile.com/trade2, Stat Filter search on the exact
+ * rendered wording with numeric tokens replaced by `#`). Only the class actually
+ * seen on a live listing is recorded - no inference to sibling classes. Each is
+ * granted a synthetic positive weight on the GGPK tag its confirmed class already
+ * carries naturally (`warstaff`/`belt`/`jewel` - see `resources/poe2/ggpk/items.json`
+ * `tags`), the same mechanism {@link RUNEFORGED_TAG} uses; `itemClasses` is kept
+ * alongside it for explicitness even though these tags are already class-specific
+ * (unlike the cross-slot `runeforged` tag, so it is not load-bearing here).
+ *
+ * Each entry below is `id: [[itemClass, tag], ...]` - a list of class/tag pairs,
+ * one per class the trade listing confirmed (usually one), grouped by the trade
+ * listing that confirmed it:
+ *
+ * - "Leeches #% of Physical Damage as Life" (`LifeLeechPermyriadLocalEssence1..7`,
+ *   identical wording across all 7 tiers) -> Warstaff (trade UI label "Quarterstaff").
+ * - "Leech Life #% faster" (`IncreasedLifeLeechRateEssence1`) -> Belt (not the
+ *   `decay` tag a stat-FK co-occurrence guess had suggested - that guess was wrong).
+ * - "#% increased Effect of your Mark Skills" (`MarkEffectEssence1`) -> Jewel (not
+ *   the `marksman` tag a stat-FK co-occurrence guess had suggested - also wrong).
+ * - "#% increased Flask Life/Mana Recovery rate" (`BeltFlaskLifeRecoveryRateEssence1..7`,
+ *   `BeltFlaskManaRecoveryRateEssence1..3`) -> Belt. A FIRST verification pass without
+ *   the `#` placeholder had mismatched the trade Stat Filter's autocomplete to an
+ *   unrelated option and wrongly read this as "Body Armour" - PoE2 trade replaces
+ *   numeric tokens with a literal `#` in the filter search text, a plain number never
+ *   matches; re-run with `#` confirms the original stat-FK `belt` guess was right.
+ * - "Damage Penetrates #% Cold/Fire/Lightning Resistance" (`ColdResistancePenetrationEssence*`,
+ *   `ColdResistancePenetrationTwoHandEssence*`, `ColdResistancePenetrationWarbands`,
+ *   and the Fire/Lightning equivalents) -> Jewel in all three elements, not the
+ *   `gloves` tag a stat-FK co-occurrence guess had suggested.
+ * - "# Life/Mana gained when you Block" (`GainLifeOnBlock1..6`, `GainManaOnBlock1..4`)
+ *   -> Shield, confirmed on Shield and Buckler (a Shield subtype) listings - matches
+ *   the `shield` tag a stat-FK co-occurrence guess had suggested.
+ * - "# to Level of all Chaos/Cold/Fire/Lightning/Physical Spell Skills"
+ *   (`GlobalChaosSpellGemsLevel1..3`, `GlobalColdSpellGemsLevel1..3`,
+ *   `GlobalFireSpellGemsLevel1..3`, `GlobalLightningSpellGemsLevel1..3`,
+ *   `GlobalPhysicalSpellGemsLevel1..3`) -> both Wand AND Staff for every element
+ *   (each queried separately with the `Item Category` trade filter, not inferred
+ *   from one element to the rest) - matches the `wand`/`staff` tags a stat-FK
+ *   co-occurrence guess had suggested.
+ * - "Hits against you have #% reduced Critical Damage Bonus"
+ *   (`HandWrapsMarksmanInfluenceCriticalHitChance1..3`) -> Shield (specifically the
+ *   `str_dex_shield`-tagged "Targe" shield bases), confirmed on a live listing -
+ *   matches the `str_dex_shield` tag a stat-FK co-occurrence guess had suggested.
+ *   Despite the `HandWraps...MarksmanInfluence` id prefix (normally the excluded
+ *   Marksman-ascendancy-influence mechanism, see {@link RUNEFORGED_HANDWRAPS_EXCLUDE_PREFIX}),
+ *   this family's own donors (`ReducedExtraDamageFromCrits1..5`) are unrelated,
+ *   unambiguous, real-weight Shield mods - the shared id prefix is coincidental
+ *   naming, not evidence of the Marksman mechanism.
+ * - "Leech #% of Physical Attack Damage as Life" (`HandWrapsDecayInfluenceLeechAmount1`)
+ *   -> Gloves AND Ring, both confirmed on live listings with an explicit tier-tagged
+ *   mod line (not just header stats) - Belt and Boots were checked and ruled out
+ *   (0 results), Amulet too. Despite the `HandWraps...DecayInfluence` id prefix
+ *   (normally the excluded Decay-influence mechanism, see
+ *   {@link RUNEFORGED_HANDWRAPS_EXCLUDE_PREFIX}), same reasoning as the Marksman
+ *   case above - the shared prefix is coincidental naming.
+ */
+const TRADE_VERIFIED_SOURCE = {
+    LifeLeechPermyriadLocalEssence1: [['Warstaff', 'warstaff']],
+    LifeLeechPermyriadLocalEssence2: [['Warstaff', 'warstaff']],
+    LifeLeechPermyriadLocalEssence3: [['Warstaff', 'warstaff']],
+    LifeLeechPermyriadLocalEssence4: [['Warstaff', 'warstaff']],
+    LifeLeechPermyriadLocalEssence5: [['Warstaff', 'warstaff']],
+    LifeLeechPermyriadLocalEssence6: [['Warstaff', 'warstaff']],
+    LifeLeechPermyriadLocalEssence7: [['Warstaff', 'warstaff']],
+    IncreasedLifeLeechRateEssence1: [['Belt', 'belt']],
+    MarkEffectEssence1: [['Jewel', 'jewel']],
+    BeltFlaskLifeRecoveryRateEssence1: [['Belt', 'belt']],
+    BeltFlaskLifeRecoveryRateEssence2: [['Belt', 'belt']],
+    BeltFlaskLifeRecoveryRateEssence3: [['Belt', 'belt']],
+    BeltFlaskLifeRecoveryRateEssence4: [['Belt', 'belt']],
+    BeltFlaskLifeRecoveryRateEssence5: [['Belt', 'belt']],
+    BeltFlaskLifeRecoveryRateEssence6: [['Belt', 'belt']],
+    BeltFlaskLifeRecoveryRateEssence7: [['Belt', 'belt']],
+    BeltFlaskManaRecoveryRateEssence1: [['Belt', 'belt']],
+    BeltFlaskManaRecoveryRateEssence2: [['Belt', 'belt']],
+    BeltFlaskManaRecoveryRateEssence3: [['Belt', 'belt']],
+    ColdResistancePenetrationEssence1: [['Jewel', 'jewel']],
+    ColdResistancePenetrationEssence2: [['Jewel', 'jewel']],
+    ColdResistancePenetrationEssence3: [['Jewel', 'jewel']],
+    ColdResistancePenetrationEssence4_: [['Jewel', 'jewel']],
+    ColdResistancePenetrationEssence5: [['Jewel', 'jewel']],
+    ColdResistancePenetrationEssence6_: [['Jewel', 'jewel']],
+    ColdResistancePenetrationTwoHandEssence1: [['Jewel', 'jewel']],
+    ColdResistancePenetrationTwoHandEssence2: [['Jewel', 'jewel']],
+    ColdResistancePenetrationTwoHandEssence3: [['Jewel', 'jewel']],
+    ColdResistancePenetrationTwoHandEssence4: [['Jewel', 'jewel']],
+    ColdResistancePenetrationTwoHandEssence5: [['Jewel', 'jewel']],
+    ColdResistancePenetrationTwoHandEssence6__: [['Jewel', 'jewel']],
+    ColdResistancePenetrationWarbands: [['Jewel', 'jewel']],
+    FireResistancePenetrationEssence1: [['Jewel', 'jewel']],
+    FireResistancePenetrationEssence2: [['Jewel', 'jewel']],
+    FireResistancePenetrationEssence3: [['Jewel', 'jewel']],
+    FireResistancePenetrationEssence4___: [['Jewel', 'jewel']],
+    FireResistancePenetrationEssence5: [['Jewel', 'jewel']],
+    FireResistancePenetrationTwoHandEssence1: [['Jewel', 'jewel']],
+    FireResistancePenetrationTwoHandEssence2_: [['Jewel', 'jewel']],
+    FireResistancePenetrationTwoHandEssence3: [['Jewel', 'jewel']],
+    FireResistancePenetrationTwoHandEssence4: [['Jewel', 'jewel']],
+    FireResistancePenetrationTwoHandEssence5: [['Jewel', 'jewel']],
+    FireResistancePenetrationWarbands: [['Jewel', 'jewel']],
+    LightningResistancePenetrationEssence1_: [['Jewel', 'jewel']],
+    LightningResistancePenetrationEssence2: [['Jewel', 'jewel']],
+    LightningResistancePenetrationEssence3: [['Jewel', 'jewel']],
+    LightningResistancePenetrationEssence4: [['Jewel', 'jewel']],
+    LightningResistancePenetrationTwoHandEssence1_: [['Jewel', 'jewel']],
+    LightningResistancePenetrationTwoHandEssence2: [['Jewel', 'jewel']],
+    LightningResistancePenetrationTwoHandEssence3_: [['Jewel', 'jewel']],
+    LightningResistancePenetrationTwoHandEssence4: [['Jewel', 'jewel']],
+    LightningPenetrationWarbands: [['Jewel', 'jewel']],
+    GainLifeOnBlock1: [['Shield', 'shield']],
+    GainLifeOnBlock2_: [['Shield', 'shield']],
+    GainLifeOnBlock3: [['Shield', 'shield']],
+    GainLifeOnBlock4: [['Shield', 'shield']],
+    GainLifeOnBlock5: [['Shield', 'shield']],
+    GainLifeOnBlock6_: [['Shield', 'shield']],
+    GainManaOnBlock1: [['Shield', 'shield']],
+    GainManaOnBlock2: [['Shield', 'shield']],
+    GainManaOnBlock3: [['Shield', 'shield']],
+    GainManaOnBlock4: [['Shield', 'shield']],
+    GlobalChaosSpellGemsLevel1: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalChaosSpellGemsLevel2: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalChaosSpellGemsLevel3: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalColdSpellGemsLevel1_: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalColdSpellGemsLevel2: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalColdSpellGemsLevel3: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalFireSpellGemsLevel1_: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalFireSpellGemsLevel2: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalFireSpellGemsLevel3: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalLightningSpellGemsLevel1: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalLightningSpellGemsLevel2: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalLightningSpellGemsLevel3: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalPhysicalSpellGemsLevel1: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalPhysicalSpellGemsLevel2: [['Wand', 'wand'], ['Staff', 'staff']],
+    GlobalPhysicalSpellGemsLevel3: [['Wand', 'wand'], ['Staff', 'staff']],
+    HandWrapsMarksmanInfluenceCriticalHitChance1: [['Shield', 'str_dex_shield']],
+    HandWrapsMarksmanInfluenceCriticalHitChance2: [['Shield', 'str_dex_shield']],
+    HandWrapsMarksmanInfluenceCriticalHitChance3: [['Shield', 'str_dex_shield']],
+    HandWrapsDecayInfluenceLeechAmount1: [['Gloves', 'gloves'], ['Ring', 'ring']],
+};
+const TRADE_VERIFIED = Object.fromEntries(
+    Object.entries(TRADE_VERIFIED_SOURCE).map(([id, pairs]) => [
+        id,
+        { itemClasses: pairs.map(([itemClass]) => itemClass), tags: pairs.map(([, tag]) => tag) },
+    ]),
+);
+
+/**
  * Stats GGG stores per minute but describes per second (`per_minute_to_per_second*`
  * value handlers): flask charge gain, life/mana regeneration and the like. The
  * toolkit's renderer either skips those handlers (unknown `_2dp` variants leave the
@@ -201,7 +469,9 @@ function mergeRangeLine(minLine, maxLine) {
  * Beyond naturally rolling affixes the catalogue carries two craft-only groups: the
  * desecrated domain's mods (flagged `desecrated`, see {@link DESECRATED_DOMAIN}) and
  * essence-granted mods (flagged `essence`, gated by `itemClasses` from
- * {@link buildEssenceClasses} since their spawn weights are all zero).
+ * {@link buildEssenceClasses} since their spawn weights are all zero). The Verisium-
+ * crafted `Alloy*` family (see {@link ALLOY_TIER_SIBLING_ITEM_CLASSES} above) rides
+ * the same essence `itemClasses` gate without its own flag - see that comment for why.
  *
  * @param {Record<string, import('@poe2-toolkit/mod-extractor').Mod>} modData
  * @param {Record<string, string[]>} essenceClasses  mod id => item classes its essence targets
@@ -240,8 +510,24 @@ export function buildModCatalogue(modData, essenceClasses = {}) {
         // Essences also grant naturally rolling mods (their outcome tiers); those stay
         // plain natural affixes. The essence flag marks only mods an essence is the sole
         // route to: referenced by EssenceMods and without any positive spawn weight.
-        const spawnWeights = mod.spawnWeights ?? [];
+        // The curated runeforged-gloves pool (see RUNEFORGED_TAG above) gets a synthetic
+        // positive weight on the runeforged tag injected here, before the essence check,
+        // so it joins the picker/import tag gate exactly like a naturally-weighted mod.
+        // Prepended, not appended: the app's matchingWeight() takes the FIRST spawnWeight
+        // entry whose tag the base carries (GGG's own first-match semantics), and every
+        // native HandWraps* entry already starts with an unconditional `{tag: "default",
+        // weight: 0}` - appended after it, the injected runeforged weight would never be
+        // reached.
+        const spawnWeights = isRuneforgedHandWrapsMod(id)
+            ? [{ tag: RUNEFORGED_TAG, weight: 1 }, ...(mod.spawnWeights ?? [])]
+            : TRADE_VERIFIED[id]
+                ? [...TRADE_VERIFIED[id].tags.map((tag) => ({ tag, weight: 1 })), ...(mod.spawnWeights ?? [])]
+                : (mod.spawnWeights ?? []);
         const essence = essenceClasses[id] !== undefined && !spawnWeights.some((gate) => gate.weight > 0);
+        // The one Alloy tier-sibling patch (see ALLOY_TIER_SIBLING_ITEM_CLASSES above):
+        // inherits its essence-sourced itemClasses from its covered tier-1 sibling.
+        const tierSiblingId = ALLOY_TIER_SIBLING_ITEM_CLASSES[id];
+        const tierSiblingItemClasses = tierSiblingId ? (essenceClasses[tierSiblingId] ?? []) : [];
 
         mods.push({
             id,
@@ -266,7 +552,19 @@ export function buildModCatalogue(modData, essenceClasses = {}) {
             spawnWeights,
             desecrated,
             essence,
-            itemClasses: essence ? essenceClasses[id] : [],
+            // Empty means "no class restriction, tag match alone decides" - the app
+            // ANDs this against the base's item class only when non-empty. Unioned
+            // rather than picked exclusively: a mod can be reachable through more than
+            // one route at once (essence, the runeforged-gloves overlay, a tier-sibling
+            // patch), and restricting to just one route's list would silently drop
+            // items only reachable through another.
+            itemClasses: [...new Set([
+                ...(essence ? essenceClasses[id] : []),
+                ...tierSiblingItemClasses,
+                ...(ALLOY_VERIFIED_ITEM_CLASSES[id] ?? []),
+                ...(TRADE_VERIFIED[id]?.itemClasses ?? []),
+                ...(isRuneforgedHandWrapsMod(id) ? ['Gloves'] : []),
+            ])],
         });
     }
 

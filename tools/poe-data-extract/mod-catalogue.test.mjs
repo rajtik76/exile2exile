@@ -139,6 +139,66 @@ describe('buildModCatalogue craft-only flags', () => {
         expect(mods).toEqual([]);
     });
 
+    it('injects the runeforged-gloves overlay weight before the native default entry', () => {
+        // The app's matchingWeight() (App\Pob\ModCatalogue) takes the FIRST spawnWeight
+        // entry whose tag the base carries - GGG's own first-match semantics. Every
+        // native HandWraps* mod already starts with an unconditional
+        // {tag: "default", weight: 0}; appended after it, the injected runeforged
+        // weight would never be reached. Regression for that exact bug.
+        const { mods } = buildModCatalogue({
+            HandWrapsAddedColdDamage9: {
+                ...base,
+                domain: 'Item',
+                generationType: 'Prefix',
+                spawnWeights: [{ tag: 'default', weight: 0 }],
+            },
+        });
+
+        expect(mods[0].spawnWeights).toEqual([
+            { tag: 'runeforged', weight: 1 },
+            { tag: 'default', weight: 0 },
+        ]);
+    });
+
+    it('injects the trade-verified overlay weight and itemClasses for a signal-less mod', () => {
+        const { mods } = buildModCatalogue({
+            LifeLeechPermyriadLocalEssence1: {
+                ...base,
+                domain: 'Item',
+                generationType: 'Suffix',
+                spawnWeights: [{ tag: 'default', weight: 0 }],
+            },
+        });
+
+        expect(mods[0]).toMatchObject({
+            spawnWeights: [
+                { tag: 'warstaff', weight: 1 },
+                { tag: 'default', weight: 0 },
+            ],
+            itemClasses: ['Warstaff'],
+        });
+    });
+
+    it('injects multiple trade-verified overlay tags and itemClasses when a mod is confirmed on more than one class', () => {
+        const { mods } = buildModCatalogue({
+            GlobalChaosSpellGemsLevel1: {
+                ...base,
+                domain: 'Item',
+                generationType: 'Prefix',
+                spawnWeights: [{ tag: 'default', weight: 0 }],
+            },
+        });
+
+        expect(mods[0]).toMatchObject({
+            spawnWeights: [
+                { tag: 'wand', weight: 1 },
+                { tag: 'staff', weight: 1 },
+                { tag: 'default', weight: 0 },
+            ],
+            itemClasses: ['Wand', 'Staff'],
+        });
+    });
+
     it('skips mods the renderer produced no stat line for, and reports them', () => {
         const { mods, skipped } = buildModCatalogue({
             Rendered: { ...base, domain: 'Item', generationType: 'Prefix', spawnWeights: [{ tag: 'default', weight: 1 }] },

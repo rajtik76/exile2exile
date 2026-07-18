@@ -20,6 +20,8 @@ function importFixture(string $file): BuildSnapshot
 
 const MERCENARY = 'mercenary-lvl19-runes-of-aldur-league.txt';
 const WITCH = 'witch-lvl80-runes-of-aldur-league.txt';
+const WARRIOR_TWICE_CORRUPTED = 'warrior-lvl100-twice-corrupted-sanctified.txt';
+const MONK_RUNEFORGED = 'monk-lvl100-runeforged-desecrated-corrupted.txt';
 
 it('decodes an export code to PathOfBuilding2 xml', function () {
     $xml = (new PobImport)->decode(file_get_contents(fixturePath(MERCENARY)));
@@ -154,9 +156,12 @@ it('parses socketed runes and strips mod source tags', function () {
     expect(collect($boots->runes)->pluck('name'))->toContain('Greater Adept Rune')
         ->and($boots->runes[0]['icon'])->toStartWith('/icons/poe2/')
         ->and($boots->runes[0]['levelRequirement'])->toBe(30)
+        // "+12 to Dexterity" is the socketed rune's own granted stat (captured above in
+        // runes[0].effects, "All Equipment: +12 to Dexterity"), not the boots' own mod -
+        // it must not also appear in the item's own mod list.
         ->and($boots->runes[0]['effects'])->not->toBeEmpty()
         ->and($boots->mods)->each(fn ($mod) => $mod->not->toStartWith('{'))
-        ->and($boots->implicitMods())->toContain('+12 to Dexterity');
+        ->and($boots->mods)->not->toContain('+12 to Dexterity');
 });
 
 it('gives every equipped item a resolved icon', function () {
@@ -185,10 +190,37 @@ it('serialises a full snapshot (and its gems and items) to an array', function (
         ->and($data['items'][0])->toHaveKeys(['slot', 'rarity', 'name', 'baseType']);
 });
 
-it('splits item mods into implicit and explicit', function () {
-    $boots = collect(importFixture(WITCH)->items)->firstWhere('slot', 'Boots');
+it('drops rune-granted stat lines from the item\'s own mods, keeping the item\'s implicit count in sync', function () {
+    $build = importFixture(MONK_RUNEFORGED);
 
-    expect($boots->implicitMods())->not->toBeEmpty()
-        ->and($boots->explicitMods())->not->toBeEmpty()
-        ->and([...$boots->implicitMods(), ...$boots->explicitMods()])->toBe($boots->mods);
+    $helmet = collect($build->items)->firstWhere('name', 'The Black Insignia');
+
+    // The helmet's 4 raw "Implicits" lines are all {rune}-tagged stats granted by its
+    // socketed runes (real PoB doesn't show these as the item's own mods either); once
+    // they're excluded, this unique has none of its own implicit lines left.
+    expect($helmet->mods)->not->toContain('+12 to Strength')
+        ->and($helmet->mods)->not->toContain('+5% to all Elemental Resistances')
+        ->and($helmet->mods)->not->toContain('2% increased Experience gain')
+        ->and($helmet->implicitMods())->toBe([])
+        ->and($helmet->explicitMods())->toContain('78% increased Evasion Rating')
+        ->and(collect($helmet->runes)->pluck('name'))->toContain('Saqawal\'s Rune of Memory');
+});
+
+it('treats "Twice Corrupted" and "Sanctified" as item flags, not mod lines', function () {
+    $build = importFixture(WARRIOR_TWICE_CORRUPTED);
+
+    $nebuloch = collect($build->items)->firstWhere('name', 'Nebuloch');
+    $shield = collect($build->items)->firstWhere('name', 'Gloom Ward');
+
+    expect($nebuloch->mods)->not->toContain('Twice Corrupted')
+        ->and($nebuloch->corrupted)->toBeTrue()
+        ->and($shield->mods)->not->toContain('Sanctified');
+});
+
+it('splits item mods into implicit and explicit', function () {
+    $belt = collect(importFixture(MERCENARY)->items)->firstWhere('slot', 'Belt');
+
+    expect($belt->implicitMods())->not->toBeEmpty()
+        ->and($belt->explicitMods())->not->toBeEmpty()
+        ->and([...$belt->implicitMods(), ...$belt->explicitMods()])->toBe($belt->mods);
 });

@@ -1,10 +1,5 @@
 import type { Item, Rune } from '@/components/build/ItemDisplay';
-import {
-    aggregateModLines,
-    renderModDetail,
-    renderModLines,
-} from '@/lib/modLines';
-import type { ModMap } from '@/lib/modLines';
+import { aggregateModLines } from '@/lib/modLines';
 import { refKey } from '@/lib/planReferences';
 import type {
     PlanReference,
@@ -12,6 +7,7 @@ import type {
     UniqueModLine,
 } from '@/lib/planReferences';
 import { renderUniqueModLine } from '@/lib/uniqueModLines';
+import { weaponStatLines } from '@/lib/weaponStats';
 import type { EQUIPMENT_SLOTS } from '@/types/planner';
 import type { ItemPlan, RuneRef, UniqueModStat } from '@/types/planner';
 
@@ -110,29 +106,22 @@ export function referenceToDisplayItem(reference: PlanReference): Item {
         icon: reference.icon ?? null,
         twoHanded: reference.twoHanded ?? false,
         runes: [],
+        category: reference.category?.replace(/^Unique\s+/, '') ?? null,
         implicitMods: renderUniqueLines(reference.implicitLines ?? [], []),
         explicitMods: renderUniqueLines(reference.modLines ?? [], []),
         flavour: reference.flavour ?? null,
     };
 }
 
-/** Adapt a planner item (plus live-resolved refs/mods) to the shared display Item shape. */
+/** Adapt a planner item (plus live-resolved references) to the shared display Item shape. */
 export function toDisplayItem(
     slot: SlotDef,
     item: ItemPlan,
     map: ReferenceMap,
-    modMap: ModMap,
 ): Item {
     const baseRef = item.base
         ? map[refKey(item.base.type, item.base.id)]
         : undefined;
-
-    // Author affixes paired with their resolved mod (unresolved ids drop out).
-    const resolvedStats = item.stats.flatMap((stat) => {
-        const mod = modMap[stat.modId];
-
-        return mod ? [{ mod, values: stat.values }] : [];
-    });
 
     return {
         slot: slot.key,
@@ -149,12 +138,20 @@ export function toDisplayItem(
         icon: baseRef?.icon ?? null,
         twoHanded: baseRef?.twoHanded ?? false,
         corrupted: item.corrupted,
+        itemLevel: item.itemLevel,
+        // The GGPK item class (e.g. "Sceptre") - the game's own first tooltip line,
+        // shown regardless of rarity. A unique reference's category carries a "Unique "
+        // prefix (for its use elsewhere, e.g. RefChip text), stripped here to match.
+        category: baseRef?.category?.replace(/^Unique\s+/, '') ?? null,
         // The item's authored defensive/quality properties (0 = hidden in the tooltip).
         quality: item.props.quality || null,
         armour: item.props.armour || null,
         evasion: item.props.evasion || null,
         energyShield: item.props.energyShield || null,
         block: item.props.block || null,
+        // Derived weapon-stat lines (base row + local mods + quality) - same computation
+        // the editor's "Weapon" section uses, so the read-only tooltip matches it exactly.
+        weaponStats: weaponStatLines(baseRef, item),
         runes: resolveRunes(item.sockets, map),
         emptySockets: item.sockets.filter((socket) => socket === null).length,
         // A base's own fixed implicit lines (read-only), from the resolved base ref. For a
@@ -172,20 +169,16 @@ export function toDisplayItem(
         // A unique's mods are fixed, not author-picked - rendered from its resolved
         // reference's synced mod lines (Path of Building), substituting a stored rolled
         // value where one exists. Same-stat affixes on a rare/magic item are summed into
-        // one line, as the game shows them by default.
+        // one line, as the game shows them by default. A non-unique's mods are a frozen
+        // snapshot taken at write time (see PlanItemSchema::canonicalMod) - `text` is
+        // always present and is the sole source of truth for display, matched or not.
         explicitMods:
             item.base?.type === 'unique'
                 ? renderUniqueLines(baseRef?.modLines ?? [], item.uniqueMods)
                 : aggregateModLines(
-                      resolvedStats.flatMap(({ mod, values }) =>
-                          renderModLines(mod, values),
+                      item.stats.flatMap((stat) =>
+                          (stat.text ?? '').split('\n'),
                       ),
                   ),
-        // The per-affix breakdown for the Alt-held detailed view.
-        modDetails: resolvedStats.map(({ mod, values }) => ({
-            type: mod.type,
-            tier: mod.tier,
-            lines: renderModDetail(mod, values),
-        })),
     };
 }

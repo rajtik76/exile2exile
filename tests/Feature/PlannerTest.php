@@ -198,12 +198,18 @@ test('a stored plan keeps equipment items and the viewer resolves their base ref
                     'notes' => '',
                     'entries' => [],
                     'slots' => [
+                        // A unique base carries no author-picked stats - its own mods
+                        // come from the GGPK unique it references (see
+                        // PlanItemSchema::itemErrors).
                         'body' => [
-                            'rarity' => 'rare',
                             'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
+                            'stats' => [],
+                        ],
+                        'helmet' => [
+                            'base' => ['type' => 'base', 'id' => 'Iron Helmet'],
                             'stats' => [
-                                ['modId' => 'IncreasedLife1', 'values' => [15]],
-                                ['modId' => 'FireResist1', 'values' => [8]],
+                                ['modId' => 'IncreasedLife1', 'text' => '+15 to maximum Life', 'values' => [15]],
+                                ['modId' => 'FireResist1', 'text' => '+8% to Fire Resistance', 'values' => [8]],
                             ],
                         ],
                         'ghost' => ['rarity' => 'rare', 'base' => null, 'stats' => []],
@@ -216,10 +222,14 @@ test('a stored plan keeps equipment items and the viewer resolves their base ref
     $plan = BuildPlan::first();
     $slots = $plan->data['sections']['act-1']['items']['slots'];
 
-    expect(array_keys($slots))->toBe(['body'])
-        ->and($slots['body']['stats'])->toBe([
-            ['modId' => 'IncreasedLife1', 'values' => [15]],
-            ['modId' => 'FireResist1', 'values' => [8]],
+    expect(array_keys($slots))->toBe(['helmet', 'body'])
+        ->and($slots['body']['rarity'])->toBe('unique')
+        // Rarity is derived from the stat count, not submitted (see
+        // PlanItemSchema::rarityOf) - two unmatched stats is magic.
+        ->and($slots['helmet']['rarity'])->toBe('magic')
+        ->and($slots['helmet']['stats'])->toBe([
+            ['modId' => 'IncreasedLife1', 'text' => '+15 to maximum Life', 'name' => null, 'type' => null, 'family' => null, 'tier' => null, 'rolls' => null, 'values' => [15]],
+            ['modId' => 'FireResist1', 'text' => '+8% to Fire Resistance', 'name' => null, 'type' => null, 'family' => null, 'tier' => null, 'rolls' => null, 'values' => [8]],
         ]);
 
     $this->get(route('planner.show', $plan))
@@ -600,7 +610,7 @@ test('an item priority above the slot count is rejected', function () {
                         'helmet' => [
                             'rarity' => 'rare',
                             'base' => ['type' => 'base', 'id' => 'Iron Helmet'],
-                            'priority' => 16,
+                            'priority' => 18,
                         ],
                     ],
                 ],
@@ -932,7 +942,7 @@ test('an item modifier rolled outside its tier range is rejected', function () {
     $this->post(route('planner.store'), planWithItem('body', [
         'rarity' => 'rare',
         'base' => ['type' => 'base', 'id' => 'BodyStr1'],
-        'stats' => [['modId' => 'FireResist1', 'values' => [0]]],
+        'stats' => [['modId' => 'FireResist1', 'text' => '+0% to Fire Resistance', 'values' => [0]]],
     ]))->assertInvalid(['sections.act-1.items.slots.body']);
 
     expect(BuildPlan::count())->toBe(0);
@@ -942,12 +952,12 @@ test('an item modifier rolled inside its tier range is accepted', function () {
     $this->post(route('planner.store'), planWithItem('body', [
         'rarity' => 'rare',
         'base' => ['type' => 'base', 'id' => 'BodyStr1'],
-        'stats' => [['modId' => 'FireResist1', 'values' => [8]]],
+        'stats' => [['modId' => 'FireResist1', 'text' => '+8% to Fire Resistance', 'values' => [8]]],
     ]))->assertRedirect();
 
     $stats = BuildPlan::first()->data['sections']['act-1']['items']['slots']['body']['stats'];
 
-    expect($stats[0])->toBe(['modId' => 'FireResist1', 'values' => [8]]);
+    expect($stats[0])->toBe(['modId' => 'FireResist1', 'text' => '+8% to Fire Resistance', 'name' => null, 'type' => null, 'family' => null, 'tier' => null, 'rolls' => null, 'values' => [8]]);
 });
 
 test('an item name above the max length is rejected', function () {
@@ -1097,7 +1107,7 @@ test('a unique item with author modifiers is rejected', function () {
     $this->post(route('planner.store'), planWithItem('body', [
         'rarity' => 'unique',
         'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
-        'stats' => [['modId' => 'IncreasedLife1', 'values' => [15]]],
+        'stats' => [['modId' => 'IncreasedLife1', 'text' => '+15 to maximum Life', 'values' => [15]]],
     ]))->assertInvalid(['sections.act-1.items.slots.body']);
 
     expect(BuildPlan::count())->toBe(0);

@@ -18,8 +18,10 @@ use App\Pob\ModCatalogue;
  * class, mark the mods you want - derived automatically instead.
  *
  * Two things a filter can key on are known from the plan alone, so no game-data guessing is
- * needed: the exact base types the build wears, and the affix names its items carry (resolved
- * through {@see ModCatalogue}). From those it emits:
+ * needed: the exact base types the build wears, and the affix names its items carry - read
+ * straight off each stat's own frozen `name` snapshot (see
+ * {@see ModCatalogue::modSnapshot}), never re-resolved against the live catalogue.
+ * From those it emits:
  *  - an identified-item block (`HasExplicitMod`) that lights up anything carrying a mod the
  *    build wants;
  *  - an unidentified-rare block (`UnidentifiedItemTier`) for the base types the build uses,
@@ -27,7 +29,7 @@ use App\Pob\ModCatalogue;
  */
 final readonly class BuildFilterBuilder
 {
-    public function __construct(private ModCatalogue $mods, private IconResolver $items) {}
+    public function __construct(private IconResolver $items) {}
 
     /**
      * @param  array<string, mixed>  $planData  a canonical plan blob
@@ -93,16 +95,13 @@ final readonly class BuildFilterBuilder
                 }
 
                 foreach (is_array($slot['stats'] ?? null) ? $slot['stats'] : [] as $stat) {
-                    $modId = is_array($stat) && is_string($stat['modId'] ?? null) ? $stat['modId'] : '';
+                    // The name is already frozen on the stat itself (see
+                    // ModCatalogue::modSnapshot) - null on a plain-text (unmatched) line,
+                    // which carries no affix name to key a filter on anyway.
+                    $name = is_array($stat) && is_string($stat['name'] ?? null) ? $stat['name'] : '';
 
-                    if ($modId === '') {
-                        continue;
-                    }
-
-                    $mod = $this->mods->resolve($modId);
-
-                    if ($mod !== null && $mod['name'] !== '') {
-                        $affixes[$mod['name']] = true;
+                    if ($name !== '') {
+                        $affixes[$name] = true;
                     }
                 }
             }

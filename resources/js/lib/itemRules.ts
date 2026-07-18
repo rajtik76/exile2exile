@@ -1,5 +1,3 @@
-import { modValuesValid } from '@/lib/modLines';
-import type { ModMap } from '@/lib/modLines';
 import type { PlanReference } from '@/lib/planReferences';
 import { uniqueModValuesValid } from '@/lib/uniqueModLines';
 import {
@@ -11,9 +9,9 @@ import {
     SLOT_MAX_SOCKETS,
 } from '@/types/planner';
 import type {
+    ItemMod,
     ItemPlan,
     ItemRarity,
-    ItemStat,
     UniqueModStat,
 } from '@/types/planner';
 
@@ -24,16 +22,17 @@ import type {
  * is a UX gate, not the security boundary.
  *
  * Shape rules: sockets stay within the slot's ceiling (jewellery and belts take none), and
- * a unique carries no author modifiers. Affix rules (from the mod
- * catalogue): per-rarity prefix/suffix counts (normal 0, magic 1+1, rare 3+3), one mod per
- * mutual-exclusion family, and every value inside its tier's range.
+ * a unique carries no author modifiers. Affix rules (from each stat's own frozen snapshot -
+ * see {@link ItemMod}): per-rarity prefix/suffix counts (normal 0, magic 1+1, rare 3+3), one
+ * mod per mutual-exclusion family, and every value inside its tier's range. A stat with no
+ * `modId` (unmatched plain text) carries none of that metadata, so it is skipped entirely -
+ * exactly the leniency the server's `ModCatalogue::modErrors` gives it.
  *
  * @returns one message per broken rule, empty when the item is legal.
  */
 export function itemErrors(
     slotKey: string,
     item: ItemPlan,
-    mods: ModMap,
     reference?: PlanReference,
 ): string[] {
     const errors: string[] = [];
@@ -87,7 +86,7 @@ export function itemErrors(
         );
     }
 
-    return [...errors, ...modErrors(item.rarity, item.stats, mods)];
+    return [...errors, ...modErrors(item.rarity, item.stats)];
 }
 
 /**
@@ -95,7 +94,7 @@ export function itemErrors(
  * `PlanRequest::uniqueModErrors`. Skips validation entirely while the reference hasn't
  * resolved yet (unresolved ⇒ nothing to check against client-side; the server still
  * validates the whole request on submit), same leniency {@link modErrors} gives an
- * unresolved authored mod.
+ * unmatched authored mod.
  */
 function uniqueModErrors(
     uniqueMods: UniqueModStat[],
@@ -133,12 +132,33 @@ function uniqueModErrors(
     return [...new Set(errors)];
 }
 
-/** The affix-rule messages for a non-unique item, mirroring ModCatalogue::modErrors. */
-function modErrors(
-    rarity: ItemRarity,
-    stats: ItemStat[],
-    mods: ModMap,
-): string[] {
+/**
+ * Whether every rolled value sits inside its own frozen roll's range (one value per
+ * roll). A fully-fixed mod (no ranged rolls at all) freezes `rolls` to null rather than
+ * an empty list (see `PlanItemSchema::canonicalRolls`) - treated the same as [] here.
+ */
+function valuesInRange(rolls: ItemMod['rolls'], values: number[]): boolean {
+    const list = rolls ?? [];
+
+    if (values.length !== list.length) {
+        return false;
+    }
+
+    return list.every((roll, index) => {
+        const value = values[index];
+
+        return value >= roll.min && value <= roll.max;
+    });
+}
+
+/**
+ * The affix-rule messages for a non-unique item, mirroring `ModCatalogue::modErrors` -
+ * except each stat's own frozen `type`/`family`/`rolls` (see {@link ItemMod}) stand in
+ * for a live catalogue lookup, so this needs no mod map. A stat with no `modId` is a
+ * plain-text line the author's mod couldn't be matched to a known affix - it carries no
+ * type/family/rolls to check, so it is skipped entirely rather than rejected.
+ */
+function modErrors(rarity: ItemRarity, stats: ItemMod[]): string[] {
     if (stats.length === 0) {
         return [];
     }
@@ -149,17 +169,18 @@ function modErrors(
     const maxPerType = MODS_PER_RARITY[rarity];
 
     for (const stat of stats) {
-        const mod = mods[stat.modId];
-
-        // An unresolved mod can't be classified client-side; the server still validates it.
-        if (!mod) {
+        // An unmatched mod can't be classified client-side; the server still stores it as-is.
+        if (stat.modId === null || !stat.type) {
             continue;
         }
 
-        counts[mod.type] += 1;
-        families.push(...mod.families);
+        counts[stat.type] += 1;
 
-        if (!modValuesValid(mod, stat.values)) {
+        if (stat.family) {
+            families.push(stat.family);
+        }
+
+        if (!valuesInRange(stat.rolls, stat.values)) {
             errors.push("A modifier's value is outside its tier's range.");
         }
     }

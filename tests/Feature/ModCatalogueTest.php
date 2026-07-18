@@ -53,6 +53,13 @@ function arbitraryMods(): array
         // tag, so it reaches any base solely through the Well of Souls.
         ['id' => 'SoulDualResist1', 'name' => 'of Souls', 'domain' => 'Item', 'group' => 'FireChaosResistance', 'type' => 'suffix', 'tier' => 1, 'level' => 1, 'stats' => ['+#% to Fire and Chaos Resistances'], 'rolls' => [['stat' => 'fire_chaos_resist', 'min' => 3, 'max' => 31]], 'families' => ['FireChaosResist'], 'spawnWeights' => [['tag' => 'soul', 'weight' => 1], ['tag' => 'default', 'weight' => 0]]],
 
+        // A class-restricted, zero-weight-everywhere tier sharing its group with
+        // SoulDualResist1 above: the soul-tagged sibling always has a positive
+        // matchingWeight (soul is always-carried), so the natural-ladder fallback
+        // must still respect this tier's own itemClasses AND, not just borrow the
+        // sibling's reach.
+        ['id' => 'FireChaosResistanceGlovesOnly1', 'name' => 'of Warded Souls', 'domain' => 'Item', 'group' => 'FireChaosResistance', 'type' => 'suffix', 'tier' => 2, 'level' => 1, 'stats' => ['+#% to Fire and Chaos Resistances'], 'rolls' => [['stat' => 'fire_chaos_resist', 'min' => 32, 'max' => 40]], 'families' => ['FireChaosResist'], 'spawnWeights' => [['tag' => 'default', 'weight' => 0]], 'itemClasses' => ['Gloves']],
+
         // A desecrated mod that zeroes body armour ahead of its soul tag: GGG's
         // first-match weights exclude it there even though desecration allows it elsewhere.
         ['id' => 'SoulNotOnBody1', 'name' => 'of Buried Souls', 'domain' => 'Item', 'group' => 'SoulThorns', 'type' => 'suffix', 'tier' => 1, 'level' => 1, 'stats' => ['# to Physical Thorns damage'], 'rolls' => [['stat' => 'thorns', 'min' => 1, 'max' => 9]], 'families' => ['SoulThorns'], 'spawnWeights' => [['tag' => 'body_armour', 'weight' => 0], ['tag' => 'soul', 'weight' => 1], ['tag' => 'default', 'weight' => 0]]],
@@ -183,11 +190,42 @@ test('search returns nothing without a domain, and honours it', function () {
     expect($charmGroups)->not->toBeEmpty();
 });
 
+test('a searched tier carries the real GGG affix name, not just the group label', function () {
+    // ModPicker.tsx freezes this straight into a manually picked stat's snapshot -
+    // without it, BuildFilterBuilder can never see the mod (it reads `name` off the
+    // frozen stat, never re-resolving live). Regression for a real bug: `search()`
+    // used to omit `name` from a tier entirely.
+    $tier = collect($this->catalogue->search('Item', ['ring', 'default'], ''))
+        ->flatMap(fn (array $group): array => $group['tiers'])
+        ->first();
+
+    expect($tier)->not->toBeNull()
+        ->and($tier['name'])->toBeString()
+        ->and($tier['name'])->not->toBe('');
+});
+
 test('a desecrated mod is legal on any base its weights do not zero', function () {
     // The soul tag counts as always carried: the Well of Souls can put the mod on an
     // ordinary rare, so validation accepts it even though it never rolls naturally.
     expect($this->catalogue->modErrors('rare', [['modId' => 'SoulDualResist1', 'values' => [16]]], 'Item', ['ring', 'default']))
         ->toBe([]);
+});
+
+test('a natural-ladder tier still honours its own itemClasses AND against a soul-tagged sibling', function () {
+    // FireChaosResistanceGlovesOnly1 has no positive weight anywhere and reaches a
+    // base only through its ladder sibling SoulDualResist1 - which always matches
+    // (soul is always-carried), on ANY base. Without the itemClasses AND on that
+    // fallback path, the gloves-only tier would leak onto a ring too. Regression for
+    // a real bug: this AND was applied on the weight/essence branches but not here.
+    expect($this->catalogue->modErrors('rare', [['modId' => 'FireChaosResistanceGlovesOnly1', 'values' => [35]]], 'Item', ['ring', 'default'], 'Ring'))
+        ->toContain('A modifier cannot roll on this base type.')
+        ->and($this->catalogue->modErrors('rare', [['modId' => 'FireChaosResistanceGlovesOnly1', 'values' => [35]]], 'Item', ['gloves', 'default'], 'Gloves'))
+        ->toBe([]);
+
+    $tierIds = collect($this->catalogue->search('Item', ['ring', 'default'], '', 60, 'Ring'))
+        ->firstWhere('group', 'FireChaosResistance')['tiers'] ?? [];
+
+    expect(collect($tierIds)->pluck('id'))->not->toContain('FireChaosResistanceGlovesOnly1');
 });
 
 test('search flags desecrated-only tiers apart from natural ones', function () {

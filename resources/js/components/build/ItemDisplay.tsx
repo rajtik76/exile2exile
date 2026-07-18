@@ -3,6 +3,7 @@ import { Filigree } from '@/components/build/Panel';
 import {
     BulletList,
     MOD_TEXT_COLOR,
+    MUTED_TEXT_COLOR,
     rarityFrame,
     rarityTone,
     RUNE_TITLE_COLOR,
@@ -12,6 +13,7 @@ import {
     TooltipRule,
 } from '@/components/build/tooltip';
 import type { TooltipAccent } from '@/components/build/tooltip';
+import type { WeaponStatLine } from '@/lib/weaponStats';
 
 /**
  * The equipment display used by the build planner. A {@link SlotTile} draws an item's
@@ -30,6 +32,10 @@ export interface Item {
     twoHanded: boolean;
     /** Whether the item is Corrupted - shown as a red footer line in the tooltip. */
     corrupted?: boolean;
+    /** The GGPK item class (e.g. "Sceptre", "Gloves") - the game's own first tooltip line. */
+    category?: string | null;
+    /** The rolled item level (1-100), shown as its own line above Requirements. */
+    itemLevel?: number | null;
     // Attribute requirements - optional; the planner does not author them, but an
     // imported item may carry them.
     requiredStrength?: number | null;
@@ -42,6 +48,13 @@ export interface Item {
     evasion?: number | null;
     energyShield?: number | null;
     block?: number | null;
+    /**
+     * The derived weapon-stat lines (base WeaponTypes row + local mods + quality) -
+     * Physical/elemental damage, Critical Hit Chance, Attacks per Second, Reload Time,
+     * Weapon Range, and Spirit (sceptres) - in the game tooltip's order. Empty for
+     * anything that isn't a weapon or Spirit-granting base. See {@link weaponStatLines}.
+     */
+    weaponStats?: WeaponStatLine[];
     runes: Rune[];
     /** Empty rune sockets to draw (as bare rings) after the filled ones. */
     emptySockets?: number;
@@ -49,10 +62,6 @@ export interface Item {
     /** The explicit mods as the game shows them by default: same-stat mods summed into
      *  one line (see aggregateModLines). */
     explicitMods: string[];
-    /** The per-affix breakdown shown while Alt is held (the game's detailed view): each
-     *  authored affix with its generation type, tier and `value(min-max)` lines. Absent
-     *  for items whose mods aren't authored affixes (e.g. imported items). */
-    modDetails?: ItemModDetail[];
     /** Unique-item flavour/lore text (lines joined by "\n"), shown italic. */
     flavour?: string | null;
 }
@@ -62,13 +71,6 @@ export interface Rune {
     icon: string | null;
     levelRequirement: number | null;
     effects: string[];
-}
-
-/** One authored affix in the Alt-held detailed view: its type, tier and rendered lines. */
-export interface ItemModDetail {
-    type: 'prefix' | 'suffix' | null;
-    tier: number | null;
-    lines: string[];
 }
 
 export type TooltipAlign = 'left' | 'center' | 'right';
@@ -349,30 +351,65 @@ export function SocketCluster({
  * game colours (the same red/green/blue as gem sockets).
  */
 /**
- * The item's defensive/quality properties - quality, the three defence types and block
- * (shields only) - each shown on its own line with the value emphasised, in the game's
- * tooltip order. A property at 0 or absent is hidden; nothing renders when none are set.
+ * A weapon-stat elemental damage line's numeric value colour, by its {@link
+ * weaponStatLines} label - the game's own per-element palette. The label itself always
+ * stays muted, only the value is tinted.
  */
+const ELEMENTAL_DAMAGE_COLOR: Record<string, string> = {
+    'Fire Damage': 'rgb(150, 0, 0)',
+    'Cold Damage': 'rgb(54, 100, 146)',
+    'Lightning Damage': 'rgb(255, 215, 0)',
+    'Chaos Damage': 'rgb(208, 32, 144)',
+};
+
+/**
+ * The item's defensive/quality properties (quality, the three defence types, block) and
+ * the derived weapon-stat lines (Physical/elemental damage, Crit, Attacks per Second,
+ * Reload Time, Weapon Range, Spirit) - one unified block, in the game tooltip's order.
+ * A property at 0/absent is hidden; nothing renders when none are set. A weapon line the
+ * item's own local mods or quality changed shows in the mod-text blue, same as the game's
+ * augmented stats; an unmodified base line shows plain.
+ */
+/** One property line: a label plus one or more colour-tinted value segments (comma-joined). */
+interface PropertyLine {
+    key: string;
+    label: string;
+    segments: Array<{ value: string; color: string }>;
+}
+
+/** Combines fire/cold/lightning weapon-stat lines into one "Elemental Damage" line, in
+ * that fixed order - the game's own display convention. Chaos Damage never joins it,
+ * always its own line (still coloured via {@link ELEMENTAL_DAMAGE_COLOR}). */
+const COMBINED_ELEMENT_ORDER = [
+    'Fire Damage',
+    'Cold Damage',
+    'Lightning Damage',
+] as const;
+
 function Properties({ item }: { item: Item }) {
-    const lines: Array<{ key: string; label: string; value: string }> = [];
+    const lines: PropertyLine[] = [];
 
     if (item.quality) {
         lines.push({
             key: 'quality',
             label: 'Quality',
-            value: `+${item.quality}%`,
+            segments: [{ value: `+${item.quality}%`, color: MOD_TEXT_COLOR }],
         });
     }
 
     if (item.armour) {
-        lines.push({ key: 'armour', label: 'Armour', value: `${item.armour}` });
+        lines.push({
+            key: 'armour',
+            label: 'Armour',
+            segments: [{ value: `${item.armour}`, color: MOD_TEXT_COLOR }],
+        });
     }
 
     if (item.evasion) {
         lines.push({
             key: 'evasion',
             label: 'Evasion Rating',
-            value: `${item.evasion}`,
+            segments: [{ value: `${item.evasion}`, color: MOD_TEXT_COLOR }],
         });
     }
 
@@ -380,12 +417,72 @@ function Properties({ item }: { item: Item }) {
         lines.push({
             key: 'es',
             label: 'Energy Shield',
-            value: `${item.energyShield}`,
+            segments: [
+                { value: `${item.energyShield}`, color: MOD_TEXT_COLOR },
+            ],
         });
     }
 
     if (item.block) {
-        lines.push({ key: 'block', label: 'Block', value: `${item.block}%` });
+        lines.push({
+            key: 'block',
+            label: 'Block',
+            segments: [{ value: `${item.block}%`, color: MOD_TEXT_COLOR }],
+        });
+    }
+
+    // Fire/Cold/Lightning weapon lines merge into one "Elemental Damage" line (fixed
+    // order, comma-joined); Chaos Damage never joins it and any other weapon-stat line
+    // (Physical Damage, Critical Hit Chance, ...) passes through untouched.
+    const weaponStats = item.weaponStats ?? [];
+    let elementalDamagePlaced = false;
+
+    for (const weaponLine of weaponStats) {
+        if (
+            (COMBINED_ELEMENT_ORDER as readonly string[]).includes(
+                weaponLine.label,
+            )
+        ) {
+            if (elementalDamagePlaced) {
+                continue;
+            }
+
+            elementalDamagePlaced = true;
+
+            const segments = COMBINED_ELEMENT_ORDER.flatMap((label) => {
+                const line = weaponStats.find((l) => l.label === label);
+
+                return line
+                    ? [
+                          {
+                              value: line.value,
+                              color: ELEMENTAL_DAMAGE_COLOR[label],
+                          },
+                      ]
+                    : [];
+            });
+
+            lines.push({
+                key: 'elemental-damage',
+                label: 'Elemental Damage',
+                segments,
+            });
+
+            continue;
+        }
+
+        lines.push({
+            key: weaponLine.label,
+            label: weaponLine.label,
+            segments: [
+                {
+                    value: weaponLine.value,
+                    color:
+                        ELEMENTAL_DAMAGE_COLOR[weaponLine.label] ??
+                        (weaponLine.modified ? MOD_TEXT_COLOR : '#fff'),
+                },
+            ],
+        });
     }
 
     if (lines.length === 0) {
@@ -395,9 +492,16 @@ function Properties({ item }: { item: Item }) {
     return (
         <div className="mt-0.5 space-y-0.5">
             {lines.map((line) => (
-                <p key={line.key} className="text-[#a7acb8]">
+                <p key={line.key} style={{ color: MUTED_TEXT_COLOR }}>
                     {line.label}:{' '}
-                    <span style={{ color: MOD_TEXT_COLOR }}>{line.value}</span>
+                    {line.segments.map((segment, index) => (
+                        <span key={index}>
+                            {index > 0 && ', '}
+                            <span style={{ color: segment.color }}>
+                                {segment.value}
+                            </span>
+                        </span>
+                    ))}
                 </p>
             ))}
         </div>
@@ -437,7 +541,10 @@ function Requirements({ item }: { item: Item }) {
 
     return (
         <div className="mt-2">
-            <p className="mb-1 text-xs font-semibold tracking-[0.12em] text-[#a7acb8] uppercase">
+            <p
+                className="mb-1 text-xs font-semibold tracking-[0.12em] uppercase"
+                style={{ color: MUTED_TEXT_COLOR }}
+            >
                 Requirements
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -447,95 +554,6 @@ function Requirements({ item }: { item: Item }) {
                     </TooltipBadge>
                 ))}
             </div>
-        </div>
-    );
-}
-
-/** The detail-view modifier key's label - "Option" on macOS, "Alt" elsewhere. The
- *  KeyboardEvent key is "Alt" on both (macOS maps Option to it), so only the label differs. */
-const ALT_LABEL =
-    typeof navigator !== 'undefined' && /mac/i.test(navigator.platform)
-        ? 'Option'
-        : 'Alt';
-
-/** Whether the Alt (macOS Option) key is currently held - the game's detail-view modifier. */
-function useAltHeld(): boolean {
-    const [held, setHeld] = useState(false);
-
-    useEffect(() => {
-        const down = (event: KeyboardEvent) => {
-            if (event.key === 'Alt') {
-                setHeld(true);
-            }
-        };
-        const up = (event: KeyboardEvent) => {
-            if (event.key === 'Alt') {
-                setHeld(false);
-            }
-        };
-        const reset = () => setHeld(false);
-
-        window.addEventListener('keydown', down);
-        window.addEventListener('keyup', up);
-        window.addEventListener('blur', reset);
-
-        return () => {
-            window.removeEventListener('keydown', down);
-            window.removeEventListener('keyup', up);
-            window.removeEventListener('blur', reset);
-        };
-    }, []);
-
-    return held;
-}
-
-/** An affix's short badge: `P3` for prefixes, `S6` for suffixes (letter + tier). */
-function detailBadge(detail: ItemModDetail): string {
-    const letter =
-        detail.type === 'prefix' ? 'P' : detail.type === 'suffix' ? 'S' : '';
-
-    return letter === '' ? 'mod' : `${letter}${detail.tier ?? ''}`;
-}
-
-/** One affix row: its P/S-tier badge followed by its `value(min-max)` lines. */
-function ModDetailRow({ detail }: { detail: ItemModDetail }) {
-    return (
-        <div>
-            <span className="mr-2 font-semibold tracking-[0.08em] text-[#a7acb8] uppercase">
-                {detailBadge(detail)}
-            </span>
-            {detail.lines.map((line, index) => (
-                <span key={index} style={{ color: MOD_TEXT_COLOR }}>
-                    {line}
-                    {index < detail.lines.length - 1 ? ', ' : ''}
-                </span>
-            ))}
-        </div>
-    );
-}
-
-/**
- * The Alt-held detailed view: each authored affix on its own showing `value(min-max)` -
- * the breakdown the game reveals under Alt. Prefixes are grouped on top and suffixes
- * below, split by a rule, each labelled `P<tier>` / `S<tier>`. Font size, line spacing
- * and mod colour match the summed view (BulletList) exactly - same body text, just
- * broken out per affix.
- */
-function ModDetailList({ details }: { details: ItemModDetail[] }) {
-    const prefixes = details.filter((detail) => detail.type === 'prefix');
-    const suffixes = details.filter((detail) => detail.type !== 'prefix');
-
-    return (
-        <div className="space-y-0.5">
-            {prefixes.map((detail, index) => (
-                <ModDetailRow key={`p${index}`} detail={detail} />
-            ))}
-
-            {prefixes.length > 0 && suffixes.length > 0 && <TooltipRule />}
-
-            {suffixes.map((detail, index) => (
-                <ModDetailRow key={`s${index}`} detail={detail} />
-            ))}
         </div>
     );
 }
@@ -550,8 +568,6 @@ export function ItemCard({ item }: { item: Item }) {
     const hasName = item.name !== '' && item.name !== item.baseType;
     const hasMods =
         item.implicitMods.length > 0 || item.explicitMods.length > 0;
-    // Hold Alt to swap the summed explicit lines for the per-affix breakdown, like the game.
-    const showDetail = useAltHeld() && (item.modDetails?.length ?? 0) > 0;
 
     return (
         <TooltipCard
@@ -561,7 +577,22 @@ export function ItemCard({ item }: { item: Item }) {
             subtitle={hasName ? item.baseType : undefined}
             frame={rarityFrame(item.rarity)}
         >
+            {item.category && (
+                <p style={{ color: MUTED_TEXT_COLOR }}>{item.category}</p>
+            )}
+
             <Properties item={item} />
+
+            {item.itemLevel != null && (
+                <>
+                    <TooltipRule />
+
+                    <p style={{ color: MUTED_TEXT_COLOR }}>
+                        Item Level:{' '}
+                        <span style={{ color: '#fff' }}>{item.itemLevel}</span>
+                    </p>
+                </>
+            )}
 
             <Requirements item={item} />
 
@@ -575,20 +606,8 @@ export function ItemCard({ item }: { item: Item }) {
                 <TooltipRule />
             )}
 
-            {item.explicitMods.length > 0 &&
-                (showDetail ? (
-                    <ModDetailList details={item.modDetails ?? []} />
-                ) : (
-                    <BulletList
-                        lines={item.explicitMods}
-                        color={MOD_TEXT_COLOR}
-                    />
-                ))}
-
-            {(item.modDetails?.length ?? 0) > 0 && (
-                <p className="mt-2 text-[0.6875rem] tracking-[0.08em] text-[#6f7480] uppercase">
-                    Hold {ALT_LABEL} for tiers
-                </p>
+            {item.explicitMods.length > 0 && (
+                <BulletList lines={item.explicitMods} color={MOD_TEXT_COLOR} />
             )}
 
             {item.flavour && (
@@ -787,9 +806,19 @@ export function SlotTile({
                                 event.stopPropagation();
                                 onClear();
                             }}
-                            className="absolute top-1.5 right-1.5 z-[61] hidden size-5 items-center justify-center rounded-full border border-[#e0584f] bg-[var(--pl-panel)] text-[11px] leading-none text-[#ff8a80] shadow-[0_1px_4px_rgba(0,0,0,0.6)] transition group-hover:flex hover:bg-[#e0584f] hover:text-white"
+                            className="pointer-events-none absolute top-1.5 right-1.5 z-[61] flex size-5 items-center justify-center rounded-full bg-[var(--pl-panel)] text-[#ff8a80] opacity-0 shadow-[inset_0_0_0_2px_#e0584f,0_1px_4px_rgba(0,0,0,0.6)] transition-opacity duration-150 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 hover:bg-[#e0584f] hover:text-white"
                         >
-                            ✕
+                            <svg
+                                aria-hidden
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                className="size-2.5"
+                            >
+                                <path d="M4 4 L12 12 M12 4 L4 12" />
+                            </svg>
                         </button>
                     )}
 

@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
+use App\Support\Planner\PlanItemSchema;
 use App\Support\Planner\PlanSchema;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -56,8 +57,22 @@ abstract class PlanRequest extends FormRequest
             'sections.*.items.slots.*.base.id' => ['nullable', 'string', 'max:120'],
             'sections.*.items.slots.*.name' => ['nullable', 'string', 'max:'.PlanSchema::MAX_ITEM_NAME_LENGTH],
             'sections.*.items.slots.*.corrupted' => ['nullable', 'boolean'],
+            // A stat is a frozen snapshot, not a live catalogue reference (see
+            // ModCatalogue::modSnapshot): `text` is the only field that must always be
+            // present (the sole source of truth for display when `modId` is null, a
+            // plain-text line nothing could be matched to); everything else is metadata
+            // kept from the match, used only while `modId` still resolves.
             'sections.*.items.slots.*.stats' => ['nullable', 'array', 'max:20'],
-            'sections.*.items.slots.*.stats.*.modId' => ['required', 'string', 'max:120'],
+            'sections.*.items.slots.*.stats.*.modId' => ['nullable', 'string', 'max:120'],
+            'sections.*.items.slots.*.stats.*.text' => ['required', 'string', 'max:200'],
+            'sections.*.items.slots.*.stats.*.name' => ['nullable', 'string', 'max:120'],
+            'sections.*.items.slots.*.stats.*.type' => ['nullable', 'string', 'in:prefix,suffix'],
+            'sections.*.items.slots.*.stats.*.family' => ['nullable', 'string', 'max:120'],
+            'sections.*.items.slots.*.stats.*.tier' => ['nullable', 'integer'],
+            'sections.*.items.slots.*.stats.*.rolls' => ['nullable', 'array', 'max:8'],
+            'sections.*.items.slots.*.stats.*.rolls.*.stat' => ['nullable', 'string', 'max:120'],
+            'sections.*.items.slots.*.stats.*.rolls.*.min' => ['nullable', 'numeric'],
+            'sections.*.items.slots.*.stats.*.rolls.*.max' => ['nullable', 'numeric'],
             'sections.*.items.slots.*.stats.*.values' => ['nullable', 'array', 'max:8'],
             'sections.*.items.slots.*.stats.*.values.*' => ['numeric'],
             // A unique's own mods (rolled value per synced catalogue line, keyed by
@@ -158,8 +173,10 @@ abstract class PlanRequest extends FormRequest
                     continue;
                 }
 
-                $rarity = is_string($item['rarity'] ?? null) ? $item['rarity'] : 'rare';
                 $stats = is_array($item['stats'] ?? null) ? array_values($item['stats']) : [];
+                // The author's own `rarity` input is never trusted for validation - see
+                // {@see PlanItemSchema::rarityOf}.
+                $rarity = PlanItemSchema::rarityOf(is_array($item['base'] ?? null) ? $item['base'] : null, $stats);
 
                 $messages = [
                     ...PlanSchema::itemErrors((string) $slot, $item),
@@ -182,10 +199,18 @@ abstract class PlanRequest extends FormRequest
                 }
             }
 
-            // A two-handed main weapon claims the off-hand, so the off-hand must be empty.
+            // A two-handed main weapon claims the off-hand, so the off-hand must be empty -
+            // checked for both the primary set and the swap set independently.
             if (self::slotIsTwoHanded($slots['weapon1'] ?? null, $icons) && self::slotHasBase($slots['weapon2'] ?? null)) {
                 $validation->errors()->add(
                     "sections.{$sectionKey}.items.slots.weapon2",
+                    'An off-hand cannot be used with a two-handed weapon.',
+                );
+            }
+
+            if (self::slotIsTwoHanded($slots['weapon1swap'] ?? null, $icons) && self::slotHasBase($slots['weapon2swap'] ?? null)) {
+                $validation->errors()->add(
+                    "sections.{$sectionKey}.items.slots.weapon2swap",
                     'An off-hand cannot be used with a two-handed weapon.',
                 );
             }
@@ -284,10 +309,8 @@ abstract class PlanRequest extends FormRequest
      */
     private static function uniqueModErrors(array $item, IconResolver $icons): array
     {
-        if (($item['rarity'] ?? null) !== 'unique') {
-            return [];
-        }
-
+        // Whether the item is unique is read straight from its base reference, same as
+        // {@see PlanItemSchema::rarityOf} - the author's own `rarity` input is untrusted.
         $base = $item['base'] ?? null;
 
         if (! is_array($base) || ($base['type'] ?? null) !== 'unique' || ! is_string($base['id'] ?? null)) {

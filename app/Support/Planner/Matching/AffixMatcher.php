@@ -13,9 +13,11 @@ use App\Pob\ModCatalogue;
  * several consecutive PoB lines, so a multi-stat candidate is matched over that many
  * lines at once (the longest match wins, so a hybrid's first line isn't stolen by a
  * single-stat affix). Per-rarity prefix/suffix caps and mutual-exclusion families are
- * respected, so the result always passes {@see ModCatalogue::modErrors}. Lines that
- * don't resolve (unknown wording, out-of-range rolls, a hybrid whose lines don't all
- * fit) are reported back as dropped.
+ * respected, so the result always passes {@see ModCatalogue::modErrors}. Every matched
+ * line is frozen into a full snapshot ({@see ModCatalogue::modSnapshot}) rather than a
+ * bare id, so a future GGPK patch renaming or dropping the id can never invalidate an
+ * already-produced result. Lines that don't resolve (unknown wording, out-of-range
+ * rolls, a hybrid whose lines don't all fit) are reported back as dropped.
  *
  * @phpstan-type AffixCandidate array{id: string, type: string, statCount: int, template: string, statTemplates: list<string>, rolls: list<array{stat: string, min: int, max: int}>, families: list<string>, crafted: bool, ladder: bool}
  */
@@ -43,7 +45,7 @@ final readonly class AffixMatcher
      *
      * @param  list<string>  $lines
      * @param  list<string>  $tags
-     * @return array{stats: list<array{modId: string, values: list<int|float>}>, dropped: list<string>}
+     * @return array{stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, dropped: list<string>}
      */
     public function match(array $lines, ?string $domain, array $tags, ?string $itemClass, int $maxPerType, bool $catalyst): array
     {
@@ -114,7 +116,14 @@ final readonly class AffixMatcher
             ));
         }
 
-        return ['stats' => $context->stats, 'dropped' => $unmatched];
+        // Freeze every matched line into a full snapshot now, while the catalogue lookup
+        // is still cheap and certain - nothing downstream ever resolves a modId again.
+        $stats = array_map(
+            fn (array $stat): array => $this->mods->modSnapshot($stat['modId'], $stat['values'], $stat['text']),
+            $context->stats,
+        );
+
+        return ['stats' => $stats, 'dropped' => $unmatched];
     }
 
     /**
@@ -122,7 +131,7 @@ final readonly class AffixMatcher
      * generation type with a free slot and no family clash wins. Returns whether the
      * line was placed.
      *
-     * @param  array<string, array{id: string, values: list<int|float>, families: list<string>}>  $options
+     * @param  array<string, array{id: string, values: list<int|float>, families: list<string>, text: string}>  $options
      */
     private function assignOptions(array $options, int $maxPerType, MatchContext $context): bool
     {
@@ -131,7 +140,7 @@ final readonly class AffixMatcher
                 && array_intersect($option['families'], $context->families) === []) {
                 $context->counts[$type]++;
                 $context->families = [...$context->families, ...$option['families']];
-                $context->stats[] = ['modId' => $option['id'], 'values' => $option['values']];
+                $context->stats[] = ['modId' => $option['id'], 'values' => $option['values'], 'text' => $option['text']];
 
                 return true;
             }
@@ -213,7 +222,7 @@ final readonly class AffixMatcher
      *
      * @param  list<string>  $lines
      * @param  list<AffixCandidate>  $candidates
-     * @return array{statCount: int, lines: list<string>, options: array<string, array{id: string, values: list<int|float>, families: list<string>}>}|null
+     * @return array{statCount: int, lines: list<string>, options: array<string, array{id: string, values: list<int|float>, families: list<string>, text: string}>}|null
      */
     private function matchOptions(array $lines, int $index, array $candidates, bool $quality = false): ?array
     {
@@ -243,6 +252,9 @@ final readonly class AffixMatcher
                     'values' => $values,
                     'families' => $candidate['families'],
                     'ceiling' => max([0, ...array_column($candidate['rolls'], 'max')]),
+                    // The window's own on-screen order, not the candidate's stat order -
+                    // the frozen snapshot keeps exactly what the author saw rendered.
+                    'text' => implode("\n", $window),
                 ];
             }
         }
@@ -277,6 +289,7 @@ final readonly class AffixMatcher
                     'id' => $match['id'],
                     'values' => $match['values'],
                     'families' => $match['families'],
+                    'text' => $match['text'],
                 ],
                 $options,
             ),

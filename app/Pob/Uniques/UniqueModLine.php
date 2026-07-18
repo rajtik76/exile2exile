@@ -57,7 +57,11 @@ final readonly class UniqueModLine
         $withoutRanges = preg_replace(self::RANGE, '#', $line) ?? $line;
         $key = preg_replace('/-?\d+(?:\.\d+)?/', '#', $withoutRanges) ?? $withoutRanges;
 
-        if ($key !== $this->key) {
+        // PoB's own unique data templates a countable noun in the singular ("Has (1-3)
+        // Charm Slot") but the game's rendered export pluralises it for rolls above 1
+        // ("Has 3 Charm Slots") - tolerate a trailing "s" either way rather than missing
+        // the match entirely.
+        if ($key !== $this->key && $key !== $this->key.'s' && $key.'s' !== $this->key) {
             return null;
         }
 

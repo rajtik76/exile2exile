@@ -1,4 +1,3 @@
-import type { ModMap } from '@/lib/modLines';
 import type { PlanReference } from '@/lib/planReferences';
 import type { ItemPlan } from '@/types/planner';
 
@@ -11,6 +10,8 @@ import type { ItemPlan } from '@/types/planner';
  * mods (`attack_*`, `spell_*`, bare ids) never touch these lines. Elemental and
  * chaos damage lines exist purely through local mods - a base weapon is physical
  * only. Quality raises physical damage, additively with `local_physical_damage_+%`.
+ * Each stat's own frozen `rolls` (see {@link ItemMod}) drive the sums directly - an
+ * unmatched stat carries none and contributes nothing.
  */
 
 /** One derived tooltip line; `modified` marks a value local mods/quality changed. */
@@ -44,11 +45,11 @@ const ELEMENTS = [
 type ElementKey = (typeof ELEMENTS)[number][0];
 
 /**
- * Sum the item's local-mod rolls. Each authored value slots into its mod's rolls
- * by index (a missing value falls back to the roll's minimum, same as the
- * tooltip's own rendering in modLines.ts).
+ * Sum the item's local-mod rolls. Each authored value slots into its stat's own
+ * frozen rolls by index (a missing value falls back to the roll's minimum, same as
+ * the tooltip's own rendering in modLines.ts).
  */
-function localSums(item: ItemPlan, modMap: ModMap): LocalSums {
+function localSums(item: ItemPlan): LocalSums {
     const sums: LocalSums = {
         physMin: 0,
         physMax: 0,
@@ -68,13 +69,11 @@ function localSums(item: ItemPlan, modMap: ModMap): LocalSums {
     };
 
     for (const stat of item.stats) {
-        const mod = modMap[stat.modId];
-
-        if (!mod) {
+        if (!stat.rolls) {
             continue;
         }
 
-        mod.rolls.forEach((roll, index) => {
+        stat.rolls.forEach((roll, index) => {
             const value = stat.values[index] ?? roll.min;
 
             switch (roll.stat) {
@@ -137,7 +136,6 @@ function fixed2(value: number): string {
 export function weaponStatLines(
     reference: PlanReference | undefined,
     item: ItemPlan,
-    modMap: ModMap,
 ): WeaponStatLine[] {
     const weapon = reference?.weapon ?? null;
     const spirit = reference?.spirit ?? 0;
@@ -146,7 +144,7 @@ export function weaponStatLines(
         return [];
     }
 
-    const sums = localSums(item, modMap);
+    const sums = localSums(item);
     const lines: WeaponStatLine[] = [];
 
     if (weapon) {

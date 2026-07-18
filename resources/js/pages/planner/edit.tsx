@@ -301,7 +301,9 @@ export default function PlannerEdit({
             ...new Set(
                 Object.values(sections).flatMap((section) =>
                     Object.values(section.items?.slots ?? {}).flatMap((item) =>
-                        item.stats.map((stat) => stat.modId),
+                        item.stats
+                            .map((stat) => stat.modId)
+                            .filter((id): id is string => id !== null),
                     ),
                 ),
             ),
