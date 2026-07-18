@@ -171,64 +171,34 @@
       "name": "Mods",
       "columns": [
         "Id",
-        "HASH16",
-        "ModType",
+        "Name",
         "Level",
+        "Domain",
+        "GenerationType",
+        "ModType",
+        "Families",
+        "SpawnWeight_Tags",
+        "SpawnWeight_Values",
         "Stat1",
         "Stat2",
         "Stat3",
         "Stat4",
-        "Domain",
-        "Name",
-        "GenerationType",
-        "Families",
+        "Stat5",
+        "Stat6",
         "Stat1Value",
         "Stat2Value",
         "Stat3Value",
         "Stat4Value",
-        "SpawnWeight_Tags",
-        "Tags",
-        "GrantedEffectsPerLevel",
-        "AuraFlags",
-        "MonsterMetadata",
-        "MonsterKillAchievements",
-        "ChestModType",
         "Stat5Value",
-        "Stat5",
-        "FullAreaClear_AchievementItems",
-        "AchievementItems",
-        "GenerationWeight_Tags",
-        "GenerationWeight_Values",
-        "ModifyMapsAchievements",
         "Stat6Value",
-        "Stat6",
-        "MaxLevel",
-        "CraftingItemClassRestrictions",
-        "MonsterOnDeath",
-        "HeistAchievements",
-        "Heist_SubStatValue1",
-        "Heist_SubStatValue2",
-        "Heist_Stat0",
-        "Heist_Stat1",
-        "Heist_AddStatValue1",
-        "Heist_AddStatValue2",
-        "InfluenceType",
-        "ImplicitTags",
-        "BuffTemplate",
-        "ArchnemesisMinionMod",
-        "HASH32",
-        "BuffTemplate2",
-        "RadiusJewelType",
         "IsEssenceOnlyModifier",
-        "SpawnLevel_Override",
-        "SpawnWeight_Values"
+        "CraftingItemClassRestrictions"
       ]
     },
     {
       "name": "ModType",
       "columns": [
-        "Name",
-        "Stat"
+        "Name"
       ]
     },
     {
@@ -241,47 +211,15 @@
       "name": "BaseItemTypes",
       "columns": [
         "Id",
-        "ItemClass",
-        "Width",
-        "Height",
         "Name",
-        "InheritsFrom",
-        "DropLevel",
-        "FlavourText",
-        "Implicit_Mods",
-        "SizeOnGround",
-        "SoundEffect",
+        "ItemClass",
         "Tags",
-        "ModDomain",
         "ItemVisualIdentity",
-        "HASH32",
-        "VendorRecipe_AchievementItems",
-        "Inflection",
-        "Equip_AchievementItem",
+        "DropLevel",
+        "ModDomain",
         "IsCorrupted",
-        "Identify_AchievementItems",
-        "IdentifyMagic_AchievementItems",
-        "FragmentBaseItemType",
-        "UncutGemSoundEffect",
-        "Unmodifiable",
-        "Achievement",
-        "ShopTag"
-      ]
-    },
-    {
-      "name": "ModEquivalencies",
-      "columns": [
-        "Id",
-        "ModsKey0",
-        "ModsKey1",
-        "ModsKey2"
-      ]
-    },
-    {
-      "name": "CraftableModTypes",
-      "columns": [
-        "ModType",
-        "HASH16"
+        "Implicit_Mods",
+        "FlavourText"
       ]
     },
     {
@@ -376,7 +314,6 @@
       "name": "Tags",
       "columns": [
         "Id",
-        "HASH32",
         "DisplayString"
       ]
     },
@@ -536,44 +473,17 @@
     {
       "name": "EssenceMods",
       "columns": [
-        "Essence",
-        "TargetItemCategory",
         "Mod",
         "DisplayMod",
-        "Text",
         "OutcomeMods",
-        "OutcomeModWeights"
+        "TargetItemCategory"
       ]
     },
     {
       "name": "EssenceTargetItemCategories",
       "columns": [
         "Id",
-        "ItemClasses",
-        "Text"
-      ]
-    },
-    {
-      "name": "CraftingBenchOptions",
-      "columns": [
-        "Id",
-        "SortCategory",
-        "CraftingCategory"
-      ]
-    },
-    {
-      "name": "Essences",
-      "columns": [
-        "BaseItemType",
-        "HASH32",
-        "TankModValues",
-        "MonsterTankMods",
-        "MonsterMod",
-        "Perfect",
-        "UpgradeResult",
-        "Tier",
-        "MapStat",
-        "ReplacementType"
+        "ItemClasses"
       ]
     }
   ]
