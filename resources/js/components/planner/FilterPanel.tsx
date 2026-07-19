@@ -159,6 +159,8 @@ export default function FilterPanel({
                         <Button
                             size="sm"
                             active={custom}
+                            aria-expanded={custom}
+                            aria-controls="filter-custom-categories"
                             onClick={() => setCustom((open) => !open)}
                         >
                             Custom
@@ -170,7 +172,12 @@ export default function FilterPanel({
                         )}
                     </div>
                     {custom && (
-                        <div className="mt-1 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+                        <div
+                            id="filter-custom-categories"
+                            role="group"
+                            aria-label="Loot categories to show or hide"
+                            className="mt-1 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2"
+                        >
                             {availableCategories.map((category) => {
                                 const shown = !hidden.includes(category.value);
 

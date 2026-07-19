@@ -10,8 +10,9 @@ namespace App\Filter\Custom;
  * so the mapping survives reordering and works across every vendored style and strictness.
  *
  * Only clutter-prone categories are listed. Safety-net blocks (top uniques, dear currency,
- * exotic/exceptional bases, unknown-item catchers) are deliberately not toggleable, and the
- * app's own economy/build override blocks always stay on top.
+ * exotic/exceptional bases, unknown-item catchers) are deliberately not toggleable. A pick is
+ * absolute: the economy overlay skips the base types of a hidden category, so live prices
+ * never re-show them - only the build overlay (bases and mods the build wants) stays on top.
  */
 enum FilterCategory: string
 {

@@ -28,20 +28,34 @@ function syntheticNeversinkBody(): string
         'Show # $type->uniques $tier->t1 !apex_stier',
         "\tSetTextColor 255 0 0 255",
         "\tPlayAlertSound 6 300",
+        '',
+        'Show # $type->gems->uncut $tier->skill20 !apex_stier',
+        "\tBaseType \"Uncut Skill Gem\"",
+        "\tSetFontSize 45",
+        '',
+        // The vendored files mostly use the `==` operator and multi-value lists.
+        'Show # %H5 $type->uniques $tier->t3 !uniques_b',
+        "\tRarity Unique",
+        "\tBaseType == \"Silk Robe\" \"Uncut Skill Gem\" \"Sapphire Ring\"",
+        "\tSetFontSize 42",
     ]);
 }
 
 test('with no disabled categories the body passes through verbatim', function () {
     $body = syntheticNeversinkBody();
 
-    expect((new CustomFilterTransformer)->apply($body, []))->toBe([$body, []]);
+    $result = (new CustomFilterTransformer)->apply($body, []);
+
+    expect($result->body)->toBe($body)
+        ->and($result->applied)->toBe([])
+        ->and($result->hiddenBaseTypes)->toBe([]);
 });
 
 test('blocks in a disabled category flip to Hide and lose their alert actions', function () {
-    [$result, $applied] = (new CustomFilterTransformer)->apply(syntheticNeversinkBody(), [FilterCategory::GoldPiles]);
+    $custom = (new CustomFilterTransformer)->apply(syntheticNeversinkBody(), [FilterCategory::GoldPiles]);
 
-    expect($applied)->toBe([FilterCategory::GoldPiles]);
-    expect($result)
+    expect($custom->applied)->toBe([FilterCategory::GoldPiles]);
+    expect($custom->body)
         ->toContain('Hide # %H3 $type->gold $tier->any !gold_pilesmall')
         ->not->toContain('Show # %H3 $type->gold $tier->any')
         // Conditions and display styling stay; only alert actions go.
@@ -53,9 +67,7 @@ test('blocks in a disabled category flip to Hide and lose their alert actions', 
 });
 
 test('blocks outside the disabled category are untouched', function () {
-    [$result] = (new CustomFilterTransformer)->apply(syntheticNeversinkBody(), [FilterCategory::GoldPiles]);
-
-    expect($result)
+    expect((new CustomFilterTransformer)->apply(syntheticNeversinkBody(), [FilterCategory::GoldPiles])->body)
         // Large and huge gold piles are excluded from the small-and-medium-piles category.
         ->toContain('Show # %D7 $type->gold $tier->stack3 !gold_pilehuge')
         ->toContain('Show # %D6 $type->gold $tier->stackxl1lvl !gold_pilelarge')
@@ -66,14 +78,34 @@ test('blocks outside the disabled category are untouched', function () {
         ->toContain('Hide # $type->currency $tier->exhide !utility_minimize');
 });
 
+test('muted blocks contribute their base types so the economy overlay can skip them', function () {
+    $custom = (new CustomFilterTransformer)->apply(syntheticNeversinkBody(), [FilterCategory::UncutSkillGems, FilterCategory::GoldPiles]);
+
+    // The gem block names a base type; the muted gold blocks match by stack size only.
+    expect($custom->hiddenBaseTypes)->toBe(['Uncut Skill Gem']);
+});
+
+test('multi-value BaseType == lines contribute every name, deduplicated across blocks', function () {
+    $custom = (new CustomFilterTransformer)->apply(
+        syntheticNeversinkBody(),
+        [FilterCategory::UncutSkillGems, FilterCategory::LowUniques],
+    );
+
+    // The bare `BaseType "..."` gem line and the `BaseType == "..." "..."` uniques line
+    // both contribute; the base type shared by both muted blocks appears once, and the
+    // trailing "Sapphire Ring" (named nowhere else) proves every value on a multi-value
+    // line is captured, not just the first.
+    expect($custom->hiddenBaseTypes)->toBe(['Uncut Skill Gem', 'Silk Robe', 'Sapphire Ring']);
+});
+
 test('picks that flip no block are not reported as applied', function () {
     $body = syntheticNeversinkBody();
 
     // The synthetic body has no rare-gear blocks, so the pick is a no-op.
-    [$result, $applied] = (new CustomFilterTransformer)->apply($body, [FilterCategory::RareGear]);
+    $custom = (new CustomFilterTransformer)->apply($body, [FilterCategory::RareGear]);
 
-    expect($result)->toBe($body)
-        ->and($applied)->toBe([]);
+    expect($custom->body)->toBe($body)
+        ->and($custom->applied)->toBe([]);
 });
 
 test('availableIn drops categories a strict level has nothing left to toggle for', function () {

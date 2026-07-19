@@ -45,11 +45,12 @@ function stubStyleTheme(): StyleTheme
 
 /**
  * @param  list<PricedItem>  $items
+ * @param  list<string>  $excludeBaseTypes
  */
-function economyFilter(array $items): string
+function economyFilter(array $items, array $excludeBaseTypes = []): string
 {
     $book = new PriceBook('Runes of Aldur', $items);
-    $blocks = new EconomyFilterBuilder(PriceTierPolicy::default(), new IconResolver)->blocks($book, stubStyleTheme());
+    $blocks = new EconomyFilterBuilder(PriceTierPolicy::default(), new IconResolver)->blocks($book, stubStyleTheme(), null, $excludeBaseTypes);
 
     return implode("\n\n", array_map(static fn ($block): string => $block->render(), $blocks));
 }
@@ -103,6 +104,25 @@ test('a stacking currency is promoted by StackSize to a dearer tier', function (
         ->toContain('BaseType == "Exalted Orb"')
         // The plain per-unit block is still emitted for a single one.
         ->toContain('# currency T4');
+});
+
+test('excluded base types are dropped from every block, unique and stack promotion included', function () {
+    // The base types of a Custom-hidden category must not resurface anywhere in the
+    // overlay: not as a per-unit currency block, not as a StackSize promotion, and not
+    // as a unique highlight. Untouched items keep their blocks.
+    $items = [
+        new PricedItem('Exalted Orb', 'Exalted Orb', 'currency', 'currency', 10.0, null, 20),
+        new PricedItem('Temporalis', 'Silk Robe', 'unique', 'armour', 700.0),
+        new PricedItem('Divine Orb', 'Divine Orb', 'currency', 'currency', 25.0),
+    ];
+
+    $filter = economyFilter($items, ['Exalted Orb', 'Silk Robe']);
+
+    expect($filter)
+        ->not->toContain('Exalted Orb')
+        ->not->toContain('StackSize')
+        ->not->toContain('Silk Robe')
+        ->toContain('BaseType == "Divine Orb"');
 });
 
 test('a non-stacking currency gets no StackSize promotion', function () {

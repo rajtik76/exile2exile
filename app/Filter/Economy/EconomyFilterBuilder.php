@@ -36,13 +36,20 @@ final readonly class EconomyFilterBuilder
      * Currency and uniques can be styled from different themes (they map to different NeverSink
      * tiers); when no separate unique theme is given, currency's is used for both.
      *
+     * Base types in $excludeBaseTypes are left out entirely: they belong to categories the
+     * player hid with a Custom pick, and that pick beats any price - highlighting them here
+     * would re-show what the body below just hid.
+     *
+     * @param  list<string>  $excludeBaseTypes
      * @return list<FilterBlock>
      */
-    public function blocks(PriceBook $book, StyleTheme $theme, ?StyleTheme $uniqueTheme = null): array
+    public function blocks(PriceBook $book, StyleTheme $theme, ?StyleTheme $uniqueTheme = null, array $excludeBaseTypes = []): array
     {
+        $excluded = array_fill_keys($excludeBaseTypes, true);
+
         return [
-            ...$this->currencyBlocks($book, $theme),
-            ...$this->uniqueBlocks($book, $uniqueTheme ?? $theme),
+            ...$this->currencyBlocks($book, $theme, $excluded),
+            ...$this->uniqueBlocks($book, $uniqueTheme ?? $theme, $excluded),
         ];
     }
 
@@ -54,9 +61,10 @@ final readonly class EconomyFilterBuilder
      * blocks and largest-stack-first, so the biggest stacks match their highest tier first
      * (the game takes the first matching block).
      *
+     * @param  array<string, true>  $excluded
      * @return list<FilterBlock>
      */
-    private function currencyBlocks(PriceBook $book, StyleTheme $theme): array
+    private function currencyBlocks(PriceBook $book, StyleTheme $theme, array $excluded = []): array
     {
         $tierCount = $this->policy->tierCount();
 
@@ -66,7 +74,7 @@ final readonly class EconomyFilterBuilder
         $stackByTier = [];
 
         foreach ($book->items('currency') as $item) {
-            if ($item->price <= 0.0 || ! $this->items->knowsBaseType($item->baseType)) {
+            if ($item->price <= 0.0 || isset($excluded[$item->baseType]) || ! $this->items->knowsBaseType($item->baseType)) {
                 continue;
             }
 
@@ -127,14 +135,15 @@ final readonly class EconomyFilterBuilder
      * One block per non-empty tier for uniques, matched by the base they drop on (valued at
      * the dearest unique sharing that base) and gated to `Rarity Unique`.
      *
+     * @param  array<string, true>  $excluded
      * @return list<FilterBlock>
      */
-    private function uniqueBlocks(PriceBook $book, StyleTheme $theme): array
+    private function uniqueBlocks(PriceBook $book, StyleTheme $theme, array $excluded = []): array
     {
         $byTier = [];
 
         foreach ($book->items('unique') as $item) {
-            if (! $this->items->knowsBaseType($item->baseType)) {
+            if (isset($excluded[$item->baseType]) || ! $this->items->knowsBaseType($item->baseType)) {
                 continue;
             }
 

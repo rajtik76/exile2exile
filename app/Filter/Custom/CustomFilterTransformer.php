@@ -19,22 +19,22 @@ final readonly class CustomFilterTransformer
     private const array ALERT_ACTIONS = ['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'PlayEffect', 'MinimapIcon'];
 
     /**
-     * Returns the transformed body plus the picks that actually flipped a block, in the order
-     * given - so banners and file names can report only hides that really happened, without a
-     * second scan of the body.
+     * Returns the transformed body, the picks that actually flipped a block (in the order
+     * given, so banners and file names report only hides that really happened) and the base
+     * types the muted blocks matched on - all from the same single scan of the body.
      *
      * @param  list<FilterCategory>  $disabled
-     * @return array{string, list<FilterCategory>}
      */
-    public function apply(string $body, array $disabled): array
+    public function apply(string $body, array $disabled): CustomFilterResult
     {
         if ($disabled === []) {
-            return [$body, []];
+            return new CustomFilterResult($body, [], []);
         }
 
         $lines = explode("\n", $body);
         $muting = false;
         $applied = [];
+        $hiddenBaseTypes = [];
 
         foreach ($lines as $index => $line) {
             if (NeversinkStyleExtractor::isBlockHeader($line)) {
@@ -52,15 +52,25 @@ final readonly class CustomFilterTransformer
                 continue;
             }
 
-            if ($muting && $this->isAlertAction($line)) {
+            if (! $muting) {
+                continue;
+            }
+
+            if ($this->isAlertAction($line)) {
                 unset($lines[$index]);
+
+                continue;
+            }
+
+            if (str_starts_with(ltrim($line), 'BaseType') && preg_match_all('/"([^"]+)"/', $line, $names) > 0) {
+                $hiddenBaseTypes += array_fill_keys($names[1], true);
             }
         }
 
         $order = array_flip(array_column($disabled, 'value'));
         usort($applied, static fn (FilterCategory $a, FilterCategory $b): int => $order[$a->value] <=> $order[$b->value]);
 
-        return [implode("\n", $lines), $applied];
+        return new CustomFilterResult(implode("\n", $lines), $applied, array_keys($hiddenBaseTypes));
     }
 
     /**

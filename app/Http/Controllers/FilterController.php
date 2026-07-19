@@ -110,10 +110,10 @@ class FilterController extends Controller
         $strictness = $this->resolveStrictness($request->query('strictness'));
         $disabled = $this->resolveDisabledCategories($request->query('off'));
 
-        [$body] = (new CustomFilterTransformer)->apply($repo->body($style, $strictness), $disabled);
+        $custom = (new CustomFilterTransformer)->apply($repo->body($style, $strictness), $disabled);
 
         return response()->json([
-            'labels' => $preview->labels($body),
+            'labels' => $preview->labels($custom->body),
         ]);
     }
 
@@ -121,8 +121,9 @@ class FilterController extends Controller
      * Compose the final filter: the app's override blocks (economy, then the build overlay)
      * prepended above the verbatim NeverSink body. The overrides are styled 1:1 from the same
      * NeverSink file, so they read as NeverSink's own tiers. With Custom category picks the
-     * body's blocks in disabled categories are flipped to Hide ({@see CustomFilterTransformer});
-     * the override blocks stay on top either way, so priced and build-wanted drops always show.
+     * body's blocks in disabled categories are flipped to Hide ({@see CustomFilterTransformer})
+     * and the economy overlay skips their base types - a pick is the player's word, live
+     * prices never re-show a hidden category. Only the build overlay always stays on top.
      *
      * Returns the filter text plus the picks that actually flipped something at this
      * strictness, so the banner and file name never claim a hide that did not happen.
@@ -145,7 +146,8 @@ class FilterController extends Controller
         $body = $repo->body($style, $strictness);
         $extractor = new NeversinkStyleExtractor($body);
 
-        [$body, $applied] = (new CustomFilterTransformer)->apply($body, $disabled);
+        $custom = (new CustomFilterTransformer)->apply($body, $disabled);
+        $body = $custom->body;
 
         $currencyTheme = new NeversinkStyleTheme($extractor, self::CURRENCY_LADDER);
         $uniqueTheme = new NeversinkStyleTheme($extractor, self::UNIQUE_LADDER);
@@ -164,11 +166,11 @@ class FilterController extends Controller
         if ($league !== null) {
             $overlay = [
                 ...$overlay,
-                ...$economy->blocks(PriceBook::forLeague($league), $currencyTheme, $uniqueTheme),
+                ...$economy->blocks(PriceBook::forLeague($league), $currencyTheme, $uniqueTheme, $custom->hiddenBaseTypes),
             ];
         }
 
-        $sections = [$this->overlayHeader($style, $strictness, $league, $buildName, $applied)];
+        $sections = [$this->overlayHeader($style, $strictness, $league, $buildName, $custom->applied)];
 
         foreach ($overlay as $block) {
             $sections[] = $block->render();
@@ -176,7 +178,7 @@ class FilterController extends Controller
 
         $sections[] = $body;
 
-        return [implode("\n\n", $sections), $applied];
+        return [implode("\n\n", $sections), $custom->applied];
     }
 
     /**

@@ -2,6 +2,13 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-07-19
+- The loot filter download gained a Custom option: next to the NeverSink strictness levels there is now a category picker with twenty toggleable groups of clutter - uncut skill/support/spirit gems, gold piles, low-tier currency, essences, catalysts, distilled emotions, omens, waystones, tablets and fragments, runes and soul cores, jewels, relics, endgame flasks and charms, rare gear and jewellery, crafting bases, low-tier uniques and the leveling rules. Anything unticked is hidden on top of the chosen strictness, with its drop sounds, beams and minimap icons stripped too.
+- A hidden category really stays hidden: it is the player's word and beats everything, including live prices - an uncut gem that happens to be worth a lot on the market will not sneak back in through the economy highlights. Only the build-aware overlay (bases and modifiers the build itself wants) still shows on top.
+- The live preview under the pickers mirrors the Custom choices: a hidden category greys out there exactly as it will in game, before anything is downloaded.
+- The picker only offers categories the chosen strictness still shows at all - at Uber-plus strict, for example, rare gear is already gone entirely, so there is no dead toggle for it - and the safety nets are deliberately not toggleable: top-tier uniques, dear currency, exceptional and exotic bases and the unknown-new-item catchers always stay visible.
+- The downloaded file is honest about what was done: its header banner lists the hidden categories, the file name gains a "custom" marker, and both only say so when a pick actually hid something at that strictness.
+
 ## 2026-07-18
 - Weapons and off-hand foci/shields in the paper-doll now show their real combat stats - Physical Damage, Critical Hit Chance, Attacks per Second, Weapon Range, Reload Time on crossbows, and Spirit on sceptres - pulled straight from GGPK and read out live: added elemental/chaos damage lines only appear once a matching local modifier is actually on the item, and quality plus local physical/attack-speed/crit/reload modifiers scale the numbers the same way the game's own tooltip does.
 - Items in the build planner can now carry an item level, hand-typed or imported straight from a Path of Building code, shown next to the item's name in the editor.

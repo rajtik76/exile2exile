@@ -12,7 +12,7 @@ use App\Models\EconomyPrice;
 beforeEach(function () {
     fakeGameData([
         'resources/poe2/ggpk/items.json' => array_fill_keys(
-            ['Divine Orb', 'Mirror of Kalandra', 'Chance Shard'],
+            ['Divine Orb', 'Mirror of Kalandra', 'Chance Shard', 'Uncut Skill Gem'],
             ['rarity' => 'normal'],
         ),
     ]);
@@ -119,6 +119,22 @@ test('custom category picks flip the matching NeverSink blocks to Hide', functio
         ->toContain('Show # %D7 $type->gold $tier->stack3')
         ->toContain('Show # %D6 $type->gold $tier->stackxl1lvl')
         ->toContain('Show # $type->gems->uncut $tier->spirit20');
+});
+
+test('a hidden category also drops its economy highlight, whatever the price', function () {
+    EconomyPrice::factory()->create([
+        'league' => 'Runes of Aldur', 'name' => 'Uncut Skill Gem', 'base_type' => 'Uncut Skill Gem',
+        'kind' => 'currency', 'category' => 'currency', 'price' => 150.0,
+    ]);
+
+    // Priced and shown while the category is on...
+    expect((string) $this->get(route('filter.economy'))->getContent())
+        ->toContain('BaseType == "Uncut Skill Gem"');
+
+    // ...but a Custom pick beats the price: no economy override re-shows the hidden category.
+    expect((string) $this->get(route('filter.economy', ['off' => 'uncut-skill-gems']))->getContent())
+        ->not->toContain('BaseType == "Uncut Skill Gem"')
+        ->toContain('Hide # $type->gems->uncut $tier->skill20');
 });
 
 test('picks with nothing to hide at the chosen strictness do not mark the download custom', function () {
