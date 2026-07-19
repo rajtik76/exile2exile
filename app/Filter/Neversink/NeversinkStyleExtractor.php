@@ -38,7 +38,7 @@ final class NeversinkStyleExtractor
             // Anchored so a marker isn't matched as the prefix of a longer one - the
             // "…$tier->t3" marker must not match a "…$tier->t3boss" header. Require the
             // char right after the marker to be a non-word boundary (space / EOL / "!").
-            if (! $this->isBlockHeader($line) || preg_match('/'.preg_quote($marker, '/').'(?!\S)/', $line) !== 1) {
+            if (! self::isBlockHeader($line) || preg_match('/'.preg_quote($marker, '/').'(?!\S)/', $line) !== 1) {
                 continue;
             }
 
@@ -68,7 +68,8 @@ final class NeversinkStyleExtractor
         return [];
     }
 
-    private function isBlockHeader(string $line): bool
+    /** Whether a filter line opens a block - the shared Show/Hide header test. */
+    public static function isBlockHeader(string $line): bool
     {
         return str_starts_with($line, 'Show') || str_starts_with($line, 'Hide');
     }
@@ -88,7 +89,7 @@ final class NeversinkStyleExtractor
             $trimmed = ltrim($line);
 
             // A blank line or the next block header ends this block.
-            if (trim($line) === '' || $this->isBlockHeader($line)) {
+            if (trim($line) === '' || self::isBlockHeader($line)) {
                 break;
             }
 

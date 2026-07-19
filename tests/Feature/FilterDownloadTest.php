@@ -100,6 +100,52 @@ test('an explicit league selects that snapshot', function () {
         ->toContain('BaseType == "Mirror of Kalandra"');
 });
 
+test('custom category picks flip the matching NeverSink blocks to Hide', function () {
+    EconomyPrice::factory()->create(['league' => 'Runes of Aldur', 'price' => 50.0]);
+
+    $response = $this->get(route('filter.economy', ['off' => 'gold-piles,uncut-skill-gems']));
+
+    $response->assertOk()
+        ->assertHeader('Content-Disposition', 'attachment; filename="Exile to Exile (Default, Regular custom).filter"');
+
+    expect((string) $response->getContent())
+        // The overlay banner names what was hidden.
+        ->toContain('# Hidden categories: Gold (small & medium piles), Uncut skill gems')
+        // Small gold piles and uncut skill gems are flipped to Hide...
+        ->toContain('Hide # %H3 $type->gold $tier->any')
+        ->not->toContain('Show # %H3 $type->gold $tier->any')
+        ->toContain('Hide # $type->gems->uncut $tier->skill20')
+        // ...while untoggled categories and the large/huge gold piles keep their Show blocks.
+        ->toContain('Show # %D7 $type->gold $tier->stack3')
+        ->toContain('Show # %D6 $type->gold $tier->stackxl1lvl')
+        ->toContain('Show # $type->gems->uncut $tier->spirit20');
+});
+
+test('picks with nothing to hide at the chosen strictness do not mark the download custom', function () {
+    EconomyPrice::factory()->create(['league' => 'Runes of Aldur', 'price' => 50.0]);
+
+    // 6-uber-plus has no rare-gear Show blocks left, so this pick flips nothing.
+    $response = $this->get(route('filter.economy', ['strictness' => '6-uber-plus-strict', 'off' => 'rare-gear']));
+
+    $response->assertOk()
+        ->assertHeader('Content-Disposition', 'attachment; filename="Exile to Exile (Default, Uber-plus strict).filter"');
+
+    expect((string) $response->getContent())->not->toContain('# Hidden categories:');
+});
+
+test('unknown off slugs are ignored and the download stays a plain NeverSink base', function () {
+    EconomyPrice::factory()->create(['league' => 'Runes of Aldur', 'price' => 50.0]);
+
+    $response = $this->get(route('filter.economy', ['off' => 'no-such-category,']));
+
+    $response->assertOk()
+        ->assertHeader('Content-Disposition', 'attachment; filename="Exile to Exile (Default, Regular).filter"');
+
+    expect((string) $response->getContent())
+        ->not->toContain('# Hidden categories:')
+        ->toContain('Show # %H3 $type->gold $tier->any');
+});
+
 test('an unknown league is a 404', function () {
     EconomyPrice::factory()->create(['league' => 'Runes of Aldur', 'price' => 50.0]);
 

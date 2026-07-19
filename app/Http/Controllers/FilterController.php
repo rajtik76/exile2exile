@@ -6,6 +6,8 @@ namespace App\Http\Controllers;
 
 use App\Economy\PriceBook;
 use App\Filter\Build\BuildFilterBuilder;
+use App\Filter\Custom\CustomFilterTransformer;
+use App\Filter\Custom\FilterCategory;
 use App\Filter\Economy\EconomyFilterBuilder;
 use App\Filter\FilterBlock;
 use App\Filter\Neversink\NeversinkFilterRepository;
@@ -68,10 +70,11 @@ class FilterController extends Controller
 
         $style = $this->resolveStyle($request->query('theme'));
         $strictness = $this->resolveStrictness($request->query('strictness'));
+        $disabled = $this->resolveDisabledCategories($request->query('off'));
 
-        $filter = $this->compose($repo, $style, $strictness, $economy, $league);
+        [$filter, $applied] = $this->compose($repo, $style, $strictness, $economy, $league, disabled: $disabled);
 
-        return $this->download($filter, $this->filterName('Exile to Exile', null, $style, $strictness));
+        return $this->download($filter, $this->filterName('Exile to Exile', null, $style, $strictness, $applied));
     }
 
     /**
@@ -83,37 +86,50 @@ class FilterController extends Controller
         $style = $this->resolveStyle($request->query('theme'));
         $strictness = $this->resolveStrictness($request->query('strictness'));
         $league = $this->resolveLeague($request->query('league'));
+        $disabled = $this->resolveDisabledCategories($request->query('off'));
 
         $planData = PlanSchema::normalize($plan->data, $plan->schema_version);
 
-        $filter = $this->compose($repo, $style, $strictness, $economy, $league, $buildAware, $planData, $plan->title);
+        [$filter, $applied] = $this->compose($repo, $style, $strictness, $economy, $league, $buildAware, $planData, $plan->title, $disabled);
 
         return $this->download(
             $filter,
-            $this->filterName($plan->title, $request->query('phase'), $style, $strictness),
+            $this->filterName($plan->title, $request->query('phase'), $style, $strictness, $applied),
         );
     }
 
     /**
      * Sample labels for the on-page preview of a theme and strictness, read from the vendored
-     * NeverSink filter so the preview shows exactly how drops look under that pick.
+     * NeverSink filter so the preview shows exactly how drops look under that pick. Custom
+     * category picks (`?off=`) are applied to the body the same way the download does; the
+     * economy/build override highlights layered on top of a download are not simulated here.
      */
     public function preview(Request $request, NeversinkFilterRepository $repo, NeversinkPreviewBuilder $preview): JsonResponse
     {
         $style = $this->resolveStyle($request->query('theme'));
         $strictness = $this->resolveStrictness($request->query('strictness'));
+        $disabled = $this->resolveDisabledCategories($request->query('off'));
+
+        [$body] = (new CustomFilterTransformer)->apply($repo->body($style, $strictness), $disabled);
 
         return response()->json([
-            'labels' => $preview->labels($repo->body($style, $strictness)),
+            'labels' => $preview->labels($body),
         ]);
     }
 
     /**
      * Compose the final filter: the app's override blocks (economy, then the build overlay)
      * prepended above the verbatim NeverSink body. The overrides are styled 1:1 from the same
-     * NeverSink file, so they read as NeverSink's own tiers.
+     * NeverSink file, so they read as NeverSink's own tiers. With Custom category picks the
+     * body's blocks in disabled categories are flipped to Hide ({@see CustomFilterTransformer});
+     * the override blocks stay on top either way, so priced and build-wanted drops always show.
+     *
+     * Returns the filter text plus the picks that actually flipped something at this
+     * strictness, so the banner and file name never claim a hide that did not happen.
      *
      * @param  array<string, mixed>|null  $planData
+     * @param  list<FilterCategory>  $disabled
+     * @return array{string, list<FilterCategory>}
      */
     private function compose(
         NeversinkFilterRepository $repo,
@@ -124,9 +140,12 @@ class FilterController extends Controller
         ?BuildFilterBuilder $buildAware = null,
         ?array $planData = null,
         ?string $buildName = null,
-    ): string {
+        array $disabled = [],
+    ): array {
         $body = $repo->body($style, $strictness);
         $extractor = new NeversinkStyleExtractor($body);
+
+        [$body, $applied] = (new CustomFilterTransformer)->apply($body, $disabled);
 
         $currencyTheme = new NeversinkStyleTheme($extractor, self::CURRENCY_LADDER);
         $uniqueTheme = new NeversinkStyleTheme($extractor, self::UNIQUE_LADDER);
@@ -149,7 +168,7 @@ class FilterController extends Controller
             ];
         }
 
-        $sections = [$this->overlayHeader($style, $strictness, $league, $buildName)];
+        $sections = [$this->overlayHeader($style, $strictness, $league, $buildName, $applied)];
 
         foreach ($overlay as $block) {
             $sections[] = $block->render();
@@ -157,15 +176,17 @@ class FilterController extends Controller
 
         $sections[] = $body;
 
-        return implode("\n\n", $sections);
+        return [implode("\n\n", $sections), $applied];
     }
 
     /**
      * The banner that opens the app's override section, above NeverSink's own file. Carries the
      * project name and URL, the build it was made for and the generation date, and credits
      * NeverSink and its MIT licence, since the body below is theirs.
+     *
+     * @param  list<FilterCategory>  $disabled
      */
-    private function overlayHeader(NeversinkStyle $style, NeversinkStrictness $strictness, ?string $league, ?string $buildName): string
+    private function overlayHeader(NeversinkStyle $style, NeversinkStrictness $strictness, ?string $league, ?string $buildName, array $disabled = []): string
     {
         $lines = [
             '#===============================================================================',
@@ -179,6 +200,14 @@ class FilterController extends Controller
 
         $lines[] = '# Generated: '.now()->format('Y-m-d H:i:s T');
         $lines[] = "# Theme: {$style->label()}  |  Strictness: {$strictness->label()}".($league === null ? '' : "  |  League: {$league}");
+
+        if ($disabled !== []) {
+            $lines[] = '# Hidden categories: '.implode(', ', array_map(
+                static fn (FilterCategory $category): string => $category->label(),
+                $disabled,
+            ));
+        }
+
         $lines[] = '#';
         $lines[] = '# Built on NeverSink\'s Indepth Loot Filter for Path of Exile 2, used under the MIT';
         $lines[] = '# License (Copyright (c) 2026 NeverSink). The blocks in this section override what';
@@ -201,9 +230,12 @@ class FilterController extends Controller
 
     /**
      * A readable download basename. Path of Exile 2 shows the file name as the filter's name
-     * in-game, so keep it human ("Cold Witch - Early Endgame (Cobalt, Strict)").
+     * in-game, so keep it human ("Cold Witch - Early Endgame (Cobalt, Strict)"); custom
+     * category picks are flagged as "Strict custom".
+     *
+     * @param  list<FilterCategory>  $disabled
      */
-    private function filterName(string $title, mixed $phase, NeversinkStyle $style, NeversinkStrictness $strictness): string
+    private function filterName(string $title, mixed $phase, NeversinkStyle $style, NeversinkStrictness $strictness, array $disabled = []): string
     {
         $name = trim($title) !== '' ? trim($title) : 'Exile to Exile';
 
@@ -211,7 +243,8 @@ class FilterController extends Controller
             $name .= ' - '.trim($phase);
         }
 
-        $name .= " ({$style->label()}, {$strictness->label()})";
+        $strictnessLabel = $strictness->label().($disabled === [] ? '' : ' custom');
+        $name .= " ({$style->label()}, {$strictnessLabel})";
 
         return trim((string) preg_replace('#[/\\\\:*?"<>|]+#', ' ', $name));
     }
@@ -224,6 +257,31 @@ class FilterController extends Controller
     private function resolveStrictness(mixed $requested): NeversinkStrictness
     {
         return is_string($requested) ? NeversinkStrictness::tryFrom($requested) ?? NeversinkStrictness::default() : NeversinkStrictness::default();
+    }
+
+    /**
+     * The Custom picks: `?off=` is a comma-separated list of category slugs to hide on top of
+     * the chosen strictness. Unknown slugs are ignored, so a stale bookmarked URL still works.
+     *
+     * @return list<FilterCategory>
+     */
+    private function resolveDisabledCategories(mixed $requested): array
+    {
+        if (! is_string($requested) || trim($requested) === '') {
+            return [];
+        }
+
+        $categories = [];
+
+        foreach (explode(',', $requested) as $slug) {
+            $category = FilterCategory::tryFrom(trim($slug));
+
+            if ($category !== null && ! in_array($category, $categories, true)) {
+                $categories[] = $category;
+            }
+        }
+
+        return $categories;
     }
 
     /** The UnidentifiedItemTier floor for the build's base-upgrade highlight, rising with strictness. */

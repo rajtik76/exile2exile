@@ -262,7 +262,7 @@ final class NeversinkPreviewBuilder
         $current = null;
 
         foreach (explode("\n", $body) as $line) {
-            if (str_starts_with($line, 'Show') || str_starts_with($line, 'Hide')) {
+            if (NeversinkStyleExtractor::isBlockHeader($line)) {
                 if ($current !== null) {
                     $blocks[] = $current;
                 }

@@ -15,6 +15,11 @@ export type StrictnessPayload = {
     level: number;
 };
 
+export type FilterCategoryPayload = {
+    value: string;
+    label: string;
+};
+
 // NeverSink ships seven strictness levels, 0 (soft) through 6 (uber-plus).
 const STRICTNESS_STEPS = 7;
 
@@ -27,18 +32,30 @@ const STRICTNESS_STEPS = 7;
 export default function FilterPanel({
     themes,
     strictness,
+    categories,
     buildSlug,
     phase,
     className,
 }: {
     themes: FilterThemePayload[];
     strictness: StrictnessPayload[];
+    /** Toggleable categories per strictness slug; stricter levels list fewer. */
+    categories: Record<string, FilterCategoryPayload[]>;
     buildSlug: string;
     phase?: string | null;
     className?: string;
 }) {
     const [theme, setTheme] = useState(themes[0]?.value ?? 'default');
     const [level, setLevel] = useState(strictness[1]?.value ?? '1-regular');
+    const [custom, setCustom] = useState(false);
+    const [hidden, setHidden] = useState<string[]>([]);
+
+    const toggleCategory = (value: string) =>
+        setHidden((current) =>
+            current.includes(value)
+                ? current.filter((item) => item !== value)
+                : [...current, value],
+        );
 
     const activeTheme =
         themes.find((item) => item.value === theme) ?? themes[0];
@@ -49,9 +66,18 @@ export default function FilterPanel({
         return null;
     }
 
+    // Only the categories this strictness level can still toggle; picks for categories the
+    // level no longer has are kept in state but dropped from the URL.
+    const availableCategories = categories[activeLevel.value] ?? [];
+    const off = custom
+        ? hidden.filter((value) =>
+              availableCategories.some((item) => item.value === value),
+          )
+        : [];
     const downloadUrl =
         `/filter/build/${buildSlug}?theme=${activeTheme.value}&strictness=${activeLevel.value}` +
-        (phase ? `&phase=${encodeURIComponent(phase)}` : '');
+        (phase ? `&phase=${encodeURIComponent(phase)}` : '') +
+        (off.length > 0 ? `&off=${encodeURIComponent(off.join(','))}` : '');
 
     return (
         <Panel title="Loot filter" collapsible className={className}>
@@ -124,6 +150,59 @@ export default function FilterPanel({
                     </div>
                 </div>
 
+                {/* Custom: multiselect of loot categories to hide on top of the chosen level. */}
+                <div className="flex flex-col gap-1.5">
+                    <span className="pl-text-2xs font-semibold tracking-[0.12em] text-[var(--pl-faint)] uppercase">
+                        Categories
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            size="sm"
+                            active={custom}
+                            onClick={() => setCustom((open) => !open)}
+                        >
+                            Custom
+                        </Button>
+                        {custom && off.length > 0 && (
+                            <span className="pl-text-2xs text-[var(--pl-muted)]">
+                                {off.length} hidden
+                            </span>
+                        )}
+                    </div>
+                    {custom && (
+                        <div className="mt-1 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+                            {availableCategories.map((category) => {
+                                const shown = !hidden.includes(category.value);
+
+                                return (
+                                    <label
+                                        key={category.value}
+                                        className="pl-text-sm flex cursor-pointer items-center gap-2 text-[var(--pl-muted)] select-none hover:text-[var(--pl-text)]"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={shown}
+                                            onChange={() =>
+                                                toggleCategory(category.value)
+                                            }
+                                            className="size-3.5 accent-[var(--pl-accent)]"
+                                        />
+                                        <span
+                                            className={
+                                                shown
+                                                    ? ''
+                                                    : 'line-through opacity-60'
+                                            }
+                                        >
+                                            {category.label}
+                                        </span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
                 {/* Live preview: real labels from the chosen NeverSink theme and strictness. */}
                 <div className="flex flex-col gap-1.5">
                     <span className="pl-text-2xs font-semibold tracking-[0.12em] text-[var(--pl-faint)] uppercase">
@@ -132,6 +211,7 @@ export default function FilterPanel({
                     <FilterPreview
                         theme={activeTheme.value}
                         strictness={activeLevel.value}
+                        off={off}
                     />
                 </div>
 

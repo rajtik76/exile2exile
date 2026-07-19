@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { classPortrait } from '@/components/build/classPortrait';
 import FilterPanel from '@/components/planner/FilterPanel';
 import type {
+    FilterCategoryPayload,
     FilterThemePayload,
     StrictnessPayload,
 } from '@/components/planner/FilterPanel';
@@ -54,6 +55,7 @@ export default function PlannerShow({
     mods,
     filterThemes,
     filterStrictness,
+    filterCategories,
 }: {
     slug: string;
     title: string;
@@ -63,6 +65,7 @@ export default function PlannerShow({
     mods: ModMap;
     filterThemes: FilterThemePayload[];
     filterStrictness: StrictnessPayload[];
+    filterCategories: Record<string, FilterCategoryPayload[]>;
 }) {
     const [activeTabId, setActiveTabId] = useState<string>(
         plan.tabs[0]?.id ?? 'act-1',
@@ -174,6 +177,7 @@ export default function PlannerShow({
                         <FilterPanel
                             themes={filterThemes}
                             strictness={filterStrictness}
+                            categories={filterCategories}
                             buildSlug={slug}
                             phase={
                                 mode === 'phases'

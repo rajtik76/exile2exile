@@ -92,17 +92,22 @@ function Label({ label }: { label: PreviewLabel }) {
 export default function FilterPreview({
     theme,
     strictness,
+    off = [],
 }: {
     theme: string;
     strictness: string;
+    /** Custom category slugs hidden by the player, mirrored so the preview matches the download. */
+    off?: string[];
 }) {
     const [labels, setLabels] = useState<PreviewLabel[]>([]);
+    const offParam = off.join(',');
 
     useEffect(() => {
         const controller = new AbortController();
 
         fetch(
-            `/filter/preview?theme=${encodeURIComponent(theme)}&strictness=${encodeURIComponent(strictness)}`,
+            `/filter/preview?theme=${encodeURIComponent(theme)}&strictness=${encodeURIComponent(strictness)}` +
+                (offParam ? `&off=${encodeURIComponent(offParam)}` : ''),
             {
                 signal: controller.signal,
                 headers: { Accept: 'application/json' },
@@ -117,7 +122,7 @@ export default function FilterPreview({
             });
 
         return () => controller.abort();
-    }, [theme, strictness]);
+    }, [theme, strictness, offParam]);
 
     return (
         <div

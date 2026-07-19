@@ -38,4 +38,25 @@ final readonly class NeversinkFilterRepository
     {
         return is_file("{$this->basePath}/{$style->value}/{$strictness->value}.filter");
     }
+
+    /**
+     * A short fingerprint of a style's vendored files (paths and mtimes), for cache keys
+     * derived from their content. Checkouts refresh mtimes, so the fingerprint changes at
+     * least whenever a deploy lands - persistent caches (database/redis survive deploys)
+     * then never serve data computed from previous files, at the harmless cost of a rebuild
+     * per deploy. Reads one directory and stats its handful of files, so it is cheap enough
+     * to derive a key from on every request.
+     */
+    public function version(NeversinkStyle $style): string
+    {
+        $files = glob("{$this->basePath}/{$style->value}/*.filter") ?: [];
+
+        $stamps = [];
+
+        foreach ($files as $file) {
+            $stamps[$file] = filemtime($file);
+        }
+
+        return substr(md5((string) json_encode($stamps)), 0, 12);
+    }
 }

@@ -56,3 +56,15 @@ test('the preview endpoint returns labels as json', function () {
         ->assertOk()
         ->assertJsonStructure(['labels' => [['name', 'hidden', 'fontSize', 'text']]]);
 });
+
+test('the preview reflects Custom category picks like the downloaded body', function () {
+    $labels = $this->get(route('filter.preview', ['strictness' => '1-regular', 'off' => 'uncut-skill-gems']))
+        ->assertOk()
+        ->json('labels');
+
+    // The hidden pick greys out in the preview exactly like in the downloaded NeverSink
+    // body, while an untoggled category keeps its Show styling. (The download additionally
+    // prepends economy/build override highlights, which the preview does not simulate.)
+    expect(labelNamed($labels, 'Uncut Skill Gem')['hidden'])->toBeTrue()
+        ->and(labelNamed($labels, 'Divine Orb')['hidden'])->toBeFalse();
+});

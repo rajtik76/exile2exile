@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Filter\Custom\FilterCategory;
+use App\Filter\Neversink\NeversinkFilterRepository;
 use App\Filter\Neversink\NeversinkStrictness;
 use App\Filter\Neversink\NeversinkStyle;
 use App\Http\Requests\DestroyPlanRequest;
@@ -19,6 +21,7 @@ use App\Support\Planner\PobPlanMapper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -128,7 +131,7 @@ class PlannerController extends Controller
     /**
      * The read-only guide, resolved by its public slug. An unknown slug 404s.
      */
-    public function show(BuildPlan $plan, IconResolver $icons, ModCatalogue $catalogue): Response
+    public function show(BuildPlan $plan, IconResolver $icons, ModCatalogue $catalogue, NeversinkFilterRepository $filters): Response
     {
         // Record the visit so a future cleanup can prune guides nobody opens, without
         // touching `updated_at` or firing model events.
@@ -146,6 +149,7 @@ class PlannerController extends Controller
             // live preview + pickers.
             'filterThemes' => NeversinkStyle::all(),
             'filterStrictness' => NeversinkStrictness::all(),
+            'filterCategories' => $this->filterCategoriesByStrictness($filters),
             'meta' => [
                 'title' => $plan->title,
                 'description' => Str::limit(trim((string) $data['description']), 160),
@@ -289,5 +293,36 @@ class PlannerController extends Controller
         } while (BuildPlan::where('slug', $slug)->exists());
 
         return $slug;
+    }
+
+    /**
+     * The Custom picker's categories per strictness level, keyed by the strictness slug.
+     * Stricter NeverSink levels drop or pre-hide whole sections, so each level only lists
+     * the categories that still have a visible block to toggle there. The default-style files
+     * stand in for every style (block counts differ per style, but the per-category
+     * availability comes out identical). The cache key carries the vendored files'
+     * fingerprint, so a NeverSink update invalidates it even on persistent cache stores.
+     *
+     * @return array<string, list<array{value: string, label: string}>>
+     */
+    private function filterCategoriesByStrictness(NeversinkFilterRepository $filters): array
+    {
+        $key = 'planner.filter-categories.'.$filters->version(NeversinkStyle::default());
+
+        return Cache::remember($key, now()->addDay(), static function () use ($filters): array {
+            $map = [];
+
+            foreach (NeversinkStrictness::cases() as $strictness) {
+                $map[$strictness->value] = array_map(
+                    static fn (FilterCategory $category): array => [
+                        'value' => $category->value,
+                        'label' => $category->label(),
+                    ],
+                    FilterCategory::availableIn($filters->body(NeversinkStyle::default(), $strictness)),
+                );
+            }
+
+            return $map;
+        });
     }
 }
