@@ -166,7 +166,7 @@ class FilterController extends Controller
         if ($league !== null) {
             $overlay = [
                 ...$overlay,
-                ...$economy->blocks(PriceBook::forLeague($league), $currencyTheme, $uniqueTheme, $custom->hiddenBaseTypes),
+                ...$economy->blocks(PriceBook::forLeague($league), $currencyTheme, $uniqueTheme, $custom),
             ];
         }
 

@@ -48,7 +48,8 @@ test('with no disabled categories the body passes through verbatim', function ()
 
     expect($result->body)->toBe($body)
         ->and($result->applied)->toBe([])
-        ->and($result->hiddenBaseTypes)->toBe([]);
+        ->and($result->hiddenBaseTypes)->toBe([])
+        ->and($result->hiddenBaseTypeSubstrings)->toBe([]);
 });
 
 test('blocks in a disabled category flip to Hide and lose their alert actions', function () {
@@ -81,21 +82,26 @@ test('blocks outside the disabled category are untouched', function () {
 test('muted blocks contribute their base types so the economy overlay can skip them', function () {
     $custom = (new CustomFilterTransformer)->apply(syntheticNeversinkBody(), [FilterCategory::UncutSkillGems, FilterCategory::GoldPiles]);
 
-    // The gem block names a base type; the muted gold blocks match by stack size only.
-    expect($custom->hiddenBaseTypes)->toBe(['Uncut Skill Gem']);
+    // The gem block names its base on a bare `BaseType "..."` line, which the game treats
+    // as a substring match; the muted gold blocks match by stack size only.
+    expect($custom->hiddenBaseTypeSubstrings)->toBe(['Uncut Skill Gem'])
+        ->and($custom->hiddenBaseTypes)->toBe([])
+        // The substring semantic is what hides poe2scout's per-level gem names.
+        ->and($custom->hidesBaseType('Uncut Skill Gem (Level 18)'))->toBeTrue()
+        ->and($custom->hidesBaseType('Divine Orb'))->toBeFalse();
 });
 
-test('multi-value BaseType == lines contribute every name, deduplicated across blocks', function () {
+test('multi-value BaseType == lines contribute every name, deduplicated per shape', function () {
     $custom = (new CustomFilterTransformer)->apply(
         syntheticNeversinkBody(),
         [FilterCategory::UncutSkillGems, FilterCategory::LowUniques],
     );
 
-    // The bare `BaseType "..."` gem line and the `BaseType == "..." "..."` uniques line
-    // both contribute; the base type shared by both muted blocks appears once, and the
-    // trailing "Sapphire Ring" (named nowhere else) proves every value on a multi-value
-    // line is captured, not just the first.
-    expect($custom->hiddenBaseTypes)->toBe(['Uncut Skill Gem', 'Silk Robe', 'Sapphire Ring']);
+    // The `BaseType == "..." "..."` uniques line lands in the exact list - all names, not
+    // just the first ("Sapphire Ring" is named nowhere else) - while the bare gem line
+    // lands in the substring list, mirroring the game's own matching semantics.
+    expect($custom->hiddenBaseTypes)->toBe(['Silk Robe', 'Uncut Skill Gem', 'Sapphire Ring'])
+        ->and($custom->hiddenBaseTypeSubstrings)->toBe(['Uncut Skill Gem']);
 });
 
 test('picks that flip no block are not reported as applied', function () {

@@ -137,6 +137,32 @@ test('a hidden category also drops its economy highlight, whatever the price', f
         ->toContain('Hide # $type->gems->uncut $tier->skill20');
 });
 
+test('a per-level priced gem stays hidden when its category is off', function () {
+    // The in-game repro: poe2scout prices uncut gems per level, so the economy row's base
+    // type carries a "(Level n)" suffix the NeverSink body never names literally - its
+    // muted block matches by the bare (substring) name. The exclusion must do the same,
+    // or the priced gem re-surfaces through the overlay at any strictness.
+    fakeGameData([
+        'resources/poe2/ggpk/items.json' => array_fill_keys(
+            ['Uncut Support Gem (Level 5)', 'Divine Orb'],
+            ['rarity' => 'normal'],
+        ),
+    ]);
+
+    EconomyPrice::factory()->create([
+        'league' => 'Runes of Aldur', 'name' => 'Uncut Support Gem (Level 5)',
+        'base_type' => 'Uncut Support Gem (Level 5)', 'kind' => 'currency', 'category' => 'currency', 'price' => 30.0,
+    ]);
+
+    // Priced and highlighted while the category is on...
+    expect((string) $this->get(route('filter.economy', ['strictness' => '6-uber-plus-strict']))->getContent())
+        ->toContain('"Uncut Support Gem (Level 5)"');
+
+    // ...gone entirely once it is off, at the same strictness the player used.
+    expect((string) $this->get(route('filter.economy', ['strictness' => '6-uber-plus-strict', 'off' => 'uncut-support-gems']))->getContent())
+        ->not->toContain('"Uncut Support Gem (Level 5)"');
+});
+
 test('picks with nothing to hide at the chosen strictness do not mark the download custom', function () {
     EconomyPrice::factory()->create(['league' => 'Runes of Aldur', 'price' => 50.0]);
 

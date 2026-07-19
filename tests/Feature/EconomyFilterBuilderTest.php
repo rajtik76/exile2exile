@@ -6,6 +6,7 @@ use App\Economy\PriceBook;
 use App\Economy\PricedItem;
 use App\Filter\Action;
 use App\Filter\Actions;
+use App\Filter\Custom\CustomFilterResult;
 use App\Filter\Economy\EconomyFilterBuilder;
 use App\Filter\Economy\PriceTierPolicy;
 use App\Filter\StyleTheme;
@@ -45,12 +46,11 @@ function stubStyleTheme(): StyleTheme
 
 /**
  * @param  list<PricedItem>  $items
- * @param  list<string>  $excludeBaseTypes
  */
-function economyFilter(array $items, array $excludeBaseTypes = []): string
+function economyFilter(array $items, ?CustomFilterResult $custom = null): string
 {
     $book = new PriceBook('Runes of Aldur', $items);
-    $blocks = new EconomyFilterBuilder(PriceTierPolicy::default(), new IconResolver)->blocks($book, stubStyleTheme(), null, $excludeBaseTypes);
+    $blocks = new EconomyFilterBuilder(PriceTierPolicy::default(), new IconResolver)->blocks($book, stubStyleTheme(), null, $custom);
 
     return implode("\n\n", array_map(static fn ($block): string => $block->render(), $blocks));
 }
@@ -116,12 +116,35 @@ test('excluded base types are dropped from every block, unique and stack promoti
         new PricedItem('Divine Orb', 'Divine Orb', 'currency', 'currency', 25.0),
     ];
 
-    $filter = economyFilter($items, ['Exalted Orb', 'Silk Robe']);
+    $filter = economyFilter($items, new CustomFilterResult('', [], ['Exalted Orb', 'Silk Robe'], []));
 
     expect($filter)
         ->not->toContain('Exalted Orb')
         ->not->toContain('StackSize')
         ->not->toContain('Silk Robe')
+        ->toContain('BaseType == "Divine Orb"');
+});
+
+test('a substring name from a bare BaseType line hides every per-level variant', function () {
+    // poe2scout prices uncut gems per level ("Uncut Support Gem (Level 5)"), while the muted
+    // NeverSink block matches them all with one bare `BaseType "Uncut Support Gem"` line.
+    // The exclusion mirrors that substring semantic, so the priced variant stays hidden.
+    fakeGameData([
+        'resources/poe2/ggpk/items.json' => array_fill_keys(
+            ['Uncut Support Gem (Level 5)', 'Divine Orb'],
+            ['rarity' => 'normal'],
+        ),
+    ]);
+
+    $items = [
+        new PricedItem('Uncut Support Gem (Level 5)', 'Uncut Support Gem (Level 5)', 'currency', 'currency', 30.0),
+        new PricedItem('Divine Orb', 'Divine Orb', 'currency', 'currency', 25.0),
+    ];
+
+    $filter = economyFilter($items, new CustomFilterResult('', [], [], ['Uncut Support Gem']));
+
+    expect($filter)
+        ->not->toContain('Uncut Support Gem (Level 5)')
         ->toContain('BaseType == "Divine Orb"');
 });
 

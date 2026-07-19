@@ -28,13 +28,14 @@ final readonly class CustomFilterTransformer
     public function apply(string $body, array $disabled): CustomFilterResult
     {
         if ($disabled === []) {
-            return new CustomFilterResult($body, [], []);
+            return new CustomFilterResult($body, [], [], []);
         }
 
         $lines = explode("\n", $body);
         $muting = false;
         $applied = [];
-        $hiddenBaseTypes = [];
+        $exactNames = [];
+        $substringNames = [];
 
         foreach ($lines as $index => $line) {
             if (NeversinkStyleExtractor::isBlockHeader($line)) {
@@ -62,15 +63,24 @@ final readonly class CustomFilterTransformer
                 continue;
             }
 
-            if (str_starts_with(ltrim($line), 'BaseType') && preg_match_all('/"([^"]+)"/', $line, $names) > 0) {
-                $hiddenBaseTypes += array_fill_keys($names[1], true);
+            $trimmed = ltrim($line);
+
+            if (str_starts_with($trimmed, 'BaseType') && preg_match_all('/"([^"]+)"/', $line, $names) > 0) {
+                // Mirror the game's BaseType semantics: `BaseType == ...` matches the exact
+                // name, a bare `BaseType ...` matches any name containing it (which is how
+                // one muted "Uncut Support Gem" line covers every per-level variant).
+                if (preg_match('/^BaseType\s*==/', $trimmed) === 1) {
+                    $exactNames += array_fill_keys($names[1], true);
+                } else {
+                    $substringNames += array_fill_keys($names[1], true);
+                }
             }
         }
 
         $order = array_flip(array_column($disabled, 'value'));
         usort($applied, static fn (FilterCategory $a, FilterCategory $b): int => $order[$a->value] <=> $order[$b->value]);
 
-        return new CustomFilterResult(implode("\n", $lines), $applied, array_keys($hiddenBaseTypes));
+        return new CustomFilterResult(implode("\n", $lines), $applied, array_keys($exactNames), array_keys($substringNames));
     }
 
     /**
