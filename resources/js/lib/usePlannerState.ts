@@ -10,7 +10,7 @@ import type {
     ClassDef,
     TreeData,
 } from '@poe2-toolkit/tree-core';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { resolveClassId } from '@/lib/classCatalog';
 import { isNumberArray, isRecord } from '@/lib/guards';
 import shared from '@/routes/shared';
@@ -119,7 +119,7 @@ export function usePlannerState(
     // Which page (create, or a build's editor) the seed below already ran for.
     // Keying it this way lets a navigation to a *different* build's editor seed
     // again on the same mounted component.
-    const seededFor = useRef<string | null>(null);
+    const [seededFor, setSeededFor] = useState<string | null>(null);
     const identity =
         mode === 'edit' && slug !== null ? `edit:${slug}` : 'create';
 
@@ -132,43 +132,37 @@ export function usePlannerState(
     // save the server redirects back into edit mode with the same page component
     // mounted, and overwriting the live allocation with its just-saved copy would
     // only reframe the canvas.
-    useEffect(() => {
-        if (seededFor.current === identity || !data || !initialBuild) {
-            return;
+    //
+    // A render-phase adjustment, not an effect: React re-renders immediately with the
+    // seeded state instead of first painting the unseeded frame.
+    if (seededFor !== identity && data && initialBuild) {
+        setSeededFor(identity);
+
+        if (allocation === null) {
+            const resolvedClassId =
+                resolveClassId(data, initialBuild.className) ?? undefined;
+
+            const seededAllocation: BuildAllocation = {
+                classId: resolvedClassId,
+                ascendId: initialBuild.ascendId ?? undefined,
+                allocated: initialBuild.allocated,
+                attributeChoices: initialBuild.attributeChoices,
+                weaponSets: initialBuild.weaponSets,
+                jewels: initialBuild.jewels,
+                treeVersion: initialBuild.treeVersion ?? undefined,
+            };
+
+            setAllocation(seededAllocation);
+            setSelectedClassId(resolvedClassId ?? null);
+            setAscendancy(initialBuild.ascendId ?? null);
+            setImported(mode !== 'edit');
+            setFrameToken((token) => token + 1);
+
+            if (mode === 'edit') {
+                setLastSaved(seededAllocation);
+            }
         }
-
-        seededFor.current = identity;
-
-        if (allocation !== null) {
-            return;
-        }
-
-        const resolvedClassId =
-            resolveClassId(data, initialBuild.className) ?? undefined;
-
-        const seededAllocation: BuildAllocation = {
-            classId: resolvedClassId,
-            ascendId: initialBuild.ascendId ?? undefined,
-            allocated: initialBuild.allocated,
-            attributeChoices: initialBuild.attributeChoices,
-            weaponSets: initialBuild.weaponSets,
-            jewels: initialBuild.jewels,
-            treeVersion: initialBuild.treeVersion ?? undefined,
-        };
-
-        setAllocation(seededAllocation);
-        setSelectedClassId(resolvedClassId ?? null);
-        setAscendancy(initialBuild.ascendId ?? null);
-        setImported(mode !== 'edit');
-        setFrameToken((token) => token + 1);
-
-        if (mode === 'edit') {
-            setLastSaved(seededAllocation);
-        }
-        // The allocation guard is a mount-time condition, not a reactive dependency:
-        // re-running the seed on every node edit would immediately mark it done anyway.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data, initialBuild, mode, identity]);
+    }
 
     // Inertia reuses this page component across navigations, so mode/slug changes
     // arrive as prop changes on live state. React to the transitions with a

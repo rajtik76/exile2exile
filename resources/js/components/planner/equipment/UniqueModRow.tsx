@@ -38,12 +38,16 @@ function UniqueModValueInput({
     onValidityChange: (invalid: boolean) => void;
 }) {
     const [text, setText] = useState(String(value));
+    const [prevValue, setPrevValue] = useState(value);
 
     // Stay in sync when the value changes from outside this input (e.g. a fresh import, or
     // switching to a different unique) - but never while the field itself is being typed in.
-    useEffect(() => {
+    // A render-phase adjustment, not an effect: React re-renders immediately with the new
+    // text, without first painting the stale one.
+    if (value !== prevValue) {
+        setPrevValue(value);
         setText(String(value));
-    }, [value]);
+    }
 
     const parsed = text.trim() === '' ? NaN : Number(text);
     const invalid = Number.isNaN(parsed) || parsed < min || parsed > max;
