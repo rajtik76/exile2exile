@@ -9,10 +9,13 @@ import {
     emptyEntry,
     emptyGroup,
     emptySection,
+    fallbackActiveTabId,
     loadDraft,
     makeCustomTab,
+    moveTab,
     nextPhaseTab,
     reindex,
+    removeTab,
     saveDraft,
     sectionFor,
     SINGLE_KEY,
@@ -103,6 +106,87 @@ describe('nextPhaseTab', () => {
         );
 
         expect(nextPhaseTab([...allBase, ...customs])).toBeNull();
+    });
+});
+
+describe('moveTab', () => {
+    const tabs: PlanTab[] = [
+        { id: 'a', label: 'A', kind: 'base' },
+        { id: 'b', label: 'B', kind: 'base' },
+        { id: 'c', label: 'C', kind: 'custom' },
+    ];
+
+    it('swaps a tab with its left neighbour', () => {
+        expect(moveTab(tabs, 'b', 'left')).toEqual([
+            { id: 'b', label: 'B', kind: 'base' },
+            { id: 'a', label: 'A', kind: 'base' },
+            { id: 'c', label: 'C', kind: 'custom' },
+        ]);
+    });
+
+    it('swaps a tab with its right neighbour', () => {
+        expect(moveTab(tabs, 'b', 'right')).toEqual([
+            { id: 'a', label: 'A', kind: 'base' },
+            { id: 'c', label: 'C', kind: 'custom' },
+            { id: 'b', label: 'B', kind: 'base' },
+        ]);
+    });
+
+    it('returns the same reference when the first tab tries to move left', () => {
+        expect(moveTab(tabs, 'a', 'left')).toBe(tabs);
+    });
+
+    it('returns the same reference when the last tab tries to move right', () => {
+        expect(moveTab(tabs, 'c', 'right')).toBe(tabs);
+    });
+
+    it('returns the same reference for an unknown id', () => {
+        expect(moveTab(tabs, 'ghost', 'left')).toBe(tabs);
+    });
+});
+
+describe('removeTab', () => {
+    const tabs: PlanTab[] = [
+        { id: 'a', label: 'A', kind: 'base' },
+        { id: 'b', label: 'B', kind: 'base' },
+        { id: 'c', label: 'C', kind: 'custom' },
+    ];
+
+    it('drops the named tab', () => {
+        expect(removeTab(tabs, 'b')).toEqual([
+            { id: 'a', label: 'A', kind: 'base' },
+            { id: 'c', label: 'C', kind: 'custom' },
+        ]);
+    });
+
+    it('returns the same reference for an unknown id', () => {
+        expect(removeTab(tabs, 'ghost')).toBe(tabs);
+    });
+
+    it('returns the same reference when only one tab remains', () => {
+        const single: PlanTab[] = [{ id: 'a', label: 'A', kind: 'base' }];
+
+        expect(removeTab(single, 'a')).toBe(single);
+    });
+});
+
+describe('fallbackActiveTabId', () => {
+    const tabs: PlanTab[] = [
+        { id: 'a', label: 'A', kind: 'base' },
+        { id: 'b', label: 'B', kind: 'base' },
+        { id: 'c', label: 'C', kind: 'custom' },
+    ];
+
+    it("lands on the tab that took the removed one's place", () => {
+        const remaining = removeTab(tabs, 'b');
+
+        expect(fallbackActiveTabId(tabs, remaining, 'b')).toBe('c');
+    });
+
+    it('falls back to the new last tab when the last one was removed', () => {
+        const remaining = removeTab(tabs, 'c');
+
+        expect(fallbackActiveTabId(tabs, remaining, 'c')).toBe('b');
     });
 });
 

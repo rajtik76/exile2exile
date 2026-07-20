@@ -12,6 +12,7 @@ import PlannerGems, { GemsViewToggle } from '@/components/planner/PlannerGems';
 import PlannerTree from '@/components/planner/PlannerTree';
 import PobImportPanel from '@/components/planner/PobImportPanel';
 import { ReferencesProvider } from '@/components/planner/ReferencesContext';
+import ScrollToTop from '@/components/planner/ScrollToTop';
 import SectionEditor from '@/components/planner/SectionEditor';
 import SharePanel from '@/components/planner/SharePanel';
 import { TextInput } from '@/components/planner/ui/Field';
@@ -30,8 +31,11 @@ import {
     draftKeyFor,
     emptyAllocation,
     emptySection,
+    fallbackActiveTabId,
     loadDraft,
+    moveTab,
     nextPhaseTab,
+    removeTab,
     saveDraft,
     sectionFor,
     SECTION_KEYS,
@@ -474,8 +478,9 @@ export default function PlannerEdit({
         });
     }
 
-    /** Reveal the next phase, inheriting the previous (currently last) phase's whole
-     *  plan - paper-doll, gems, tree and every priority/note. */
+    /** Add the next suggested phase (prefilled per the fixed act order, or a fresh
+     *  custom phase once every base phase is in use), inheriting the currently last
+     *  tab's whole plan - paper-doll, gems, tree and every priority/note. */
     function addTab(): void {
         const tab = nextPhaseTab(tabs);
 
@@ -505,25 +510,36 @@ export default function PlannerEdit({
         }));
     }
 
-    /** Remove the last phase in the sequence (the only one that can go, so the plan
-     *  stays a gap-free prefix). "Act I" is never removable. */
-    function removeLastTab(): void {
-        if (tabs.length <= 1) {
+    /** Move a phase one slot left/right - phases are freely orderable, no fixed
+     *  sequence is enforced. */
+    function handleMoveTab(id: string, direction: 'left' | 'right'): void {
+        setPlanData((previous) => ({
+            ...previous,
+            tabs: moveTab(previous.tabs, id, direction),
+        }));
+    }
+
+    /** Remove a phase. At least one phase always remains. */
+    function handleRemoveTab(id: string): void {
+        const remaining = removeTab(tabs, id);
+
+        if (remaining === tabs) {
             return;
         }
 
-        const last = tabs[tabs.length - 1];
-        const remaining = tabs.slice(0, -1);
-
         setPlanData((previous) => {
             const nextSections = { ...previous.sections };
-            delete nextSections[last.id];
+            delete nextSections[id];
 
-            return { ...previous, tabs: remaining, sections: nextSections };
+            return {
+                ...previous,
+                tabs: removeTab(previous.tabs, id),
+                sections: nextSections,
+            };
         });
 
-        if (activeTabId === last.id) {
-            setActiveTabId(remaining[remaining.length - 1].id);
+        if (activeTabId === id) {
+            setActiveTabId(fallbackActiveTabId(tabs, remaining, id));
         }
     }
 
@@ -672,7 +688,8 @@ export default function PlannerEdit({
                                     onSetMode={setMode}
                                     onAddTab={addTab}
                                     onRenameTab={renameTab}
-                                    onRemoveLast={removeLastTab}
+                                    onMoveTab={handleMoveTab}
+                                    onRemoveTab={handleRemoveTab}
                                 />
 
                                 {/* Name + description region. */}
@@ -855,6 +872,8 @@ export default function PlannerEdit({
                                 </div>
                             </>
                         )}
+
+                        <ScrollToTop />
                     </div>
                 </ModsProvider>
             </ReferencesProvider>

@@ -153,8 +153,8 @@ final class PlanSchema
     }
 
     /**
-     * Validate a submitted tabs list against the immutable-base-tabs rule (see
-     * {@see PlanTabs::error}). Returns the first violation message, or null.
+     * Validate a submitted tabs list (see {@see PlanTabs::error}). Returns the first
+     * violation message, or null.
      */
     public static function tabsError(mixed $tabs): ?string
     {
@@ -236,10 +236,11 @@ final class PlanSchema
     }
 
     /**
-     * Repair any plan blob into the canonical current shape: force the base-tab
-     * prefix, keep only custom tabs after it, guarantee a section set for every tab
-     * (and for single mode), drop orphaned sections, and normalise every entry with
-     * its priority recomputed from list order.
+     * Repair any plan blob into the canonical current shape: reduce the tabs list to
+     * well-formed entries in their submitted order (see {@see PlanTabs::canonical}),
+     * guarantee a section set for every tab (and for single mode), drop orphaned
+     * sections, and normalise every entry with its priority recomputed from list
+     * order.
      *
      * @param  array<string, mixed>  $data
      * @return array{description: string, mode: string, build: array{className: ?string, ascendId: ?string}, tabs: list<array{id: string, label: string, kind: string}>, sections: array<string, array<string, mixed>>}

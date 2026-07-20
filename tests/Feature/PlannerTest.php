@@ -77,7 +77,7 @@ test('the create page renders the empty editor with only the first phase', funct
         );
 });
 
-test('a plan may hold a leading prefix of base phases', function () {
+test('a plan may hold any subset of base phases', function () {
     $tabs = array_slice(PlanSchema::baseTabs(), 0, 3);
 
     $this->post(route('planner.store'), planPayload(['tabs' => $tabs]))
@@ -88,18 +88,37 @@ test('a plan may hold a leading prefix of base phases', function () {
         ->toBe(['act-1', 'act-2', 'act-3']);
 });
 
-test('a plan missing the first phase is rejected', function () {
+test('a plan missing the first phase is accepted', function () {
     $tabs = array_slice(PlanSchema::baseTabs(), 1, 2);
 
     $this->post(route('planner.store'), planPayload(['tabs' => $tabs]))
-        ->assertInvalid(['tabs']);
+        ->assertValid()
+        ->assertRedirect();
+
+    expect(array_column(BuildPlan::first()->data['tabs'], 'id'))
+        ->toBe(['act-2', 'act-3']);
 });
 
-test('a base phase prefix with a gap is rejected', function () {
+test('a base phase subset with a gap is accepted', function () {
     $tabs = [PlanSchema::baseTabs()[0], PlanSchema::baseTabs()[2]];
 
     $this->post(route('planner.store'), planPayload(['tabs' => $tabs]))
-        ->assertInvalid(['tabs']);
+        ->assertValid()
+        ->assertRedirect();
+
+    expect(array_column(BuildPlan::first()->data['tabs'], 'id'))
+        ->toBe(['act-1', 'act-3']);
+});
+
+test('base phases in a reordered sequence are accepted', function () {
+    $tabs = [PlanSchema::baseTabs()[2], PlanSchema::baseTabs()[0], PlanSchema::baseTabs()[1]];
+
+    $this->post(route('planner.store'), planPayload(['tabs' => $tabs]))
+        ->assertValid()
+        ->assertRedirect();
+
+    expect(array_column(BuildPlan::first()->data['tabs'], 'id'))
+        ->toBe(['act-3', 'act-1', 'act-2']);
 });
 
 test('storing a plan creates a row, unlocks the session and redirects to the editor without a token in the url', function () {
@@ -866,24 +885,28 @@ test('an edit that empties the build description fails validation without saving
     expect($plan->fresh()->title)->toBe('Original');
 });
 
-test('reordering the base tabs is rejected', function () {
+test('reordering the base tabs is accepted', function () {
     $tabs = PlanSchema::baseTabs();
     [$tabs[0], $tabs[1]] = [$tabs[1], $tabs[0]];
 
     $this->post(route('planner.store'), planPayload(['tabs' => $tabs]))
-        ->assertInvalid(['tabs']);
+        ->assertValid()
+        ->assertRedirect();
 
-    expect(BuildPlan::count())->toBe(0);
+    expect(array_column(BuildPlan::first()->data['tabs'], 'id'))
+        ->toBe(array_column($tabs, 'id'));
 });
 
-test('a custom tab placed before the last base tab is rejected', function () {
+test('a custom tab placed between base tabs is accepted', function () {
     $tabs = PlanSchema::baseTabs();
     array_splice($tabs, 2, 0, [['id' => 'c-x', 'label' => 'Sneaky', 'kind' => 'custom']]);
 
     $this->post(route('planner.store'), planPayload(['tabs' => $tabs]))
-        ->assertInvalid(['tabs']);
+        ->assertValid()
+        ->assertRedirect();
 
-    expect(BuildPlan::count())->toBe(0);
+    expect(array_column(BuildPlan::first()->data['tabs'], 'id'))
+        ->toBe(array_column($tabs, 'id'));
 });
 
 test('more than four custom tabs is rejected', function () {

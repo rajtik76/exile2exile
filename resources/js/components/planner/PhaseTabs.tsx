@@ -1,50 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AddButton from '@/components/planner/AddButton';
 import { SegmentedControl } from '@/components/planner/Button';
 import { nextPhaseTab } from '@/lib/planner';
 import type { PlanMode, PlanTab } from '@/types/planner';
 
 /**
- * The site header is sticky at top:0 with a height that changes by breakpoint (the
- * CTA shows only from lg up), so a fixed offset would let the header cover the tab
- * strip. Measure the live header and pin just below it, re-measuring on resize.
- */
-function useHeaderHeight(): number {
-    const [height, setHeight] = useState(68);
-
-    useEffect(() => {
-        const header = document.querySelector('header');
-
-        if (!header) {
-            return;
-        }
-
-        const measure = () => setHeight(header.getBoundingClientRect().height);
-
-        measure();
-
-        const observer = new ResizeObserver(measure);
-        observer.observe(header);
-        window.addEventListener('resize', measure);
-
-        return () => {
-            observer.disconnect();
-            window.removeEventListener('resize', measure);
-        };
-    }, []);
-
-    return height;
-}
-
-/**
  * The sticky phase switcher: the mode toggle (phases vs one shared set) and the tab
- * strip. It pins just under the site header so it's always in reach while the author
- * scrolls a long guide.
+ * strip. The site header scrolls away with the page, so this pins to the very top
+ * of the viewport, always in reach while the author scrolls a long guide.
  *
- * Phases are a fixed sequence (Act I → Early Endgame, then optional custom phases). A
- * new build opens with only "Act I"; "Add phase" reveals the next one and copies the
- * previous phase's plan. Only the last phase can be removed, so the sequence stays a
- * gap-free prefix. Custom phases (beyond the acts) can be renamed inline.
+ * Phases are optional, freely orderable and renameable: the six base phases (Act I →
+ * Early Endgame) are just prefilled defaults, not a requirement - the author picks
+ * which ones to use, arranges tabs however they like, and can rename any of them.
+ * "Add phase" prefills a new tab from the fixed act order (skipping whichever base
+ * phases are already present) and copies the previous phase's plan; any phase can be
+ * renamed, reordered or removed, as long as at least one remains.
  */
 export default function PhaseTabs({
     mode,
@@ -56,7 +26,8 @@ export default function PhaseTabs({
     onSetMode,
     onAddTab,
     onRenameTab,
-    onRemoveLast,
+    onMoveTab,
+    onRemoveTab,
 }: {
     mode: PlanMode;
     tabs: PlanTab[];
@@ -68,9 +39,9 @@ export default function PhaseTabs({
     onSetMode?: (mode: PlanMode) => void;
     onAddTab?: () => void;
     onRenameTab?: (id: string, label: string) => void;
-    onRemoveLast?: () => void;
+    onMoveTab?: (id: string, direction: 'left' | 'right') => void;
+    onRemoveTab?: (id: string) => void;
 }) {
-    const headerHeight = useHeaderHeight();
     const activeLabel =
         tabs.find((tab) => tab.id === activeTabId)?.label || 'Untitled';
     const canAdd = nextPhaseTab(tabs) !== null;
@@ -78,7 +49,7 @@ export default function PhaseTabs({
     const [hidden, setHidden] = useState(!defaultOpen);
 
     return (
-        <div style={{ top: headerHeight }} className="sticky z-[90] -mt-8 mb-8">
+        <div className="sticky top-0 z-[90] -mt-8 mb-8">
             {/* Full-bleed bar spanning the viewport (like the top nav), broken out of
                 the page's max-width; content re-centred inside. */}
             {!hidden && (
@@ -124,15 +95,23 @@ export default function PhaseTabs({
                                             active={tab.id === activeTabId}
                                             editable={editable}
                                             removable={
+                                                editable && tabs.length > 1
+                                            }
+                                            canMoveLeft={editable && index > 0}
+                                            canMoveRight={
                                                 editable &&
-                                                tabs.length > 1 &&
-                                                index === tabs.length - 1
+                                                index < tabs.length - 1
                                             }
                                             onSelect={() => onSelectTab(tab.id)}
                                             onRename={(label) =>
                                                 onRenameTab?.(tab.id, label)
                                             }
-                                            onRemove={() => onRemoveLast?.()}
+                                            onMove={(direction) =>
+                                                onMoveTab?.(tab.id, direction)
+                                            }
+                                            onRemove={() =>
+                                                onRemoveTab?.(tab.id)
+                                            }
                                         />
                                     ))}
 
@@ -227,28 +206,34 @@ export default function PhaseTabs({
 }
 
 /**
- * One phase pill - a 2px-bordered, text-sm tab matching the segmented controls. Base
- * phases show a static label; custom phases (editable) take an inline name input. The
- * last phase carries a small ✕ to remove it (the only phase that can go).
+ * One phase pill - a 2px-bordered, text-sm tab matching the segmented controls. While
+ * editing, any phase (base or custom) takes an inline name input, so "Act I" etc. are
+ * just prefilled defaults the author can rename. Small ‹/› arrows reorder the phase
+ * and a ✕ removes it (as long as at least one phase remains).
  */
 function PhaseChip({
     tab,
     active,
     editable,
     removable,
+    canMoveLeft,
+    canMoveRight,
     onSelect,
     onRename,
+    onMove,
     onRemove,
 }: {
     tab: PlanTab;
     active: boolean;
     editable: boolean;
     removable: boolean;
+    canMoveLeft: boolean;
+    canMoveRight: boolean;
     onSelect: () => void;
     onRename: (label: string) => void;
+    onMove: (direction: 'left' | 'right') => void;
     onRemove: () => void;
 }) {
-    const isCustom = tab.kind === 'custom';
     const frame = active
         ? 'border-[var(--pl-accent)] bg-[var(--pl-accent-soft)]'
         : 'border-[var(--pl-panel-border)] hover:border-[var(--pl-accent)]';
@@ -260,7 +245,38 @@ function PhaseChip({
         <div
             className={`relative inline-flex items-center rounded-[var(--pl-radius)] border-2 transition ${frame} ${removable ? 'pr-6' : ''}`}
         >
-            {editable && isCustom ? (
+            {editable && (canMoveLeft || canMoveRight) && (
+                <span className="flex items-center pl-1">
+                    <button
+                        type="button"
+                        title="Move phase left"
+                        aria-label="Move phase left"
+                        disabled={!canMoveLeft}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onMove('left');
+                        }}
+                        className="pl-text-2xs inline-flex size-4 items-center justify-center leading-none text-[var(--pl-muted)] transition hover:text-[var(--pl-accent-lit)] disabled:opacity-20"
+                    >
+                        ‹
+                    </button>
+                    <button
+                        type="button"
+                        title="Move phase right"
+                        aria-label="Move phase right"
+                        disabled={!canMoveRight}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onMove('right');
+                        }}
+                        className="pl-text-2xs inline-flex size-4 items-center justify-center leading-none text-[var(--pl-muted)] transition hover:text-[var(--pl-accent-lit)] disabled:opacity-20"
+                    >
+                        ›
+                    </button>
+                </span>
+            )}
+
+            {editable ? (
                 <input
                     value={tab.label}
                     onChange={(event) => onRename(event.target.value)}

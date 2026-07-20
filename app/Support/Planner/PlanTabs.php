@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Support\Planner;
 
 /**
- * The plan's phase tabs and their immutable-base-prefix rule: a plan always opens
- * with the fixed base phases in order (at least "Act I"), and custom tabs may only
- * follow the last base tab present - a guide author can neither reorder the base
- * phases nor slip a tab between them.
+ * The plan's phase tabs. The six base phases (Act I..Early Endgame) are optional,
+ * freely orderable and renameable - a guide author picks which ones to use, arranges
+ * them however they like, and can rename any of them, alongside up to
+ * {@see MAX_CUSTOM_TABS} custom tabs. Only a base tab's id is fixed (it still means
+ * the same phase and drives the fixed act order "Add phase" suggests next); its
+ * label and position are not.
  */
 final class PlanTabs
 {
@@ -62,10 +64,12 @@ final class PlanTabs
     }
 
     /**
-     * Validate a submitted tabs list against the immutable-base-tabs rule. Returns
-     * the first violation message, or null when the list is well-formed: a leading
-     * prefix of the base tabs (at least "Act I"), unchanged and in order, optionally
-     * followed by custom tabs.
+     * Validate a submitted tabs list. Returns the first violation message, or null
+     * when the list is well-formed: at least one tab, each either a base tab (a known
+     * id from {@see BASE_TABS}, any non-empty label) or a well-formed custom tab, all
+     * ids distinct, custom tabs within {@see MAX_CUSTOM_TABS}. Base tabs may be any
+     * subset of the fixed list, in any order and under any name - the author picks,
+     * arranges and renames phases freely.
      */
     public static function error(mixed $tabs): ?string
     {
@@ -74,62 +78,52 @@ final class PlanTabs
         }
 
         $tabs = array_values($tabs);
-        $base = self::base();
 
         if ($tabs === []) {
-            return 'At least the first phase must be present.';
+            return 'At least one phase must be present.';
         }
 
-        // The base tabs present must be a leading prefix of the fixed list - in order,
-        // no gaps, none renamed - starting at "Act I". Later phases are revealed one at
-        // a time, so a plan may hold just "Act I", or "Act I".."Act III", etc.
-        $baseCount = 0;
+        $baseIds = self::baseIds();
+        $seen = [];
+        $customCount = 0;
 
-        foreach ($tabs as $index => $tab) {
+        foreach ($tabs as $tab) {
             if (! is_array($tab)) {
                 return 'The tabs list is malformed.';
             }
 
-            if (($tab['kind'] ?? null) !== 'base') {
-                break;
-            }
-
-            $expected = $base[$baseCount] ?? null;
-
-            if ($index !== $baseCount || $expected === null || ($tab['id'] ?? null) !== $expected['id'] || ($tab['label'] ?? null) !== $expected['label']) {
-                return 'The base phase tabs must be a leading prefix of the fixed list, in order.';
-            }
-
-            $baseCount++;
-        }
-
-        if ($baseCount < 1 || ($tabs[0]['id'] ?? null) !== $base[0]['id']) {
-            return '"Act I" must be the first phase.';
-        }
-
-        // Everything after the base prefix must be a well-formed custom tab.
-        $customTabs = array_slice($tabs, $baseCount);
-
-        if (count($customTabs) > self::MAX_CUSTOM_TABS) {
-            return 'Too many custom tabs.';
-        }
-
-        $seen = self::baseIds();
-
-        foreach ($customTabs as $tab) {
-            if (! is_array($tab) || ($tab['kind'] ?? null) !== 'custom') {
-                return 'A custom tab is malformed or placed before "Early Endgame".';
-            }
-
             $id = $tab['id'] ?? null;
+            $kind = $tab['kind'] ?? null;
             $label = $tab['label'] ?? null;
 
-            if (! is_string($id) || $id === '' || ! is_string($label) || trim($label) === '') {
-                return 'Every custom tab needs a name.';
+            if (! is_string($id) || $id === '') {
+                return 'Every phase needs an id.';
             }
 
             if (in_array($id, $seen, true)) {
-                return 'Custom tabs must have distinct ids.';
+                return 'Phases must have distinct ids.';
+            }
+
+            if (! is_string($label) || trim($label) === '') {
+                return 'Every phase needs a name.';
+            }
+
+            if ($kind === 'base') {
+                if (! in_array($id, $baseIds, true)) {
+                    return 'A base phase tab has an unknown id.';
+                }
+            } elseif ($kind === 'custom') {
+                if (in_array($id, $baseIds, true)) {
+                    return 'A custom tab cannot use a base phase id.';
+                }
+
+                $customCount++;
+
+                if ($customCount > self::MAX_CUSTOM_TABS) {
+                    return 'Too many custom tabs.';
+                }
+            } else {
+                return 'A phase tab has an unknown kind.';
             }
 
             $seen[] = $id;
@@ -139,50 +133,24 @@ final class PlanTabs
     }
 
     /**
-     * Force a tabs list into canonical form: the leading prefix of base tabs the blob
-     * carries (in fixed order, no gaps, at least "Act I") followed by any well-formed
-     * custom tabs, de-duplicated. Used on the read path where the blob is
-     * trusted-but-verified rather than freshly validated.
+     * Force a tabs list into canonical form, preserving the submitted order: any base
+     * tabs the blob carries (known id, any non-empty label - renamed or not), any
+     * well-formed custom tabs up to {@see MAX_CUSTOM_TABS}, de-duplicated by id. Used
+     * on the read path where the blob is trusted-but-verified rather than freshly
+     * validated.
      *
      * @param  array<int|string, mixed>  $tabs
      * @return list<array{id: string, label: string, kind: string}>
      */
     public static function canonical(array $tabs): array
     {
-        $present = [];
-
-        foreach (array_values($tabs) as $tab) {
-            if (is_array($tab) && is_string($tab['id'] ?? null)) {
-                $present[$tab['id']] = true;
-            }
-        }
-
-        // Keep base tabs as a leading prefix: stop at the first one the blob omits, so
-        // a gap (e.g. Act III without Act II) can never resurrect a skipped phase.
+        $baseIds = self::baseIds();
         $canonical = [];
-
-        foreach (self::base() as $baseTab) {
-            if (! isset($present[$baseTab['id']])) {
-                break;
-            }
-
-            $canonical[] = $baseTab;
-        }
-
-        // Every plan keeps at least the first phase.
-        if ($canonical === []) {
-            $canonical[] = self::base()[0];
-        }
-
-        $seen = array_column($canonical, 'id');
+        $seen = [];
         $customCount = 0;
 
         foreach (array_values($tabs) as $tab) {
-            if ($customCount >= self::MAX_CUSTOM_TABS) {
-                break;
-            }
-
-            if (! is_array($tab) || ($tab['kind'] ?? null) !== 'custom') {
+            if (! is_array($tab)) {
                 continue;
             }
 
@@ -193,9 +161,23 @@ final class PlanTabs
                 continue;
             }
 
-            $canonical[] = ['id' => $id, 'label' => trim($label), 'kind' => 'custom'];
-            $seen[] = $id;
-            $customCount++;
+            if (($tab['kind'] ?? null) === 'base' && in_array($id, $baseIds, true)) {
+                $canonical[] = ['id' => $id, 'label' => trim($label), 'kind' => 'base'];
+                $seen[] = $id;
+
+                continue;
+            }
+
+            if (($tab['kind'] ?? null) === 'custom' && ! in_array($id, $baseIds, true) && $customCount < self::MAX_CUSTOM_TABS) {
+                $canonical[] = ['id' => $id, 'label' => trim($label), 'kind' => 'custom'];
+                $seen[] = $id;
+                $customCount++;
+            }
+        }
+
+        // Every plan keeps at least one phase.
+        if ($canonical === []) {
+            $canonical[] = self::base()[0];
         }
 
         return $canonical;

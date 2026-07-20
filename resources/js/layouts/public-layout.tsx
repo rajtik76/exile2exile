@@ -279,7 +279,7 @@ function TopBar() {
     const cta = <PrimaryCta href="/build-planner">Build Planner</PrimaryCta>;
 
     return (
-        <header className="sticky top-0 z-30 border-b border-[#c9a24a]/12 bg-[#08080b]/85 backdrop-blur">
+        <header className="border-b border-[#c9a24a]/12 bg-[#08080b]/85 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-5">
                 {/* the E2E mark, then the wordmark it abbreviates */}
                 <Link href="/" className="flex items-baseline gap-3">

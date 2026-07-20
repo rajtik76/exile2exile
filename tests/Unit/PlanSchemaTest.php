@@ -77,7 +77,7 @@ test('canonicalize recomputes entry priorities from list order', function () {
         ->and($entries[1]['priority'])->toBe(2);
 });
 
-test('canonicalize forces base tabs to the front and keeps customs after', function () {
+test('canonicalize preserves submitted order across custom and base tabs', function () {
     $data = PlanSchema::canonicalize([
         'tabs' => [
             ['id' => 'c-1', 'label' => 'Maps', 'kind' => 'custom'],
@@ -86,7 +86,7 @@ test('canonicalize forces base tabs to the front and keeps customs after', funct
     ]);
 
     expect(array_column($data['tabs'], 'id'))
-        ->toBe([...PlanSchema::baseTabIds(), 'c-1']);
+        ->toBe(['c-1', ...PlanSchema::baseTabIds()]);
 });
 
 test('canonicalize gives a gem entry a default kind but leaves items without one', function () {
@@ -123,9 +123,9 @@ test('normalize brings a legacy-versioned blob up to the current shape', functio
         ->and($data['sections'])->toHaveKey('act-1');
 });
 
-test('canonicalize keeps the base tabs as a leading prefix and drops gaps', function () {
-    // Act I + Act III present but Act II missing → the prefix stops at Act I, so the
-    // gap can't resurrect a skipped phase; a trailing custom still lands after it.
+test('canonicalize keeps any subset of base tabs, gaps included', function () {
+    // Act I + Act III present but Act II missing is legal now - phases are optional
+    // and freely orderable, so no gap needs to be closed.
     $data = PlanSchema::canonicalize([
         'tabs' => [
             ['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'],
@@ -134,7 +134,7 @@ test('canonicalize keeps the base tabs as a leading prefix and drops gaps', func
         ],
     ]);
 
-    expect(array_column($data['tabs'], 'id'))->toBe(['act-1', 'c-1']);
+    expect(array_column($data['tabs'], 'id'))->toBe(['act-1', 'act-3', 'c-1']);
 });
 
 test('canonicalize keeps a longer base prefix intact', function () {
@@ -523,19 +523,19 @@ test('all three defence types at once are legal (triple-hybrid bases exist)', fu
         ->toBe([]);
 });
 
-test('tabsError passes the base tabs and rejects a reorder', function () {
+test('tabsError passes the base tabs in their default order and in a reorder', function () {
     $reordered = PlanSchema::baseTabs();
     [$reordered[0], $reordered[1]] = [$reordered[1], $reordered[0]];
 
     expect(PlanSchema::tabsError(PlanSchema::baseTabs()))->toBeNull()
-        ->and(PlanSchema::tabsError($reordered))->not->toBeNull();
+        ->and(PlanSchema::tabsError($reordered))->toBeNull();
 });
 
-test('tabsError rejects a custom tab slipped between the base tabs', function () {
+test('tabsError passes a custom tab slipped between the base tabs', function () {
     $tabs = PlanSchema::baseTabs();
     array_splice($tabs, 3, 0, [['id' => 'c', 'label' => 'Sneaky', 'kind' => 'custom']]);
 
-    expect(PlanSchema::tabsError($tabs))->not->toBeNull();
+    expect(PlanSchema::tabsError($tabs))->toBeNull();
 });
 
 test('tabsError accepts custom tabs appended after the base tabs', function () {

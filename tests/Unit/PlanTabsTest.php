@@ -9,38 +9,36 @@ it('rejects a malformed tabs payload', function (mixed $tabs, string $message) {
 })->with([
     'not a list at all' => ['nonsense', 'The tabs list is malformed.'],
     'a non-array tab' => [['nonsense'], 'The tabs list is malformed.'],
-    'an empty list' => [[], 'At least the first phase must be present.'],
-    'a custom tab first' => [
-        [['id' => 'c-1', 'label' => 'My Tab', 'kind' => 'custom']],
-        '"Act I" must be the first phase.',
+    'an empty list' => [[], 'At least one phase must be present.'],
+    'an unknown base id' => [
+        [['id' => 'act-9', 'label' => 'Act IX', 'kind' => 'base']],
+        'A base phase tab has an unknown id.',
     ],
-    'a renamed base tab' => [
-        [['id' => 'act-1', 'label' => 'Act One', 'kind' => 'base']],
-        'The base phase tabs must be a leading prefix of the fixed list, in order.',
+    'a base tab without a name' => [
+        [['id' => 'act-1', 'label' => '  ', 'kind' => 'base']],
+        'Every phase needs a name.',
     ],
     'a custom tab without a name' => [
-        [['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'], ['id' => 'c-1', 'label' => '  ', 'kind' => 'custom']],
-        'Every custom tab needs a name.',
+        [['id' => 'c-1', 'label' => '  ', 'kind' => 'custom']],
+        'Every phase needs a name.',
     ],
-    'duplicate custom ids' => [
+    'an unknown kind' => [
+        [['id' => 'act-1', 'label' => 'Act I', 'kind' => 'mystery']],
+        'A phase tab has an unknown kind.',
+    ],
+    'a custom tab squatting on a base id' => [
+        [['id' => 'act-1', 'label' => 'Sneaky', 'kind' => 'custom']],
+        'A custom tab cannot use a base phase id.',
+    ],
+    'duplicate ids' => [
         [
-            ['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'],
             ['id' => 'c-1', 'label' => 'One', 'kind' => 'custom'],
             ['id' => 'c-1', 'label' => 'Two', 'kind' => 'custom'],
         ],
-        'Custom tabs must have distinct ids.',
-    ],
-    'a base tab after a custom tab' => [
-        [
-            ['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'],
-            ['id' => 'c-1', 'label' => 'One', 'kind' => 'custom'],
-            ['id' => 'act-2', 'label' => 'Act II', 'kind' => 'base'],
-        ],
-        'A custom tab is malformed or placed before "Early Endgame".',
+        'Phases must have distinct ids.',
     ],
     'too many custom tabs' => [
         [
-            ['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'],
             ['id' => 'c-1', 'label' => 'One', 'kind' => 'custom'],
             ['id' => 'c-2', 'label' => 'Two', 'kind' => 'custom'],
             ['id' => 'c-3', 'label' => 'Three', 'kind' => 'custom'],
@@ -51,25 +49,34 @@ it('rejects a malformed tabs payload', function (mixed $tabs, string $message) {
     ],
 ]);
 
-it('accepts a base prefix followed by well-formed custom tabs', function () {
+it('accepts base phases in any subset and order, followed or preceded by custom tabs', function () {
     $tabs = [
-        ['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'],
-        ['id' => 'act-2', 'label' => 'Act II', 'kind' => 'base'],
+        ['id' => 'act-3', 'label' => 'Act III', 'kind' => 'base'],
         ['id' => 'c-1', 'label' => 'Maps', 'kind' => 'custom'],
+        ['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'],
+        ['id' => 'early-endgame', 'label' => 'Early Endgame', 'kind' => 'base'],
     ];
 
     expect(PlanTabs::error($tabs))->toBeNull();
 });
 
-it('canonicalises a gapped or duplicate tabs blob back to a legal list', function () {
-    // Act III without Act II must not resurrect the skipped phase; a nameless or
-    // duplicate custom tab is dropped; customs past the cap are cut.
+it('accepts a renamed base tab - the fixed label is only a default', function () {
+    expect(PlanTabs::error([['id' => 'act-1', 'label' => 'Prologue', 'kind' => 'base']]))->toBeNull();
+});
+
+it('accepts a single custom tab with no base phase at all', function () {
+    expect(PlanTabs::error([['id' => 'c-1', 'label' => 'Only custom', 'kind' => 'custom']]))->toBeNull();
+});
+
+it('canonicalises a tabs blob, preserving submitted order and dropping malformed entries', function () {
     $canonical = PlanTabs::canonical([
-        ['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'],
         ['id' => 'act-3', 'label' => 'Act III', 'kind' => 'base'],
         ['id' => 'c-1', 'label' => ' Maps ', 'kind' => 'custom'],
         ['id' => 'c-1', 'label' => 'Duplicate', 'kind' => 'custom'],
         ['id' => '', 'label' => 'No id', 'kind' => 'custom'],
+        ['id' => 'act-1', 'label' => ' Prologue ', 'kind' => 'base'],
+        ['id' => 'act-1', 'label' => 'Duplicate id, dropped', 'kind' => 'base'],
+        ['id' => 'act-2', 'label' => '  ', 'kind' => 'base'],
         ['id' => 'c-2', 'label' => 'Two', 'kind' => 'custom'],
         ['id' => 'c-3', 'label' => 'Three', 'kind' => 'custom'],
         ['id' => 'c-4', 'label' => 'Four', 'kind' => 'custom'],
@@ -77,18 +84,29 @@ it('canonicalises a gapped or duplicate tabs blob back to a legal list', functio
     ]);
 
     expect($canonical)->toBe([
-        ['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'],
+        ['id' => 'act-3', 'label' => 'Act III', 'kind' => 'base'],
         ['id' => 'c-1', 'label' => 'Maps', 'kind' => 'custom'],
+        ['id' => 'act-1', 'label' => 'Prologue', 'kind' => 'base'],
         ['id' => 'c-2', 'label' => 'Two', 'kind' => 'custom'],
         ['id' => 'c-3', 'label' => 'Three', 'kind' => 'custom'],
         ['id' => 'c-4', 'label' => 'Four', 'kind' => 'custom'],
     ]);
 });
 
-it('falls back to "Act I" alone when the blob carries no base tab', function () {
-    expect(PlanTabs::canonical([['id' => 'c-1', 'label' => 'Only custom', 'kind' => 'custom']]))
+it('falls back to "Act I" alone when the blob carries no valid phase', function () {
+    expect(PlanTabs::canonical([['id' => '', 'label' => 'No id', 'kind' => 'custom']]))
         ->toBe([
             ['id' => 'act-1', 'label' => 'Act I', 'kind' => 'base'],
-            ['id' => 'c-1', 'label' => 'Only custom', 'kind' => 'custom'],
         ]);
+});
+
+it('drops a custom tab squatting on a base id instead of storing it', function () {
+    $canonical = PlanTabs::canonical([
+        ['id' => 'act-1', 'label' => 'Sneaky', 'kind' => 'custom'],
+        ['id' => 'c-1', 'label' => 'Maps', 'kind' => 'custom'],
+    ]);
+
+    expect($canonical)->toBe([
+        ['id' => 'c-1', 'label' => 'Maps', 'kind' => 'custom'],
+    ]);
 });

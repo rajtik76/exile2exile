@@ -14,9 +14,10 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Shared validation for creating and updating a build plan. Field shape lives in
- * {@see rules()}; the immutable-base-tabs integrity rule runs in {@see after()} so a
- * forged payload can't reorder or slip a tab between the six base phases. The
- * exposed {@see planData()} is the canonicalised JSON the controller persists.
+ * {@see rules()}; the tabs integrity rule runs in {@see after()} so a forged payload
+ * can't invent an unknown base-phase id, let a custom tab squat on one, or exceed the
+ * custom-tab cap. The exposed {@see planData()} is the canonicalised JSON the
+ * controller persists.
  *
  * No auth: authoring a guide is a guest action, like the rest of the build tooling.
  */

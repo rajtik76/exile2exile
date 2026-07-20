@@ -14,6 +14,7 @@ import PlannerGems, { GemsViewToggle } from '@/components/planner/PlannerGems';
 import PlannerTree from '@/components/planner/PlannerTree';
 import { ReferencesProvider } from '@/components/planner/ReferencesContext';
 import RichText from '@/components/planner/RichText';
+import ScrollToTop from '@/components/planner/ScrollToTop';
 import TreeNotablePriority from '@/components/planner/TreeNotablePriority';
 import { Panel } from '@/components/planner/ui/Panel';
 import { Eyebrow, Heading } from '@/components/planner/ui/Text';
@@ -253,6 +254,8 @@ export default function PlannerShow({
                                 Start a build plan
                             </Link>
                         </div>
+
+                        <ScrollToTop />
                     </div>
                 </ModsProvider>
             </ReferencesProvider>

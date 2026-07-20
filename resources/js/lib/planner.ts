@@ -69,8 +69,9 @@ export function makeCustomTab(label: string): PlanTab {
 /**
  * The next phase "Add phase" reveals: the first base phase not yet present (in fixed
  * order), or a fresh custom phase once every base phase is shown. Null when the custom
- * cap is reached, so the button hides. Base phases are revealed one at a time, so the
- * plan always holds a leading prefix of {@link BASE_PHASES}.
+ * cap is reached, so the button hides. Phases are optional and freely orderable, so
+ * this only decides what a *new* tab is prefilled with - which base phase to suggest
+ * next follows the fixed act order regardless of how the existing tabs are arranged.
  */
 export function nextPhaseTab(tabs: PlanTab[]): PlanTab | null {
     const present = new Set(tabs.map((tab) => tab.id));
@@ -83,6 +84,62 @@ export function nextPhaseTab(tabs: PlanTab[]): PlanTab | null {
     const customCount = tabs.filter((tab) => tab.kind === 'custom').length;
 
     return customCount < MAX_CUSTOM_TABS ? makeCustomTab('New phase') : null;
+}
+
+/**
+ * Swap a phase with its left/right neighbour - phases are freely orderable, no fixed
+ * sequence is enforced. Returns the same array reference when the id is unknown or
+ * the move would run off either end, so callers can skip a state update.
+ */
+export function moveTab(
+    tabs: PlanTab[],
+    id: string,
+    direction: 'left' | 'right',
+): PlanTab[] {
+    const index = tabs.findIndex((tab) => tab.id === id);
+    const target = direction === 'left' ? index - 1 : index + 1;
+
+    if (index === -1 || target < 0 || target >= tabs.length) {
+        return tabs;
+    }
+
+    const reordered = [...tabs];
+    [reordered[index], reordered[target]] = [
+        reordered[target],
+        reordered[index],
+    ];
+
+    return reordered;
+}
+
+/**
+ * Drop a phase, keeping at least one. Returns the same array reference when the id
+ * is unknown or it's the last remaining phase, so callers can skip a state update.
+ */
+export function removeTab(tabs: PlanTab[], id: string): PlanTab[] {
+    if (tabs.length <= 1 || !tabs.some((tab) => tab.id === id)) {
+        return tabs;
+    }
+
+    return tabs.filter((tab) => tab.id !== id);
+}
+
+/**
+ * Which tab should become active once `removedId` is gone - the tab that took its
+ * place in the list, or the new last tab if it was removed from the end. Only
+ * meaningful when `removedId` was the active tab; the caller keeps the current one
+ * otherwise.
+ */
+export function fallbackActiveTabId(
+    tabsBeforeRemoval: PlanTab[],
+    remaining: PlanTab[],
+    removedId: string,
+): string {
+    const removedIndex = tabsBeforeRemoval.findIndex(
+        (tab) => tab.id === removedId,
+    );
+
+    return remaining[Math.min(removedIndex, remaining.length - 1)].id;
 }
 
 /**
