@@ -1,35 +1,24 @@
-// Regenerates every GGPK-derived asset in place from the pinned patch, the single
-// entrypoint both a fresh clone and the production watcher call. It runs the four
-// extractor steps in order - dat table export, item/gem/rune data + icons, passive
-// tree, tree publish - writing straight into public/icons, public/tree/current and
-// resources/poe2/ggpk. Source of truth: GGPK only (BLOCKER A). The committed art is
-// not in git; this rebuilds it from the CDN for the version pinned in config.json.
+// Regenerates every GGPK-derived asset in place for a single patch version, the
+// single entrypoint both a fresh clone and the production watcher call. It runs the
+// four extractor steps in order - dat table export, item/gem/rune data + icons,
+// passive tree, tree publish - writing straight into public/icons, public/tree/current
+// and resources/poe2/ggpk. Source of truth: GGPK only (BLOCKER A). The committed art
+// is not in git; this rebuilds it from the CDN for the version given.
+//
+// The version comes from PATCH if set (the production watcher/CI always pass one -
+// see StageGameData.php); left unset (a fresh clone, a manual local run) it queries
+// GGG's own patch server for whatever is current right now - see resolvePatch.mjs.
+// There is no separate "default" version pinned anywhere, committed or otherwise.
 //
 // Usage: npm run refresh:data   (from the repo root)
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolvePatch } from './resolvePatch.mjs';
 
 const toolDir = fileURLToPath(new URL('./', import.meta.url));
-const configUrl = new URL('./config.json', import.meta.url);
-const config = JSON.parse(readFileSync(configUrl, 'utf8'));
-
-// A caller (the production watcher) can pin a specific version via PATCH; write it
-// into config.json run-local so every step agrees - build-data reads the pin, the
-// tree extract takes --patch, publish stamps it. Left unset (a fresh clone) it
-// uses the committed pin as-is.
-if (process.env.PATCH && process.env.PATCH !== config.patch) {
-    config.patch = process.env.PATCH;
-    writeFileSync(configUrl, `${JSON.stringify(config, null, 2)}\n`);
-}
-
-const patch = config.patch;
-
-if (!patch) {
-    throw new Error('tools/poe-data-extract/config.json has no patch pin');
-}
+const patch = resolvePatch();
 
 // Optional staging root: with DATA_OUT set, build-data and publish write the
 // whole output tree (public/..., resources/...) under it instead of the repo
@@ -41,7 +30,11 @@ if (process.env.DATA_OUT) {
     console.log(`Staging output under ${process.env.DATA_OUT}`);
 }
 
-/** Run a step from the extractor directory, inheriting stdio, failing loud on error. */
+/** Run a step from the extractor directory, inheriting stdio, failing loud on error.
+ *  Every step inherits process.env, so the resolved PATCH reaches all of them without
+ *  any of them needing to read a shared file (build-data.mjs and the vendored
+ *  pathofexile-dat CLI still read it from config.json, which resolvePatch() above
+ *  already wrote fresh for this run). */
 function step(label, command, args, extraEnv = {}) {
     console.log(`\n▶ ${label}`);
     execFileSync(command, args, {
@@ -51,7 +44,7 @@ function step(label, command, args, extraEnv = {}) {
     });
 }
 
-console.log(`Refreshing GGPK-derived data for pinned patch ${patch}`);
+console.log(`Refreshing GGPK-derived data for patch ${patch}`);
 
 // The extractor has its own dependency tree (@poe2-toolkit/*), separate from the
 // app's root node_modules; a fresh clone or a production image built without it
@@ -72,8 +65,6 @@ step('extract the passive tree', 'npx', [
     '--out',
     'out/tree',
 ]);
-step('publish the passive tree (PNG -> WebP)', 'node', ['tree/publish.mjs'], {
-    PATCH: patch,
-});
+step('publish the passive tree (PNG -> WebP)', 'node', ['tree/publish.mjs']);
 
 console.log('\n✓ GGPK-derived data refreshed in place.');

@@ -5,3 +5,8 @@ tables/
 out/
 files/
 ggg-fallback/
+
+# The working config pathofexile-dat's CLI reads: regenerated on every run from
+# config.example.json (committed) plus whichever patch resolvePatch.mjs resolves -
+# never a static pin, so a real extraction run can never leave a dirty diff here.
+config.json

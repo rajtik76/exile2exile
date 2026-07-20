@@ -8,7 +8,7 @@ otherwise `.github/workflows/data-contract.yml`.
 ```
 GGPK / patch server
         |
-tools/poe-data-extract  (pathofexile-dat, patch pinned in config.json)
+tools/poe-data-extract  (pathofexile-dat, patch given via PATCH env or live GGG query)
         |
         |  extract.mjs, build-data.mjs, transform.mjs, mod-catalogue.mjs
         |  build-data.mjs runs items/gems/runes/mods on worker_threads (extract-worker.mjs)

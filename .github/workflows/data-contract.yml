@@ -11,9 +11,9 @@ name: data-contract
 #                          release: download that release, verify its checksum,
 #                          run the suite, and on green call the activation
 #                          endpoint so production swaps to it atomically.
-#   dispatch mode=extract - full GGPK extraction (the config.json pin, or the
-#                          version input); for changes to the extractor itself.
-#                          Never activates anything.
+#   dispatch mode=extract - full GGPK extraction (the version input, or whatever
+#                          GGG currently serves if omitted); for changes to the
+#                          extractor itself. Never activates anything.
 #
 # Repo settings this needs:
 #   vars.DATA_BASE_URL           - the app's base URL, e.g. https://exile2exile.example
@@ -226,7 +226,17 @@ jobs:
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-      - name: Read data patch pin
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      # No committed pin anywhere (tools/poe-data-extract/config.json is
+      # gitignored, regenerated fresh on every run - see resolvePatch.mjs): an
+      # explicit version input wins, otherwise ask GGG's own patch server live via
+      # the same command the extractor itself falls back to.
+      - name: Resolve the patch to extract
         id: datapatch
         env:
           INPUT_VERSION: ${{ inputs.version }}
@@ -234,7 +244,7 @@ jobs:
           if [ -n "$INPUT_VERSION" ]; then
             echo "patch=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
           else
-            echo "patch=$(node -p "require('./tools/poe-data-extract/config.json').patch")" >> "$GITHUB_OUTPUT"
+            echo "patch=$(php artisan poe2:current-patch)" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Cache GGPK bundles
@@ -257,12 +267,6 @@ jobs:
       # Same as the validate job: page-rendering Contract tests need the manifest.
       - name: Build Assets
         run: npm run build
-
-      - name: Copy Environment File
-        run: cp .env.example .env
-
-      - name: Generate Application Key
-        run: php artisan key:generate
 
       # Some Contract tests (e.g. the unique-mod GGPK-affix-fallback test) read the
       # real PoB-uniques cache, not a fixture - storage/game-data is gitignored and
