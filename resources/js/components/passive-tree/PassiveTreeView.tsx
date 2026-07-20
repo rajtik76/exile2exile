@@ -200,37 +200,21 @@ export default function PassiveTreeView(props: PlanTreeProps) {
         ? { showSearch, showPointsCounter, ...fullscreenOverride }
         : { showSearch, showPointsCounter };
 
-    // The fullscreen stage is a fixed overlay pinned just below the sticky site header,
-    // so the top nav stays visible and reachable instead of being covered. Measure the
-    // live header (its height changes by breakpoint) while fullscreen.
-    const [headerHeight, setHeaderHeight] = useState(0);
+    // The fullscreen stage is a fixed overlay covering the whole viewport - the site
+    // header isn't sticky, so it may already be scrolled out of view by the time
+    // fullscreen opens; leaving room for it would either reserve a gap for nothing or
+    // sit at the wrong offset. Body scroll is locked so the page behind doesn't leave
+    // a scrollbar over nothing.
     useEffect(() => {
         if (!fullscreen) {
             return;
         }
 
-        // Lock body scroll so the page behind doesn't leave a scrollbar over nothing.
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
 
-        const header = document.querySelector('header');
-        const measure = () =>
-            setHeaderHeight(header ? header.getBoundingClientRect().height : 0);
-
-        measure();
-
-        const observer = header ? new ResizeObserver(measure) : null;
-
-        if (header) {
-            observer?.observe(header);
-        }
-
-        window.addEventListener('resize', measure);
-
         return () => {
             document.body.style.overflow = previousOverflow;
-            observer?.disconnect();
-            window.removeEventListener('resize', measure);
         };
     }, [fullscreen]);
 
@@ -907,12 +891,11 @@ export default function PassiveTreeView(props: PlanTreeProps) {
 
                     nodeTappedRef.current = false;
                 }}
-                style={fullscreen ? { top: headerHeight } : undefined}
                 className={
                     fullscreen
-                        ? // Pinned below the site header (top nav stays visible) and above
-                          // the planner's sticky phase bar (z-90) so it doesn't overlap.
-                          'fixed right-0 bottom-0 left-0 z-[120] overflow-hidden bg-black'
+                        ? // Covers the whole viewport - above the planner's sticky
+                          // phase bar (z-90) so it doesn't overlap.
+                          'fixed inset-0 z-[120] overflow-hidden bg-black'
                         : // Every caller sizes its own box (a fixed height or a
                           // flex-1 panel) and hands it down via `className`, in
                           // both modes - read-only never wants a fixed aspect
