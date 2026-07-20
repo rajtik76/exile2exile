@@ -170,6 +170,13 @@ jobs:
       - name: Generate Application Key
         run: php artisan key:generate
 
+      # Some Contract tests (e.g. the unique-mod GGPK-affix-fallback test) read the
+      # real PoB-uniques cache, not a fixture - storage/game-data is gitignored and
+      # production keeps this synced via its own cron, so CI needs its own copy.
+      # Public repo, works unauthenticated (lower GitHub API rate limit only).
+      - name: Sync PoB uniques
+        run: php artisan poe2:sync-pob-uniques
+
       - name: Contract tests (real data)
         run: php artisan test --parallel --testsuite=Contract
 
@@ -256,6 +263,13 @@ jobs:
 
       - name: Generate Application Key
         run: php artisan key:generate
+
+      # Some Contract tests (e.g. the unique-mod GGPK-affix-fallback test) read the
+      # real PoB-uniques cache, not a fixture - storage/game-data is gitignored and
+      # production keeps this synced via its own cron, so CI needs its own copy.
+      # Public repo, works unauthenticated (lower GitHub API rate limit only).
+      - name: Sync PoB uniques
+        run: php artisan poe2:sync-pob-uniques
 
       - name: Contract tests (real data)
         run: php artisan test --parallel --testsuite=Contract
