@@ -1,6 +1,7 @@
 import { useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { ClearGlyph, INPUT_FONT } from '@/components/passive-tree/chrome';
+import { cn } from '@/lib/utils';
 import shared from '@/routes/shared';
 
 /**
@@ -150,6 +151,7 @@ function PillButton({
     children,
     title,
     ariaLabel,
+    className = '',
 }: {
     variant?: 'ghost' | 'accent' | 'danger';
     disabled?: boolean;
@@ -157,6 +159,7 @@ function PillButton({
     children: React.ReactNode;
     title?: string;
     ariaLabel?: string;
+    className?: string;
 }) {
     const palette = {
         ghost: 'border-[#a9842f]/35 text-[#b39a64] hover:bg-[#f0c869]/12 hover:text-[#ecc878] focus-visible:bg-[#f0c869]/12',
@@ -171,7 +174,11 @@ function PillButton({
             disabled={disabled}
             title={title}
             aria-label={ariaLabel}
-            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] uppercase transition-colors focus-visible:outline-none disabled:border-[#3a2f18] disabled:text-[#5a4d30] disabled:hover:bg-transparent ${palette}`}
+            className={cn(
+                'shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] uppercase transition-colors focus-visible:outline-none disabled:border-[#3a2f18] disabled:text-[#5a4d30] disabled:hover:bg-transparent',
+                palette,
+                className,
+            )}
         >
             {children}
         </button>
@@ -238,6 +245,11 @@ function CopyButton({
             onClick={copy}
             title="Copy to clipboard"
             ariaLabel={label}
+            // Fixed width, "Copy failed" (its longest label) sized with room to
+            // spare: the label swaps on click, and a resizing button mid-click
+            // reads as layout jitter to a human and as an unstable click target
+            // to Playwright, which can then redispatch the click as a retry.
+            className="min-w-[6.5rem] text-center"
         >
             {state === 'copied'
                 ? 'Copied ✓'

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Jobs\SendPatchWebhook;
 use App\Models\PatchRelease;
 use Illuminate\Contracts\Cache\Repository as Cache;
 
@@ -10,6 +11,14 @@ use Illuminate\Contracts\Cache\Repository as Cache;
  * polled the patch server. Written by the watcher on every poll, read by the
  * Inertia middleware to feed the nav read-out - a cache hit on every request,
  * never a query once the watcher has run.
+ *
+ * The version is the raw string the patch server reports (e.g. "4.5.4.4.3"),
+ * shown verbatim rather than translated into a guessed in-game version: GGG's
+ * raw build number doesn't map onto the player-facing one predictably - it can
+ * bump on a silent hotfix that never changes the version players see in the
+ * client, so any conversion would just as often lie as inform. The webhook
+ * payload ({@see SendPatchWebhook}) already sends this same raw
+ * string, so this keeps every surface consistent.
  */
 class Poe2PatchStatus
 {
@@ -55,7 +64,7 @@ class Poe2PatchStatus
                 ?? $status['checked_at'];
 
             return [
-                'version' => Poe2Version::display($status['version']),
+                'version' => $status['version'],
                 'checkedAt' => $status['checked_at'],
                 'releasedAt' => $releasedAt,
             ];
@@ -73,7 +82,7 @@ class Poe2PatchStatus
         $releasedAt = $release->created_at?->toIso8601String() ?? now()->toIso8601String();
 
         return [
-            'version' => Poe2Version::display($release->version),
+            'version' => $release->version,
             'checkedAt' => $releasedAt,
             'releasedAt' => $releasedAt,
         ];

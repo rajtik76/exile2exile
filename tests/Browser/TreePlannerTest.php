@@ -42,7 +42,7 @@ test('searching by node name reports matches and stays error-free', function () 
 test('the default tree view matches its visual snapshot', function () {
     visit(route('tree'))
         ->assertNoJavaScriptErrors()
-        ->waitForText('/123')
+        ->assertSee('/123')
         ->wait(3)
         ->assertScreenshotMatches();
 });

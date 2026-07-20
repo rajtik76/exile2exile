@@ -9,7 +9,11 @@ export type PatchProp = {
 } | null;
 
 export interface PatchStatus {
-    /** Latest player-facing PoE2 version GGG has released. */
+    /**
+     * Raw GGG patch string the patch server last reported (e.g. "4.5.4.4.3"),
+     * shown verbatim rather than translated into a guessed in-game version -
+     * GGG's raw build number doesn't map onto the player-facing one predictably.
+     */
     version: string;
     /** ISO time the version released (first detected by the patch watcher). */
     releasedAt: string;

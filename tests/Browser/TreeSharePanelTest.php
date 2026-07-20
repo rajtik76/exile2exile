@@ -39,7 +39,7 @@ test('the editor panel copies the public link, the edit link and the token', fun
         ->fill('token', $shared->edit_token)
         ->click('Unlock')
         // The editor opens with the link panel already unfolded.
-        ->waitForText('Build links');
+        ->assertSee('Build links');
 
     // Capture instead of the real clipboard (headless contexts deny the API).
     $page->script(<<<'JS'

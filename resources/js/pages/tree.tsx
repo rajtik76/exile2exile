@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
+import LazyMount from '@/components/LazyMount';
 import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
 import { PlannerControls } from '@/components/passive-tree/PlannerControls';
 import { usePlannerState } from '@/lib/usePlannerState';
@@ -92,7 +93,14 @@ export default function Tree({
                     />
                 )}
 
-                <div className="min-h-0 flex-1">
+                <LazyMount
+                    className="min-h-0 flex-1"
+                    fallback={
+                        <div className="grid h-full place-items-center">
+                            <div className="h-full w-full animate-pulse rounded-[var(--pl-radius)] bg-[var(--pl-panel-2)]" />
+                        </div>
+                    }
+                >
                     <PassiveTreeView
                         editable
                         classId={planner.classId}
@@ -106,7 +114,7 @@ export default function Tree({
                         frameToken={planner.frameToken}
                         className="h-full"
                     />
-                </div>
+                </LazyMount>
             </div>
         </>
     );

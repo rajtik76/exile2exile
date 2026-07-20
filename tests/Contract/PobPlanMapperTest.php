@@ -366,7 +366,12 @@ it('falls back to the general GGPK affix pool for a plainly-worded unique mod it
     // catalogue, but it's a perfectly ordinary GGPK weapon affix - the fallback must
     // find it there instead of leaving it dropped.
     expect($weapon1['base'])->toBe(['type' => 'unique', 'id' => 'Skysliver'])
+        ->and(array_column($weapon1['uniqueMods'], 'key'))->toContain('Grants Skill: Spear Throw')
+        ->and(array_column($weapon1['uniqueMods'], 'key'))->toContain('No Physical Damage')
+        ->and(array_column($weapon1['uniqueMods'], 'key'))->toContain('Rolls only the minimum or maximum Damage value for each Damage Type')
         ->and($weapon1['uniqueMods'])->toContain(['key' => 'Adds # to # Lightning Damage', 'values' => [1, 107]])
+        ->and($weapon1['uniqueMods'])->toContain(['key' => '#% increased Attack Speed', 'values' => [30.0]])
+        ->and($weapon1['uniqueMods'])->toContain(['key' => '#% increased chance to Shock', 'values' => [73.0]])
         ->and($mapper->droppedMods())->not->toHaveKey('weapon1');
 });
 

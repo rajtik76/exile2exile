@@ -79,6 +79,6 @@ test('the class portrait sheet matches its visual snapshot', function () {
     // parallel-run flakiness a fixed wait still left.
     visit(route('test.class-portraits'))
         ->assertNoJavaScriptErrors()
-        ->waitForText('Titan')
+        ->assertSee('Titan')
         ->assertScreenshotMatches();
 });

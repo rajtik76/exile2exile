@@ -6,13 +6,13 @@ use App\Support\Poe2PatchStatus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 
-test('recording a poll exposes the player-facing version and check time', function () {
+test('recording a poll exposes the raw version and check time', function () {
     $this->freezeTime(function () {
         // No release row yet, so the version is treated as released now.
         app(Poe2PatchStatus::class)->record('4.5.3.1.7');
 
         expect(app(Poe2PatchStatus::class)->current())->toBe([
-            'version' => '0.5.3.7',
+            'version' => '4.5.3.1.7',
             'checkedAt' => now()->toIso8601String(),
             'releasedAt' => now()->toIso8601String(),
         ]);
@@ -37,7 +37,7 @@ test('a cold cache falls back to the last recorded release', function () {
     $release = PatchRelease::create(['version' => '4.5.3.1.7']);
 
     expect(app(Poe2PatchStatus::class)->current())->toBe([
-        'version' => '0.5.3.7',
+        'version' => '4.5.3.1.7',
         'checkedAt' => $release->created_at->toIso8601String(),
         'releasedAt' => $release->created_at->toIso8601String(),
     ]);
@@ -61,5 +61,5 @@ test('the watcher stamps the poll time even when the version is unchanged', func
 
     $this->artisan('poe2:watch-patch')->assertSuccessful();
 
-    expect(app(Poe2PatchStatus::class)->current()['version'])->toBe('0.5.3.7');
+    expect(app(Poe2PatchStatus::class)->current()['version'])->toBe('4.5.3.1.7');
 });

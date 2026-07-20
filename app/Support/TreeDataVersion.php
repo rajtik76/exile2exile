@@ -16,14 +16,14 @@ namespace App\Support;
 class TreeDataVersion
 {
     /**
-     * The player-facing version of the published data, or null when the stamp
-     * is absent or unreadable.
+     * The raw GGG patch string the published data was built from, or null when
+     * the stamp is absent or unreadable. Shown verbatim, not translated into a
+     * guessed in-game version - GGG's raw build numbering doesn't map onto the
+     * player-facing one predictably (see {@see Poe2PatchStatus}).
      */
     public function current(): ?string
     {
-        $raw = $this->readPatch(public_path('tree/current/version.json'));
-
-        return $raw !== null ? Poe2Version::display($raw) : null;
+        return $this->readPatch(public_path('tree/current/version.json'));
     }
 
     /**

@@ -1,14 +1,14 @@
 <?php
 
-use App\Support\Poe2Version;
 use App\Support\TreeDataVersion;
 
-test('the data version resolves to the published stamp patch in player format', function () {
-    // The data stamp is the single source of truth - no extractor-config fallback.
+test('the data version resolves to the published stamp patch, verbatim', function () {
+    // The data stamp is the single source of truth - no extractor-config fallback,
+    // and no guessed in-game version: the raw GGG patch string, as-is.
     $raw = patchFrom(public_path('tree/current/version.json'));
     expect($raw)->not->toBeNull();
 
-    expect(app(TreeDataVersion::class)->current())->toBe(Poe2Version::display($raw));
+    expect(app(TreeDataVersion::class)->current())->toBe($raw);
 });
 
 test('the cache stamp joins the committed patch and content hash', function () {
