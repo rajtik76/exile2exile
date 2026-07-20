@@ -5,7 +5,9 @@
 // the export reads it; everything else passes through untouched. Drop this shim once
 // the column is named upstream.
 //
-// Usage: node extract.mjs   (replaces `npx pathofexile-dat`)
+// Usage: npm run extract   (replaces `npx pathofexile-dat`; runs resolvePatch.mjs
+// first via the "preextract" npm hook, which writes the config.json this reads its
+// patch from - `node extract.mjs` directly skips that and will fail without one)
 
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';

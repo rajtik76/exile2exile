@@ -15,12 +15,15 @@
 // committed default version anywhere - unset always means "whatever GGG currently
 // serves", never a stale pin.
 //
-// Usage: import { resolvePatch } from './resolvePatch.mjs'  (refresh.mjs, or any
-// standalone step run directly - node build-data.mjs, node extract.mjs - after
-// first running `node resolvePatch.mjs` once to prepare config.json).
+// Usage: import { resolvePatch } from './resolvePatch.mjs'  (refresh.mjs calls this
+// directly, once, for the whole pipeline). Running this file itself (`node
+// resolvePatch.mjs`, or via the preextract/prebuild-data npm hooks on `npm run
+// extract`/`npm run build-data`) reuses an existing config.json instead, so
+// separate manual steps in the same session stay on the same patch - see
+// ensurePatch() below.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,11 +33,23 @@ const exampleUrl = new URL('./config.example.json', import.meta.url);
 const configUrl = new URL('./config.json', import.meta.url);
 
 function currentGggPatch() {
-    return execFileSync('php', ['artisan', 'poe2:current-patch'], {
-        cwd: repoRoot,
-    })
-        .toString()
-        .trim();
+    try {
+        return execFileSync('php', ['artisan', 'poe2:current-patch'], {
+            cwd: repoRoot,
+        })
+            .toString()
+            .trim();
+    } catch (error) {
+        // Surface the command's own clean output (artisan errors land on stdout,
+        // not stderr, by default) instead of Node's noisy "Command failed: ..."
+        // wrapper + stack trace.
+        const output =
+            error.stderr?.toString().trim() ||
+            error.stdout?.toString().trim() ||
+            error.message;
+
+        throw new Error(`${output} (php artisan poe2:current-patch)`);
+    }
 }
 
 /**
@@ -53,8 +68,32 @@ export function resolvePatch() {
     return patch;
 }
 
-// Runnable standalone (node resolvePatch.mjs) to prepare config.json before running
-// an individual extractor step by hand, without going through refresh.mjs.
+/**
+ * Like {@link resolvePatch}, but reuses an already-written `config.json` as-is
+ * when one exists and `PATCH` wasn't explicitly given - used by the `preextract`/
+ * `prebuild-data` npm hooks, so running `npm run extract` then later `npm run
+ * build-data` by hand targets the same patch both resolved, instead of each
+ * independently re-querying GGG live and risking two different versions if a new
+ * patch ships in the gap between the two commands. `refresh.mjs` never calls this -
+ * it resolves once per full pipeline run via {@link resolvePatch} directly.
+ */
+function ensurePatch() {
+    if (!process.env.PATCH && existsSync(configUrl)) {
+        const existing = JSON.parse(readFileSync(configUrl, 'utf8')).patch;
+
+        if (existing) {
+            process.env.PATCH = existing;
+
+            return existing;
+        }
+    }
+
+    return resolvePatch();
+}
+
+// Runnable standalone (node resolvePatch.mjs, or via the preextract/prebuild-data
+// npm hooks) to prepare config.json before running an individual extractor step by
+// hand, without going through refresh.mjs.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    console.log(`Resolved patch: ${resolvePatch()}`);
+    console.log(`Resolved patch: ${ensurePatch()}`);
 }

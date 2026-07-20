@@ -5,7 +5,9 @@
   "description": "Decodes PoE2 GGPK tables via pathofexile-dat, then builds the app's item/gem/rune mapping data and icons through the @poe2-toolkit extractors. GGPK only.",
   "type": "module",
   "scripts": {
+    "preextract": "node resolvePatch.mjs",
     "extract": "node extract.mjs",
+    "prebuild-data": "node resolvePatch.mjs",
     "build-data": "node build-data.mjs"
   },
   "dependencies": {

@@ -27,7 +27,10 @@ class CurrentPoe2Patch extends Command
         try {
             $this->line($patchServer->currentVersion());
         } catch (RuntimeException $e) {
-            $this->error("Patch server unreachable: {$e->getMessage()}");
+            // Poe2PatchServer's own message already says what went wrong (an
+            // unreachable connection, a malformed reply, ...) - pass it through
+            // as-is rather than wrapping it in another layer of "failed to X".
+            $this->error($e->getMessage());
 
             return self::FAILURE;
         }

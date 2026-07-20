@@ -244,7 +244,8 @@ jobs:
           if [ -n "$INPUT_VERSION" ]; then
             echo "patch=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
           else
-            echo "patch=$(php artisan poe2:current-patch)" >> "$GITHUB_OUTPUT"
+            patch=$(php artisan poe2:current-patch)
+            echo "patch=$patch" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Cache GGPK bundles

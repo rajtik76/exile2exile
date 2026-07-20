@@ -2,6 +2,10 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-07-21
+- Fixed the passive tree's fullscreen view leaving a dead gap (or sitting at the wrong offset) at the top of the screen: it was still reserving room for the site header on the assumption the header stays pinned at the top while scrolling, which stopped being true once the header itself became non-sticky. Fullscreen now simply fills the whole screen.
+- For contributors: the GGPK extractor no longer pins a patch version in a committed file. `tools/poe-data-extract/config.json` is gitignored and regenerated on every run from the committed `config.example.json` plus whichever patch that run targets - an explicit `PATCH` env (production/CI always pass one), or, left unset, a live query against GGG's own patch server (`php artisan poe2:current-patch`, a new command) rather than a stale default. Running `extract`/`build-data` by hand still works standalone via new npm pre-hooks that resolve the same way.
+
 ## 2026-07-20
 - The patch version shown in the footer and on the patch-webhook page is now GGG's own raw build string (e.g. "4.5.4.4.3"), not a guessed player-facing number. The old conversion assumed the raw build number always maps onto the in-game version by a fixed formula; it doesn't - GGG ships silent hotfixes that bump the raw number without ever changing what players see in the client (verified against the official 0.5.4c patch notes thread, whose raw build kept moving while the in-game label stayed put). Showing the real string is honest about what changed, and it now matches what the webhook payload has always sent subscribers.
 - The passive tree editor no longer draws its canvas the instant the page loads: on the build editor, the tree sits below the link panel and a chunk of visitors never scroll down to it, so the canvas now mounts only once it is about to come into view, showing a quiet pulsing placeholder until then.

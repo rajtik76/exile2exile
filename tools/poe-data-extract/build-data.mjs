@@ -8,7 +8,9 @@
 // if an icon can't be served or decoded, the run fails loud rather than silently
 // shipping stale art.
 //
-// Usage: node build-data.mjs   (after `npm run extract`)
+// Usage: npm run build-data   (after `npm run extract`; runs resolvePatch.mjs first
+// via the "prebuild-data" npm hook - `node build-data.mjs` directly reuses whatever
+// config.json currently holds, which is only reliable right after an npm-run step)
 
 import {
     mkdirSync,
