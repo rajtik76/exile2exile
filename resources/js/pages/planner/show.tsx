@@ -72,6 +72,11 @@ export default function PlannerShow({
         plan.tabs[0]?.id ?? 'act-1',
     );
 
+    // Whether the passive tree is currently fullscreen - hides the ScrollToTop
+    // waypoint for the duration, since there's nothing to scroll to while the
+    // tree fills the screen (see `PlannerTree`'s `onFullscreenChange`).
+    const [treeFullscreen, setTreeFullscreen] = useState(false);
+
     // Gems layout (icon grid vs named list) - a display preference remembered in
     // localStorage, toggled from the gems panel header even in the read-only viewer.
     const [gemsView, setGemsViewState] = useState<GemsView>(loadGemsView);
@@ -219,6 +224,9 @@ export default function PlannerShow({
                                                     section.tree.allocation ??
                                                     emptyAllocation()
                                                 }
+                                                onFullscreenChange={
+                                                    setTreeFullscreen
+                                                }
                                             />
                                         ) : key === 'items' ? (
                                             <PlannerEquipment
@@ -255,7 +263,7 @@ export default function PlannerShow({
                             </Link>
                         </div>
 
-                        <ScrollToTop />
+                        {!treeFullscreen && <ScrollToTop />}
                     </div>
                 </ModsProvider>
             </ReferencesProvider>

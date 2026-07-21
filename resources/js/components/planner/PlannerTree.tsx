@@ -17,11 +17,23 @@ function PlannerTree({
     allocation,
     editable,
     onAllocationChange,
+    onFullscreenChange,
 }: {
     build: PlanBuild;
     allocation: TreeAllocation;
     editable: boolean;
     onAllocationChange?: (allocation: TreeAllocation) => void;
+    /**
+     * Fired whenever the tree enters or leaves fullscreen. The page wraps this
+     * component in its own `.planner-reading` stacking context (`relative z-10`,
+     * to sit above the class-portrait backdrop) - that context traps the tree's
+     * fullscreen stage's `z-[120]` inside it no matter how high the number is,
+     * so `ScrollToTop`'s own root-level z-index could still render on top of a
+     * "fullscreen" tree. The page uses this to hide `ScrollToTop` for the
+     * duration instead - there's nothing to scroll to while the tree fills the
+     * screen anyway (see `pages/planner/show.tsx` / `edit.tsx`).
+     */
+    onFullscreenChange?: (fullscreen: boolean) => void;
 }) {
     const { data } = useTreeData();
 
@@ -98,6 +110,7 @@ function PlannerTree({
                 showSearch
                 showPointsCounter
                 onAllocationChange={handleAllocationChange}
+                onFullscreenChange={onFullscreenChange}
                 className="h-full"
             />
         </div>

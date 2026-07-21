@@ -195,6 +195,30 @@ export default function PassiveTreeView(props: PlanTreeProps) {
         onFullscreenChange?.(next);
     };
 
+    // If this component unmounts (or remounts under a fresh `key`, e.g. the
+    // page switching phase tabs) while still fullscreen, nothing else ever
+    // tells the caller fullscreen ended - a caller hiding its own UI in
+    // response (see `PlannerTree`'s doc) would stay stuck in that state
+    // forever. Refs, not `fullscreen`/`onFullscreenChange` themselves, so the
+    // unmount effect below only ever runs its cleanup once, reading whatever
+    // was current at that moment rather than a stale closure - kept in sync
+    // via their own effects (a ref write belongs in an effect, not render).
+    const fullscreenRef = useRef(fullscreen);
+    const onFullscreenChangeRef = useRef(onFullscreenChange);
+
+    useEffect(() => {
+        fullscreenRef.current = fullscreen;
+        onFullscreenChangeRef.current = onFullscreenChange;
+    }, [fullscreen, onFullscreenChange]);
+
+    useEffect(() => {
+        return () => {
+            if (fullscreenRef.current) {
+                onFullscreenChangeRef.current?.(false);
+            }
+        };
+    }, []);
+
     // Windowed: the props. Fullscreen: the props with any override merged over.
     const chrome: TreeChromeFlags = fullscreen
         ? { showSearch, showPointsCounter, ...fullscreenOverride }

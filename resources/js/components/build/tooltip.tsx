@@ -276,6 +276,11 @@ export function TooltipCard({
     // matched against real in-game tree tooltip screenshots) - `normal` keeps the
     // smaller FontinSmallCaps every other frame uses.
     const isBigTitleFrame = frame === 'notable' || frame === 'keystone';
+    // `normal` is only ever a passive tree node's frame (see `NODE_FRAME`), never
+    // an item's - its body is prose (mod/flavour text) same as notable/keystone,
+    // so it needs the same FontinSmallCaps-renders-as-uppercase escape hatch even
+    // though its title stays the small `normal` face/size.
+    const isProseBodyFrame = isBigTitleFrame || frame === 'normal';
 
     return (
         <div
@@ -405,7 +410,7 @@ export function TooltipCard({
                     // FontinSmallCaps is a real distinct font file (not a CSS
                     // text-transform), so mod text left on it renders visually as
                     // if it were all-caps - correct for a title, wrong for prose.
-                    style={isBigTitleFrame ? FONTIN_REGULAR : FONTIN}
+                    style={isProseBodyFrame ? FONTIN_REGULAR : FONTIN}
                 >
                     {children}
                 </div>
