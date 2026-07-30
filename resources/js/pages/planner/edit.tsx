@@ -1,6 +1,10 @@
 import { Head, router, useForm } from '@inertiajs/react';
+import type { TreeData } from '@poe2-toolkit/tree-core';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { classPortrait } from '@/components/build/classPortrait';
+import {
+    ascendancyLabel,
+    classPortrait,
+} from '@/components/build/classPortrait';
 import BuildClassGallery from '@/components/planner/BuildClassGallery';
 import Button from '@/components/planner/Button';
 import DroppedModsNotice from '@/components/planner/DroppedModsNotice';
@@ -19,7 +23,6 @@ import { TextInput } from '@/components/planner/ui/Field';
 import { Modal } from '@/components/planner/ui/Overlay';
 import { Panel } from '@/components/planner/ui/Panel';
 import { Eyebrow } from '@/components/planner/ui/Text';
-import { resolveAscendancyName } from '@/lib/classCatalog';
 import { xsrfToken } from '@/lib/csrf';
 import { loadGemsView, saveGemsView } from '@/lib/gemsView';
 import type { GemsView } from '@/lib/gemsView';
@@ -43,7 +46,6 @@ import {
 import { collectTokens, refKey } from '@/lib/planReferences';
 import type { PlanReference, ReferenceMap } from '@/lib/planReferences';
 import { reconcileNotablePriority } from '@/lib/treeNotables';
-import { useTreeData } from '@/lib/useTreeData';
 import planner from '@/routes/planner';
 import { resolve as resolveMods } from '@/routes/planner/mods';
 import { resolve as resolveReferences } from '@/routes/planner/references';
@@ -72,6 +74,7 @@ export default function PlannerEdit({
     title,
     references,
     mods,
+    ascendancyName,
 }: {
     mode: 'create' | 'edit';
     slug: string | null;
@@ -80,6 +83,13 @@ export default function PlannerEdit({
     plan: PlanData;
     references: ReferenceMap;
     mods: ModMap;
+    /**
+     * The saved build's ascendancy display name, resolved server-side from the stored
+     * id. Only GGG's internal ids (what a PoB import stores) need it - anything picked
+     * in the gallery is already a display name - so the page never downloads the
+     * passive tree just to label the header and its backdrop art.
+     */
+    ascendancyName: string | null;
 }) {
     // A draft autosaved before the last save survives a hard refresh; when present
     // it seeds the editor instead of the server copy, so unsaved work isn't lost.
@@ -195,6 +205,14 @@ export default function PlannerEdit({
     const [droppedMods, setDroppedMods] = useState<Record<string, string[]>>(
         {},
     );
+    // An import replaces the whole build in this session and stores GGG's internal
+    // ascendancy id, so the `ascendancyName` prop (resolved for the *saved* plan) no
+    // longer describes it - the import response brings its own resolved name along. It
+    // rides in the draft too, so a refresh before the first save does not lose the label
+    // (nothing on the client can turn `Mercenary2` back into `Witchhunter`).
+    const [resolvedAscName, setResolvedAscName] = useState<string | null>(
+        draft?.ascendancyName ?? null,
+    );
 
     // Whether the passive tree is currently fullscreen - hides the ScrollToTop
     // waypoint for the duration, since there's nothing to scroll to while the
@@ -224,11 +242,12 @@ export default function PlannerEdit({
                 tabs: data.tabs as PlanTab[],
                 sections: data.sections as Record<string, PlanSection>,
                 activeTabId,
+                ascendancyName: resolvedAscName,
             });
         }, 400);
 
         return () => window.clearTimeout(timer);
-    }, [draftKey, data, activeTabId]);
+    }, [draftKey, data, activeTabId, resolvedAscName]);
 
     // Resolve any reference token present in the text but not yet in the map (e.g.
     // tokens restored from a draft on a hard refresh, or pasted) to live catalogue
@@ -351,13 +370,15 @@ export default function PlannerEdit({
     const currentSection = sectionFor(data as PlanData, sectionKey);
 
     // The chosen class/ascendancy drives the gallery gate, the header label and the
-    // faded backdrop. The ascendancy display name comes from the live tree (the
-    // build only stores its id), and the portrait is the game's own centre art.
+    // faded backdrop, and the portrait is the game's own centre art. The display name
+    // needs no tree: a gallery pick already stores it, and a stored internal id was
+    // resolved server-side (see `ascendancyName`).
     const build = data.build as PlanBuild;
-    const { data: treeData } = useTreeData();
-    const selectedAscName = treeData
-        ? resolveAscendancyName(treeData, build.className, build.ascendId)
-        : null;
+    const selectedAscName = ascendancyLabel(
+        build.className,
+        build.ascendId,
+        resolvedAscName ?? ascendancyName,
+    );
     const portrait = build.className
         ? classPortrait(build.className, selectedAscName)
         : null;
@@ -384,19 +405,19 @@ export default function PlannerEdit({
 
     // A stable allocation handler so <PlannerTree> can be memoised and stay idle while
     // the author types elsewhere. The functional state update touches only the active
-    // phase's tree, leaving every other branch's reference intact.
+    // phase's tree, leaving every other branch's reference intact. The tree data comes
+    // from the canvas that emitted the edit - this page never loads it itself, so the
+    // download stays deferred until the tree frame nears the viewport.
     const handleTreeAllocationChange = useCallback(
-        (allocation: TreeAllocation) => {
+        (allocation: TreeAllocation, treeData: TreeData) => {
             setPlanData((previous) => {
                 const key = sectionKeyRef.current;
                 const section = previous.sections[key] ?? emptySection();
-                const notablePriority = treeData
-                    ? reconcileNotablePriority(
-                          section.tree.notablePriority ?? [],
-                          allocation.allocated,
-                          treeData,
-                      )
-                    : section.tree.notablePriority;
+                const notablePriority = reconcileNotablePriority(
+                    section.tree.notablePriority ?? [],
+                    allocation.allocated,
+                    treeData,
+                );
 
                 return {
                     ...previous,
@@ -414,7 +435,7 @@ export default function PlannerEdit({
                 };
             });
         },
-        [treeData],
+        [],
     );
 
     function setMode(next: PlanMode): void {
@@ -446,6 +467,7 @@ export default function PlannerEdit({
         importedTitle: string,
         imported: PlanData,
         importedDroppedMods: Record<string, string[]>,
+        importedAscendancyName: string | null,
     ): void {
         setPlanData({
             title: importedTitle,
@@ -456,6 +478,7 @@ export default function PlannerEdit({
             sections: imported.sections,
         });
         setDroppedMods(importedDroppedMods);
+        setResolvedAscName(importedAscendancyName);
         setActiveTabId(imported.tabs[0]?.id ?? 'act-1');
         window.scrollTo({ top: 0 });
     }
@@ -663,11 +686,13 @@ export default function PlannerEdit({
                                                 importedTitle,
                                                 imported,
                                                 importedDropped,
+                                                importedAscendancyName,
                                             ) => {
                                                 loadImported(
                                                     importedTitle,
                                                     imported,
                                                     importedDropped,
+                                                    importedAscendancyName,
                                                 );
                                                 setShowImport(false);
                                             }}

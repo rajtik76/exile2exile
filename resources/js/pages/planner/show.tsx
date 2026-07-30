@@ -18,7 +18,6 @@ import ScrollToTop from '@/components/planner/ScrollToTop';
 import TreeNotablePriority from '@/components/planner/TreeNotablePriority';
 import { Panel } from '@/components/planner/ui/Panel';
 import { Eyebrow, Heading } from '@/components/planner/ui/Text';
-import { resolveAscendancyName } from '@/lib/classCatalog';
 import { loadGemsView, saveGemsView } from '@/lib/gemsView';
 import type { GemsView } from '@/lib/gemsView';
 import type { ModMap } from '@/lib/modLines';
@@ -29,7 +28,6 @@ import {
     SECTION_KEYS,
 } from '@/lib/planner';
 import type { ReferenceMap } from '@/lib/planReferences';
-import { useTreeData } from '@/lib/useTreeData';
 import planner from '@/routes/planner';
 import { SECTION_META } from '@/types/planner';
 import type {
@@ -51,6 +49,7 @@ export default function PlannerShow({
     slug,
     title,
     plan,
+    ascendancyName,
     meta,
     references,
     mods,
@@ -61,6 +60,13 @@ export default function PlannerShow({
     slug: string;
     title: string;
     plan: PlanData;
+    /**
+     * The build's ascendancy display name, resolved server-side from the id the plan
+     * stores. Deliberately a prop and not a client-side lookup: resolving it here
+     * would mean downloading the whole passive tree before the header and its backdrop
+     * art could render, which is exactly what keeps the tree's payload deferred below.
+     */
+    ascendancyName: string | null;
     meta: { title: string; description: string };
     references: ReferenceMap;
     mods: ModMap;
@@ -89,15 +95,12 @@ export default function PlannerShow({
     const sectionKey = activeSectionKey(mode, activeTabId);
     const section = sectionFor(plan, sectionKey);
 
-    // The chosen class/ascendancy drives the header label and the faded backdrop -
-    // resolved from the live tree (the build stores only ids), exactly as the editor.
+    // The chosen class/ascendancy drives the header label and the faded backdrop. The
+    // name arrives resolved from the server, so the backdrop image is discoverable in
+    // the first render rather than after a multi-MB tree download.
     const build = plan.build as PlanBuild;
-    const { data: treeData } = useTreeData();
-    const selectedAscName = treeData
-        ? resolveAscendancyName(treeData, build.className, build.ascendId)
-        : null;
     const portrait = build.className
-        ? classPortrait(build.className, selectedAscName)
+        ? classPortrait(build.className, ascendancyName)
         : null;
 
     return (
@@ -151,13 +154,13 @@ export default function PlannerShow({
                                     <span className="font-semibold text-[var(--pl-text-strong)]">
                                         {build.className}
                                     </span>
-                                    {selectedAscName && (
+                                    {ascendancyName && (
                                         <>
                                             <span className="px-1.5 text-[var(--pl-faint)]">
                                                 ·
                                             </span>
                                             <span className="text-[var(--pl-accent-lit)]">
-                                                {selectedAscName}
+                                                {ascendancyName}
                                             </span>
                                         </>
                                     )}

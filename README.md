@@ -49,7 +49,7 @@ Plan a build with the full tree, skill gems and item editor, then save and share
 - **Backend:** Laravel 13, PHP 8.4
 - **Database/cache/queue:** PostgreSQL, Redis
 - **Frontend:** Inertia v3, React 19, TypeScript, Tailwind v4, shadcn/ui, Vite
-- **Tests:** Pest 4 (Unit/Feature/Contract), Vitest, E2E via Pest's Browser plugin (Playwright)
+- **Tests:** Pest 5 (Unit/Feature/Contract), Vitest, E2E via Pest's Browser plugin (Playwright)
 - Built on Laravel's React starter kit.
 
 A map of the codebase lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -175,16 +175,18 @@ The suites differ in what they need on your machine:
 ```bash
 composer test:exclude-snapshots   # Unit + Feature: no game data needed, runs anywhere
 composer test:contract            # Contract: needs the real extracted game data (npm run refresh:data)
-composer test:update-snapshots    # Browser: needs Playwright (npx playwright install chromium)
+composer test:browser             # Browser: needs Playwright, the game data and a built frontend
 composer test                     # everything at once
 ```
 
 Unit and Feature tests mock all external data, so they are the ones to run on a
 fresh clone and the ones CI runs for pull requests. Contract tests validate the
-app against the real GGPK extract; Browser tests drive a real browser through
-Playwright. Quality checks (eslint, prettier, tsc, pint, rector, phpstan) plus
-the JS and PHP test suites run together via `composer review`, which is also the
-pre-commit hook.
+app against the real GGPK extract. Browser tests drive a real browser through
+Playwright: they render pages that read the game data, and they load the compiled
+frontend, so run `npm run build` after changing anything under `resources/js` or
+they measure the previous bundle. Quality checks (eslint, prettier, tsc, pint,
+rector, phpstan) plus the JS and PHP test suites run together via
+`composer review`, which is also the pre-commit hook.
 
 ## Development notes
 

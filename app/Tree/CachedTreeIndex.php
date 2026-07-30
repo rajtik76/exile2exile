@@ -49,6 +49,43 @@ final class CachedTreeIndex implements TreeIndex
         );
     }
 
+    #[\Override]
+    public function ascendancyName(?string $className, ?string $ascendId): ?string
+    {
+        if ($className === null || $ascendId === null) {
+            return null;
+        }
+
+        $ascendancies = $this->ascendanciesFor($className);
+
+        if ($ascendancies === null) {
+            return null;
+        }
+
+        // The class gallery stores the display name itself, so take it as given - but
+        // only when the class really carries it, never as a blind pass-through: an
+        // unresolvable value must read as "no ascendancy", exactly as it does in the
+        // frontend's own lookup (`resolveAscendancyName`).
+        return $ascendancies[$ascendId] ?? (in_array($ascendId, $ascendancies, true) ? $ascendId : null);
+    }
+
+    /**
+     * A class's ascendancy names keyed by internal id, matched case-insensitively on
+     * the class name (a stored build may carry any casing), or null for an unknown class.
+     *
+     * @return array<string, string>|null
+     */
+    private function ascendanciesFor(string $className): ?array
+    {
+        foreach ($this->classes() as $name => $class) {
+            if (strcasecmp($name, $className) === 0) {
+                return $class['ascendancies'];
+            }
+        }
+
+        return null;
+    }
+
     /**
      * @return array<int, array{name: string, kind: string}>
      */

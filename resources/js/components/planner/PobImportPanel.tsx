@@ -37,6 +37,12 @@ export default function PobImportPanel({
         title: string,
         plan: PlanData,
         droppedMods: Record<string, string[]>,
+        /**
+         * The imported build's ascendancy display name, resolved server-side: the
+         * mapped plan stores GGG's internal id, which the editor cannot name without
+         * the passive tree it deliberately does not load up front.
+         */
+        ascendancyName: string | null,
     ) => void;
     onClose: () => void;
 }) {
@@ -82,8 +88,14 @@ export default function PobImportPanel({
                 title: string;
                 plan: PlanData;
                 droppedMods?: Record<string, string[]>;
+                ascendancyName?: string | null;
             };
-            onImported(body.title, body.plan, body.droppedMods ?? {});
+            onImported(
+                body.title,
+                body.plan,
+                body.droppedMods ?? {},
+                body.ascendancyName ?? null,
+            );
         } catch {
             setError('The import could not be reached. Try again.');
         } finally {

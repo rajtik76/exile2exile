@@ -147,7 +147,9 @@ export default function PassiveTreeView(props: PlanTreeProps) {
     const onAllocationChange = props.onAllocationChange;
     const onClearBuild = props.onClearBuild;
 
-    const { data, resources, budget, error } = useTreeData();
+    // The only consumer that blits the GGG sprite sheets, so the only one that asks for
+    // them - see {@link useTreeData} on why the atlases are opt-in.
+    const { data, resources, budget, error } = useTreeData({ resources: true });
 
     // The GGPK-derived basic-tree cap; falls back only until the extract loads
     // (handlers early-return while `data` is still null anyway).

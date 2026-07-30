@@ -276,6 +276,51 @@ describe('drafts', () => {
         expect(loadDraft('planner-draft:bad')).toBeNull();
     });
 
+    test('carries the resolved ascendancy name across a refresh', () => {
+        // A PoB import stores GGG's internal id, which nothing on the client can turn
+        // back into a display name - so the name the server resolved has to survive in
+        // the draft, or a restored import loses its label until it is saved.
+        const draft: PlanDraft = {
+            title: 'Imported',
+            description: '',
+            mode: 'single',
+            build: { className: 'Mercenary', ascendId: 'Mercenary2' },
+            tabs: [],
+            sections: {},
+            activeTabId: SINGLE_KEY,
+            ascendancyName: 'Witchhunter',
+        };
+        const key = draftKeyFor(null);
+
+        saveDraft(key, draft);
+
+        expect(loadDraft(key)?.ascendancyName).toBe('Witchhunter');
+    });
+
+    test('accepts a draft written before the ascendancy name was stored', () => {
+        // Drafts already sitting in a visitor's localStorage have no such field; they
+        // must still restore rather than be thrown away as corrupt.
+        const legacy = {
+            title: 'Older draft',
+            description: '',
+            mode: 'single',
+            build: emptyBuild(),
+            tabs: [],
+            sections: {},
+            activeTabId: SINGLE_KEY,
+        };
+        window.localStorage.setItem(
+            'planner-draft:new',
+            JSON.stringify(legacy),
+        );
+
+        const restored = loadDraft('planner-draft:new');
+
+        expect(restored).not.toBeNull();
+        expect(restored?.title).toBe('Older draft');
+        expect(restored?.ascendancyName).toBeUndefined();
+    });
+
     test('round-trips a draft with populated sections', () => {
         const draft: PlanDraft = {
             title: 'Draft',

@@ -1,28 +1,28 @@
-import type { BuildAllocation } from '@poe2-toolkit/tree-core';
+import type { BuildAllocation, TreeData } from '@poe2-toolkit/tree-core';
 import { memo, useMemo } from 'react';
+import LazyMount from '@/components/LazyMount';
 import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
 import { resolveAscendancyName, resolveClassId } from '@/lib/classCatalog';
 import { useTreeData } from '@/lib/useTreeData';
 import type { PlanBuild } from '@/types/planner';
 import type { TreeAllocation } from '@/types/tree';
 
-/**
- * The planner's visual passive tree: a bounded, controlled {@link PassiveTreeView}
- * for the active phase. Class/ascendancy live on the plan build and are picked at the
- * top of the page (see {@link BuildClassGallery}); this only draws the allocation and
- * reports node edits back through {@link onAllocationChange}.
- */
-function PlannerTree({
-    build,
-    allocation,
-    editable,
-    onAllocationChange,
-    onFullscreenChange,
-}: {
+/** Fixed frame height, shared by the canvas and the placeholder that stands in for it. */
+const FRAME = 'h-[560px]';
+
+interface PlannerTreeProps {
     build: PlanBuild;
     allocation: TreeAllocation;
     editable: boolean;
-    onAllocationChange?: (allocation: TreeAllocation) => void;
+    /**
+     * Receives the edited allocation plus the tree it was resolved against, so a caller
+     * can reconcile derived state (e.g. the notable-priority list) without loading the
+     * tree itself - only this component ever holds it.
+     */
+    onAllocationChange?: (
+        allocation: TreeAllocation,
+        treeData: TreeData,
+    ) => void;
     /**
      * Fired whenever the tree enters or leaves fullscreen. The page wraps this
      * component in its own `.planner-reading` stacking context (`relative z-10`,
@@ -34,7 +34,46 @@ function PlannerTree({
      * screen anyway (see `pages/planner/show.tsx` / `edit.tsx`).
      */
     onFullscreenChange?: (fullscreen: boolean) => void;
-}) {
+}
+
+/**
+ * The planner's visual passive tree: a bounded, controlled {@link PassiveTreeView}
+ * for the active phase. Class/ascendancy live on the plan build and are picked at the
+ * top of the page (see {@link BuildClassGallery}); this only draws the allocation and
+ * reports node edits back through {@link PlannerTreeProps.onAllocationChange}.
+ *
+ * Nothing here touches the network until the frame nears the viewport. The tree sits
+ * far below the fold on both planner pages and costs ~450 kB of data plus ~3 MB of
+ * sprite atlases, so {@link useTreeData} is deliberately called by the inner canvas
+ * only - a page that renders this must not hold that hook itself, or the download
+ * starts on mount again and this defer buys nothing.
+ */
+function PlannerTree(props: PlannerTreeProps) {
+    return (
+        <LazyMount
+            fallback={
+                // A textless skeleton on purpose: the panel this sits in is already
+                // titled "Passive tree" (see SECTION_META), so a label here would just
+                // say it twice. Keeps the canvas's exact height, so nothing shifts when
+                // the real tree replaces it.
+                <div
+                    className={`${FRAME} w-full animate-pulse rounded-sm border border-[#2a2833] bg-[#08080b]/50`}
+                />
+            }
+        >
+            <PlannerTreeCanvas {...props} />
+        </LazyMount>
+    );
+}
+
+/** The tree itself, mounted only once {@link PlannerTree}'s frame nears the viewport. */
+function PlannerTreeCanvas({
+    build,
+    allocation,
+    editable,
+    onAllocationChange,
+    onFullscreenChange,
+}: PlannerTreeProps) {
     const { data } = useTreeData();
 
     const classId = useMemo(
@@ -74,7 +113,9 @@ function PlannerTree({
 
     if (!data) {
         return (
-            <div className="pl-text-sm flex h-40 items-center justify-center text-[#787d8a]">
+            <div
+                className={`pl-text-sm flex ${FRAME} items-center justify-center rounded-sm border border-[#2a2833] bg-[#08080b]/50 text-[#787d8a]`}
+            >
                 Loading passive tree…
             </div>
         );
@@ -82,7 +123,9 @@ function PlannerTree({
 
     if (classId === null) {
         return (
-            <div className="pl-text-sm flex h-40 items-center justify-center rounded-sm border border-[#2a2833] bg-[#08080b]/50 text-[#787d8a]">
+            <div
+                className={`pl-text-sm flex ${FRAME} items-center justify-center rounded-sm border border-[#2a2833] bg-[#08080b]/50 text-[#787d8a]`}
+            >
                 {editable
                     ? 'Pick a class at the top to start the tree.'
                     : 'No tree for this build.'}
@@ -90,18 +133,27 @@ function PlannerTree({
         );
     }
 
-    function handleAllocationChange(next: BuildAllocation): void {
-        onAllocationChange?.({
-            allocated: next.allocated,
-            attributeChoices: next.attributeChoices ?? {},
-            weaponSets: next.weaponSets ?? {},
-            jewels: (next.jewels ?? {}) as TreeAllocation['jewels'],
-            treeVersion: next.treeVersion ?? null,
-        });
-    }
+    // Narrowed past the guards above, so the tree handed to the caller alongside an
+    // edit is always the one that edit was resolved against.
+    const treeData = data;
+
+    const handleAllocationChange = (next: BuildAllocation): void => {
+        onAllocationChange?.(
+            {
+                allocated: next.allocated,
+                attributeChoices: next.attributeChoices ?? {},
+                weaponSets: next.weaponSets ?? {},
+                jewels: (next.jewels ?? {}) as TreeAllocation['jewels'],
+                treeVersion: next.treeVersion ?? null,
+            },
+            treeData,
+        );
+    };
 
     return (
-        <div className="planner-tree-frame h-[560px] overflow-hidden rounded-sm border border-[#2a2833]">
+        <div
+            className={`planner-tree-frame ${FRAME} overflow-hidden rounded-sm border border-[#2a2833]`}
+        >
             <PassiveTreeView
                 editable={editable}
                 classId={classId}

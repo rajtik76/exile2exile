@@ -18,6 +18,7 @@ use App\Pob\ModCatalogue;
 use App\Support\Planner\PlanReferences;
 use App\Support\Planner\PlanSchema;
 use App\Support\Planner\PobPlanMapper;
+use App\Tree\TreeIndex;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,6 +68,8 @@ class PlannerController extends Controller
             'plan' => PlanSchema::blank(),
             'references' => (object) [],
             'mods' => (object) [],
+            // A blank plan has no class yet, so there is nothing to label.
+            'ascendancyName' => null,
         ]);
     }
 
@@ -89,7 +92,7 @@ class PlannerController extends Controller
      * so an import is throwaway until then and never leaves a stray row behind.
      * Resolution and validity are enforced in {@see ImportPlanRequest}.
      */
-    public function import(ImportPlanRequest $request, PobPlanMapper $mapper): JsonResponse
+    public function import(ImportPlanRequest $request, PobPlanMapper $mapper, TreeIndex $tree): JsonResponse
     {
         $snapshot = $request->snapshot();
         $plan = PlanSchema::canonicalize($mapper->map($snapshot));
@@ -97,6 +100,9 @@ class PlannerController extends Controller
         return response()->json([
             'title' => $mapper->title($snapshot),
             'plan' => $plan,
+            // The mapper stores GGG's internal ascendancy id; the editor labels the build
+            // with the display name and never loads the tree just to resolve it.
+            'ascendancyName' => $tree->ascendancyName($plan['build']['className'], $plan['build']['ascendId']),
             // Author-mod lines the reverse-match could not resolve, keyed by slot, so the
             // editor can tell the author what the import left off (read after map()).
             'droppedMods' => $mapper->droppedMods(),
@@ -131,7 +137,7 @@ class PlannerController extends Controller
     /**
      * The read-only guide, resolved by its public slug. An unknown slug 404s.
      */
-    public function show(BuildPlan $plan, IconResolver $icons, ModCatalogue $catalogue, NeversinkFilterRepository $filters): Response
+    public function show(BuildPlan $plan, IconResolver $icons, ModCatalogue $catalogue, NeversinkFilterRepository $filters, TreeIndex $tree): Response
     {
         // Record the visit so a future cleanup can prune guides nobody opens, without
         // touching `updated_at` or firing model events.
@@ -145,6 +151,12 @@ class PlannerController extends Controller
             'plan' => $data,
             'references' => (object) PlanReferences::resolveMap($data, $icons),
             'mods' => (object) PlanReferences::resolveModMap($data, $catalogue),
+            // Resolved here, not in the browser: the class/ascendancy label and its
+            // backdrop art are above the fold, and the frontend's own lookup would
+            // have to download the whole passive tree first (~450 kB gzipped) just to
+            // turn a stored id into a name - delaying the page's largest paint on a
+            // read-only guide that may never scroll to the tree at all.
+            'ascendancyName' => $tree->ascendancyName($data['build']['className'], $data['build']['ascendId']),
             // Loot-filter theme palettes and strictness levels for the download panel's
             // live preview + pickers.
             'filterThemes' => NeversinkStyle::all(),
@@ -164,7 +176,7 @@ class PlannerController extends Controller
      * link is honoured once - it unlocks the session and redirects to the clean URL, so
      * the token never lingers in the address bar, history or server logs.
      */
-    public function edit(BuildPlan $plan, Request $request, IconResolver $icons, ModCatalogue $catalogue): Response|RedirectResponse
+    public function edit(BuildPlan $plan, Request $request, IconResolver $icons, ModCatalogue $catalogue, TreeIndex $tree): Response|RedirectResponse
     {
         $token = $request->query('token');
 
@@ -191,6 +203,10 @@ class PlannerController extends Controller
             'plan' => $data,
             'references' => (object) PlanReferences::resolveMap($data, $icons),
             'mods' => (object) PlanReferences::resolveModMap($data, $catalogue),
+            // The stored build's label, resolved server-side for the same reason as in
+            // {@see show()}. The editor keeps it in state from here on, since a gallery
+            // pick or a PoB import changes the build without a page load.
+            'ascendancyName' => $tree->ascendancyName($data['build']['className'], $data['build']['ascendId']),
         ]);
     }
 

@@ -28,4 +28,15 @@ interface TreeIndex
      * @return array<string, array{overrides: array<int, int>, ascendancies: array<string, string>}>
      */
     public function classes(): array;
+
+    /**
+     * The display name of a build's stored ascendancy within its class, or null
+     * when either is unset or the class carries no such ascendancy.
+     *
+     * Two key formats reach us: a PoB import stores GGG's internal id (e.g.
+     * `Mercenary2`), the planner's class gallery stores the display name itself
+     * (`Witchhunter`). Both resolve here, so a page can label a build without
+     * the frontend downloading the multi-MB tree just to look the name up.
+     */
+    public function ascendancyName(?string $className, ?string $ascendId): ?string;
 }

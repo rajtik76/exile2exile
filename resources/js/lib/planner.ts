@@ -183,6 +183,15 @@ export interface PlanDraft {
     tabs: PlanTab[];
     sections: Record<string, PlanSection>;
     activeTabId: string;
+    /**
+     * The build's ascendancy display name, when the stored `build.ascendId` cannot be
+     * read as one. A PoB import stores GGG's internal id (e.g. `Mercenary2`), which only
+     * the server-side tree can name - so the name it resolved travels with the draft.
+     * Without it a restored import loses its label until the plan is saved.
+     *
+     * Optional: drafts written before this field existed must still load.
+     */
+    ascendancyName?: string | null;
 }
 
 /** localStorage key for a plan's draft: per-slug when editing, a shared key for a
@@ -241,7 +250,12 @@ function isPlanDraft(value: unknown): value is PlanDraft {
         ) &&
         isRecord(value.sections) &&
         Object.values(value.sections).every(isPlanSectionShape) &&
-        typeof value.activeTabId === 'string'
+        typeof value.activeTabId === 'string' &&
+        // Absent in drafts written before the field existed, so only its presence is
+        // constrained - a missing one restores as "no resolved name".
+        (value.ascendancyName === undefined ||
+            value.ascendancyName === null ||
+            typeof value.ascendancyName === 'string')
     );
 }
 

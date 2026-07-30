@@ -31,7 +31,7 @@ describe('useTreeData', () => {
             atlases: {},
         });
 
-        const { result } = renderHook(() => useTreeData());
+        const { result } = renderHook(() => useTreeData({ resources: true }));
 
         await waitFor(() => expect(result.current.data).toBe(tree));
         expect(result.current.budget).toEqual({ total: 123 });
@@ -39,12 +39,29 @@ describe('useTreeData', () => {
         expect(result.current.error).toBeNull();
     });
 
+    it('leaves the sprite atlases alone unless a caller asks for them', async () => {
+        // The atlases are several MB of GGG webp sheets against ~400 kB of JSON, so a
+        // caller that only reads node names or the class list must not pull them.
+        loaders.loadTreeData.mockResolvedValue(tree);
+        loaders.loadPointBudget.mockResolvedValue({ total: 123 });
+        loaders.loadTreeResources.mockResolvedValue({
+            manifest: { frames: {} },
+            atlases: {},
+        });
+
+        const { result } = renderHook(() => useTreeData());
+
+        await waitFor(() => expect(result.current.data).toBe(tree));
+        expect(loaders.loadTreeResources).not.toHaveBeenCalled();
+        expect(result.current.resources).toBeNull();
+    });
+
     it('reports the tree load error and keeps resources null on atlas failure', async () => {
         loaders.loadTreeData.mockRejectedValue(new Error('boom'));
         loaders.loadPointBudget.mockRejectedValue(new Error('no budget'));
         loaders.loadTreeResources.mockRejectedValue(new Error('no atlas'));
 
-        const { result } = renderHook(() => useTreeData());
+        const { result } = renderHook(() => useTreeData({ resources: true }));
 
         await waitFor(() => expect(result.current.error).toBe('boom'));
         expect(result.current.data).toBeNull();

@@ -54,6 +54,40 @@ function normalize(name: string): string {
     return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+/**
+ * The display name for a build's stored ascendancy, from the static class sheet alone.
+ *
+ * The planner's class gallery and the tree renderer both key ascendancies by display
+ * name, so a value this catalog recognises already *is* the name. GGG's internal ids
+ * (`Mercenary2`, which a PoB import stores) are not in here - those are resolved
+ * server-side from the GGPK tree and handed in as `resolved`, so a page can label a
+ * build without downloading the multi-MB tree just to look one name up.
+ *
+ * Returns null when the class is unknown, no ascendancy is set, or an unrecognised id
+ * came with no server resolution - never a raw internal id, which would read as garbage.
+ */
+export function ascendancyLabel(
+    className: string | null | undefined,
+    ascendId: string | null | undefined,
+    resolved: string | null,
+): string | null {
+    if (!className || !ascendId) {
+        return null;
+    }
+
+    const sheet = CLASS_SHEETS[className.toLowerCase()];
+
+    if (!sheet) {
+        return null;
+    }
+
+    return (
+        sheet.ascendancies.find(
+            (name) => name !== '' && normalize(name) === normalize(ascendId),
+        ) ?? resolved
+    );
+}
+
 interface Rect {
     x: number;
     y: number;

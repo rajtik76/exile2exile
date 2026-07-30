@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { SpriteIcon } from '@/components/build/tooltip';
+import LazyMount from '@/components/LazyMount';
 import ReferenceTooltip from '@/components/planner/ReferenceTooltip';
 import type { PlanReference } from '@/lib/planReferences';
 import { moveById } from '@/lib/reorder';
@@ -12,25 +13,45 @@ import { useTreeData } from '@/lib/useTreeData';
 const NOTABLE_BORDER = '#7fd4c9';
 const KEYSTONE_BORDER = '#e7a23a';
 
+interface TreeNotablePriorityProps {
+    priority: number[];
+    allocated: number[];
+    editable: boolean;
+    /** Persist a reordered priority (editable only). */
+    onChange?: (priority: number[]) => void;
+}
+
 /**
  * The passive-tree priority list, built from the tree itself: every notable/keystone the
  * author has allocated, shown as its round GGPK icon in take order. Priority is set by
  * dragging the icons (the author sculpts it by clicking the tree in any phase, windowed or
  * fullscreen, then orders here). Each icon hovers with the same reference tooltip +
  * tree-location mini-map as an inline notable reference.
+ *
+ * It reads node names and kinds out of the tree extract, so - like the tree canvas it sits
+ * under, and for the same reason - it stays unmounted until it nears the viewport. Both
+ * live inside the tree panel, far below the fold, and mounting either one starts a ~400 kB
+ * download the reader may never need.
  */
-export default function TreeNotablePriority({
+export default function TreeNotablePriority(props: TreeNotablePriorityProps) {
+    return (
+        <LazyMount
+            fallback={
+                <div className="h-12 w-24 animate-pulse rounded-full bg-[var(--pl-input-bg)]" />
+            }
+        >
+            <NotablePriorityList {...props} />
+        </LazyMount>
+    );
+}
+
+/** The list itself, mounted only once it nears the viewport. */
+function NotablePriorityList({
     priority,
     allocated,
     editable,
     onChange,
-}: {
-    priority: number[];
-    allocated: number[];
-    editable: boolean;
-    /** Persist a reordered priority (editable only). */
-    onChange?: (priority: number[]) => void;
-}) {
+}: TreeNotablePriorityProps) {
     const { data } = useTreeData();
 
     // Always display the allocation reconciled against the stored order, so newly
