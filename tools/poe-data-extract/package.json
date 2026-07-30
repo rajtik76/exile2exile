@@ -11,12 +11,12 @@
     "build-data": "node build-data.mjs"
   },
   "dependencies": {
-    "@poe2-toolkit/gem-extractor": "^0.6.2",
-    "@poe2-toolkit/ggpk": "^0.6.1",
-    "@poe2-toolkit/item-extractor": "^0.12.0",
-    "@poe2-toolkit/mod-extractor": "^0.1.3",
-    "@poe2-toolkit/rune-extractor": "^0.4.2",
-    "@poe2-toolkit/tree-extractor": "^0.6.3",
+    "@poe2-toolkit/gem-extractor": "^1.0.0",
+    "@poe2-toolkit/ggpk": "^1.0.0",
+    "@poe2-toolkit/item-extractor": "^1.0.0",
+    "@poe2-toolkit/mod-extractor": "^1.0.0",
+    "@poe2-toolkit/rune-extractor": "^1.0.0",
+    "@poe2-toolkit/tree-extractor": "^1.0.0",
     "pathofexile-dat": "^15.1.0",
     "sharp": "^0.35.2"
   }
