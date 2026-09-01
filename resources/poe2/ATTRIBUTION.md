@@ -14,14 +14,14 @@ Vendored, framework-agnostic game data used to resolve gem/item icons and metada
 - `public/tree/current/**` - the passive skill tree, built **straight from the GGPK** by the
   `tools/poe-data-extract/tree` pipeline (PSG graph + `PassiveSkills`/`Characters`/`Ascendancy`
   tables + UI sprites, decoded from the patch server). `data.json` (topology, classes,
-  ascendancies, stats), the four renderer atlases (`skills`, `skills-disabled`, `frame`,
-  `mastery-effect-active`) and the centre art (`assets/centre/*`: class + ascendancy portraits,
-  hub ring). A handful of UI-texture sprites the patch CDN doesn't serve (only a full game
-  install) fall back to the project's prior atlases - see `docs/GGPK_SOURCE_OF_TRUTH.md`.
-- `public/icons/poe2/Art/**` - gem/item icons. Skill/gem icons come from the GGPK pipeline;
-  item icons whose `art/2ditems/*` texture bundles the patch CDN doesn't serve still come from
-  [poe2-build-planner](https://github.com/poe2-tools/poe2-build-planner) (MIT, extracted from
-  Content.ggpk) until a full-install extraction replaces them.
+  ascendancies, stats), the three renderer atlases (`skills`, `frame`,
+  `mastery-effect-active` - unallocated nodes reuse the sharp icons dimmed at render time, so
+  no disabled atlas is baked) and the centre art (`assets/centre/*`: class + ascendancy
+  portraits, hub ring). Nothing here falls back to a committed asset: a sprite the patch server
+  does not serve is skipped and reported, never replaced from a vendored one.
+- `public/icons/poe2/Art/**` - gem and item icons, decoded from the GGPK textures the patch
+  server serves (item textures uncompressed R8G8B8A8, gem textures BC1). There is no committed
+  PNG fallback: an icon that cannot be fetched or decoded fails the build.
 - The passive tree renderer in `resources/js/components/passive-tree/` is a thin wrapper over
   the project's own `@poe2-toolkit/*` packages (independent rewrite, MIT © Vladislav Rajtmajer).
 
