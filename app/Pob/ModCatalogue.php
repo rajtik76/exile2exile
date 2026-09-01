@@ -175,14 +175,12 @@ final class ModCatalogue
 
             $key = ($mod['group'] ?? $mod['id']).'|'.$mod['type'];
 
-            if (! isset($groups[$key])) {
-                $groups[$key] = [
-                    'group' => $mod['group'] ?? $mod['id'],
-                    'type' => $mod['type'],
-                    'label' => self::previewLine($mod['stats']),
-                    'tiers' => [],
-                ];
-            }
+            $groups[$key] ??= [
+                'group' => $mod['group'] ?? $mod['id'],
+                'type' => $mod['type'],
+                'label' => self::previewLine($mod['stats']),
+                'tiers' => [],
+            ];
 
             $groups[$key]['tiers'][] = [
                 'id' => $mod['id'],
