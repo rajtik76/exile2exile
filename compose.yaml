@@ -1,0 +1,41 @@
+# Optional local development database, for running the app on PostgreSQL. The
+# container reads its name, user, password and port from .env, so set
+# DB_CONNECTION=pgsql and fill the DB_* keys there first - .env.example ships
+# sqlite with those keys commented out, and the app would ignore this container.
+#
+# Not used by the PHP test suite: phpunit.xml pins DB_CONNECTION=sqlite and
+# DB_DATABASE=:memory:, so `php artisan test` runs without this container.
+services:
+    postgres:
+        image: postgres:18-alpine
+        container_name: exile2exile-postgres
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-exile2exile}
+            POSTGRES_USER: ${DB_USERNAME:-root}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-}
+            # .env ships an empty DB_PASSWORD and the image refuses to initialise
+            # without one. Trust auth keeps that working on a development machine;
+            # it accepts any local connection, so never run this compose file on a
+            # host reachable from outside.
+            POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+            # Bound to the loopback interface only, so the trust auth above stays
+            # unreachable from the network.
+            - '127.0.0.1:${DB_PORT:-5432}:5432'
+        volumes:
+            # PostgreSQL 18 images keep their data in /var/lib/postgresql/<major>,
+            # so the whole parent directory is the volume mount point.
+            - postgres-data:/var/lib/postgresql
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U ${DB_USERNAME:-root} -d ${DB_DATABASE:-exile2exile}',
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+volumes:
+    postgres-data:
