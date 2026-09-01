@@ -62,6 +62,67 @@ test('SearchBox pluralises the match count and hides Clear when empty', function
     expect(screen.getByLabelText('Clear search')).toBeTruthy();
 });
 
+test('SearchBox opens and closes the syntax hint on a press', function () {
+    render(
+        <SearchBox
+            value=""
+            onValue={() => {}}
+            onSubmit={() => {}}
+            matchCount={0}
+        />,
+    );
+
+    const hint = screen.getByLabelText('Search syntax');
+
+    expect(screen.queryByText('ailment|channelling')).toBeNull();
+
+    // The whole press, not just the click: the tooltip primitive closes on
+    // pointerdown, which a click-only test never fires.
+    press(hint);
+
+    expect(screen.getByText('ailment|channelling')).toBeTruthy();
+    expect(screen.getByText('^Life')).toBeTruthy();
+
+    press(hint);
+
+    expect(screen.queryByText('ailment|channelling')).toBeNull();
+});
+
+test('the syntax hint answers the keyboard and ignores non-primary buttons', function () {
+    render(
+        <SearchBox
+            value=""
+            onValue={() => {}}
+            onSubmit={() => {}}
+            matchCount={0}
+        />,
+    );
+
+    const hint = screen.getByLabelText('Search syntax');
+
+    // Enter and Space arrive as a click with no button press behind them.
+    fireEvent.click(hint, { detail: 0 });
+    expect(screen.getByText('^Life')).toBeTruthy();
+
+    fireEvent.click(hint, { detail: 0 });
+    expect(screen.queryByText('^Life')).toBeNull();
+
+    // A right-click opens the context menu, not the panel.
+    fireEvent.pointerDown(hint, { button: 2 });
+    expect(screen.queryByText('^Life')).toBeNull();
+});
+
+/**
+ * One full pointer press, in the order a browser fires it. `detail` counts the
+ * clicks behind the event, and jsdom leaves it at 0 - the value a browser only
+ * uses for keyboard activation.
+ */
+function press(element: HTMLElement) {
+    fireEvent.pointerDown(element, { button: 0 });
+    fireEvent.pointerUp(element, { button: 0 });
+    fireEvent.click(element, { detail: 1 });
+}
+
 test('BudgetBar picks the paint mode while editing', function () {
     const onMode = vi.fn();
 

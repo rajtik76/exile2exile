@@ -4,6 +4,45 @@ import type { BuildAllocation, TreeData } from '@poe2-toolkit/tree-core';
 /** Shortest node-search query that highlights matches (avoids matching everything). */
 export const SEARCH_MIN = 2;
 
+/** Tests one node name or stat line against a query. */
+export type NodeMatcher = (text: string) => boolean;
+
+/**
+ * Punctuation that marks a query as a pattern. A bare `+` and a bare `.` are
+ * excluded on purpose: stat lines are full of both ("+5 to Strength", "0.6
+ * seconds"), and promoting those to syntax would change what a literal search
+ * finds.
+ */
+const PATTERN_HINT = /[|()[\]\\^$*?]|\{\d+(?:,\d*)?\}|\.\+/;
+
+/**
+ * Compiles a query into a text predicate, or null when it is too short to
+ * highlight anything. A query holding {@link PATTERN_HINT} punctuation compiles
+ * as a case-insensitive regex; everything else, and any pattern the engine
+ * rejects, searches as a case-insensitive substring.
+ */
+export function compileNodeMatcher(search: string): NodeMatcher | null {
+    const query = search.trim();
+
+    if (query.length < SEARCH_MIN) {
+        return null;
+    }
+
+    if (PATTERN_HINT.test(query)) {
+        try {
+            const pattern = new RegExp(query, 'i');
+
+            return (text) => pattern.test(text);
+        } catch {
+            // Half-typed or invalid: search it as plain text instead.
+        }
+    }
+
+    const needle = query.toLowerCase();
+
+    return (text) => text.toLowerCase().includes(needle);
+}
+
 /**
  * Skill ids whose node name OR stat description matches the query - drawn with a
  * ring. Only the active ascendancy's nodes are on screen (relocated into the
@@ -21,9 +60,9 @@ export function searchTreeNodes(
     ascendancy: string | null,
     allocation: BuildAllocation | null,
 ): Set<number> {
-    const query = search.trim().toLowerCase();
+    const matches = compileNodeMatcher(search);
 
-    if (query.length < SEARCH_MIN || !data) {
+    if (!matches || !data) {
         return new Set();
     }
 
@@ -36,13 +75,13 @@ export function searchTreeNodes(
 
         const chosen = chosenAttributeOption(node, allocation ?? undefined);
 
-        const matches =
-            node.name?.toLowerCase().includes(query) ||
-            node.stats?.some((stat) => stat.toLowerCase().includes(query)) ||
-            chosen?.name.toLowerCase().includes(query) ||
-            chosen?.stats?.some((stat) => stat.toLowerCase().includes(query));
+        const hit =
+            (node.name !== undefined && matches(node.name)) ||
+            (node.stats?.some(matches) ?? false) ||
+            (chosen !== undefined && matches(chosen.name)) ||
+            (chosen?.stats?.some(matches) ?? false);
 
-        if (matches) {
+        if (hit) {
             hits.add(Number(skill));
         }
     }

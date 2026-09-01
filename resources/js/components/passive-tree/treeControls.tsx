@@ -1,5 +1,7 @@
 import type { AllocMode, WeaponSet } from '@poe2-toolkit/tree-core';
 import { DEFAULT_TREE_COLORS } from '@poe2-toolkit/tree-react';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import {
     ClearGlyph,
@@ -28,9 +30,9 @@ export const WEAPON_SET_HEX: Record<WeaponSet, string> = {
 const ASCENDANCY_HEX = '#b48ce0';
 
 /**
- * Node-name search: the same bronze {@link PLAQUE} shell as the rest of the
- * rail. Typing highlights matches live on the tree; Enter frames them. The match
- * count reads out at the end.
+ * Node search over names and stat lines, in the same bronze {@link PLAQUE}
+ * shell as the rest of the rail. Typing highlights matches live on the tree;
+ * Enter frames them. The match count reads out at the end.
  */
 export function SearchBox({
     value,
@@ -43,8 +45,10 @@ export function SearchBox({
     onSubmit: () => void;
     matchCount: number;
 }) {
+    // Wider than the other plaques: the clear and hint glyphs sit inside the
+    // field, next to its placeholder.
     return (
-        <div className="relative min-w-[12rem] flex-1 md:w-64 md:flex-none">
+        <div className="relative min-w-[12rem] flex-1 md:w-80 md:flex-none">
             <div
                 className={`flex h-10 items-center gap-1 pr-1 pl-3.5 transition-colors focus-within:border-[#a9842f] ${PLAQUE}`}
             >
@@ -79,6 +83,7 @@ export function SearchBox({
                         <ClearGlyph />
                     </button>
                 )}
+                <SearchHint />
                 <Divider />
                 <span className="shrink-0 px-2 text-base font-medium tracking-wide text-[#f5ecd8] tabular-nums">
                     {matchCount}
@@ -88,6 +93,129 @@ export function SearchBox({
                 </span>
             </div>
         </div>
+    );
+}
+
+/** Each runs as typed, and each needs the pattern half to work. */
+const SEARCH_EXAMPLES: { query: string; effect: string }[] = [
+    { query: 'ailment|channelling', effect: 'either word' },
+    { query: 'minion.*(life|damage)', effect: 'both, in that order' },
+    { query: '\\d+% increased Attack Speed', effect: 'any number' },
+    { query: '^Life', effect: 'starts with' },
+];
+
+/**
+ * Regex support is invisible without this. Only the trigger wears the rail's
+ * bronze; the panel is plain white on near-black, because a pattern has to be
+ * legible character by character. Radix runs through its primitives to set
+ * those colours directly, and the panel outranks the fullscreen canvas
+ * (`z-[120]`).
+ */
+function SearchHint() {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <TooltipPrimitive.Provider delayDuration={150}>
+            <TooltipPrimitive.Root open={open} onOpenChange={setOpen}>
+                <TooltipPrimitive.Trigger asChild>
+                    <button
+                        type="button"
+                        // Touch never hovers, so a press toggles the panel.
+                        // Radix closes on pointerdown and again on click, both
+                        // against a stale `open` prop, so the toggle runs first
+                        // and the click close is cancelled.
+                        onPointerDown={(event) => {
+                            if (event.button !== 0) {
+                                return;
+                            }
+
+                            setOpen((shown) => !shown);
+                        }}
+                        onClick={(event) => {
+                            // Keyboard activation reports no button press, and
+                            // fires no pointerdown to have toggled on.
+                            if (event.detail === 0) {
+                                setOpen((shown) => !shown);
+
+                                return;
+                            }
+
+                            event.preventDefault();
+                        }}
+                        aria-label="Search syntax"
+                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#8a7850] transition-colors hover:bg-[#f0c869]/10 hover:text-[#ecc878] focus-visible:text-[#ecc878] focus-visible:outline-none data-[state=delayed-open]:text-[#ecc878] data-[state=instant-open]:text-[#ecc878]"
+                    >
+                        <HintGlyph />
+                    </button>
+                </TooltipPrimitive.Trigger>
+                <TooltipPrimitive.Portal>
+                    <TooltipPrimitive.Content
+                        side="bottom"
+                        align="end"
+                        sideOffset={16}
+                        collisionPadding={12}
+                        className="z-[200] max-w-[min(27rem,calc(100vw-1.5rem))] rounded-lg border border-white/15 bg-[#101215] px-4 py-3.5 font-sans text-[13px]/[1.5] text-white shadow-xl shadow-black/60"
+                    >
+                        <p>
+                            Matches a node name or a stat line. Add regex
+                            punctuation to search several at once.
+                        </p>
+                        <table className="mt-3 w-full border-collapse text-left">
+                            <thead>
+                                <tr className="border-b border-white/30">
+                                    <th className="border-r border-white/15 py-1.5 pr-3 font-semibold">
+                                        Example
+                                    </th>
+                                    <th className="py-1.5 pl-3 font-semibold">
+                                        Matches
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {SEARCH_EXAMPLES.map(({ query, effect }) => (
+                                    <tr
+                                        key={query}
+                                        className="border-b border-white/15 last:border-b-0"
+                                    >
+                                        <td className="border-r border-white/15 py-1.5 pr-3 font-mono whitespace-nowrap text-[#4ade80]">
+                                            {query}
+                                        </td>
+                                        <td className="py-1.5 pl-3">
+                                            {effect}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <p className="mt-3">
+                            A query without regex punctuation, or one that is
+                            not a valid pattern, is searched as plain text.
+                        </p>
+                    </TooltipPrimitive.Content>
+                </TooltipPrimitive.Portal>
+            </TooltipPrimitive.Root>
+        </TooltipPrimitive.Provider>
+    );
+}
+
+/** Opens the search syntax hint. */
+function HintGlyph() {
+    return (
+        <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <circle cx="12" cy="12" r="9.25" />
+            <path d="M9.4 9.2a2.7 2.7 0 0 1 5.2.9c0 1.8-2.6 2.2-2.6 3.9" />
+            <path d="M12 17.4h.01" />
+        </svg>
     );
 }
 
