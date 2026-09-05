@@ -274,7 +274,7 @@ final class GemCatalog
             foreach ($this->store->load('ggpk/gems.json') as $segment => $value) {
                 $index[(string) $segment] = [
                     'name' => (string) ($value['name'] ?? ''),
-                    'icon' => $this->store->ddsToPng($value['icon'] ?? null),
+                    'icon' => $this->store->artToPng($value['icon'] ?? null),
                     'color' => (string) ($value['color'] ?? 'w'),
                     'type' => (string) ($value['kind'] ?? 'active'),
                     'description' => $value['description'] ?? null,
@@ -282,7 +282,7 @@ final class GemCatalog
                         (array) ($value['tags'] ?? []),
                         fn (mixed $tag): bool => is_string($tag) && ! in_array($tag, self::HIDDEN_GEM_TAGS, true),
                     )),
-                    'hoverImage' => $this->store->ddsToPng($value['hoverImage'] ?? null),
+                    'hoverImage' => $this->store->artToPng($value['hoverImage'] ?? null),
                 ];
             }
 

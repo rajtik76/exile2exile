@@ -13,6 +13,8 @@ beforeEach(function () {
             'resources/poe2/ggpk/gems.json' => [
                 'SkillGemAlpha' => ['name' => 'Alpha', 'icon' => 'Skills/Alpha.dds', 'color' => 'b', 'kind' => 'active', 'hoverImage' => 'Hover/Alpha.dds'],
                 'SkillGemGamma' => ['name' => 'Gamma', 'icon' => 'Skills/Gamma.dds', 'color' => 'r', 'kind' => 'active'],
+                // Since patch 4.5.5 SkillGems.UI_Image holds a UIImages sprite name, no extension.
+                'SkillGemDelta' => ['name' => 'Delta', 'icon' => 'Skills/Delta.dds', 'color' => 'g', 'kind' => 'active', 'hoverImage' => 'Hover/Delta'],
             ],
             'resources/poe2/ggpk/gem_scaling.json' => [
                 'SkillGemAlpha' => [
@@ -55,7 +57,7 @@ beforeEach(function () {
             ],
         ],
         icons: [
-            'Skills/Alpha.png', 'Skills/Gamma.png', 'Hover/Alpha.png', 'ui/gem-hover-placeholder.png',
+            'Skills/Alpha.png', 'Skills/Gamma.png', 'Hover/Alpha.png', 'Hover/Delta.png', 'ui/gem-hover-placeholder.png',
             'Helmets/Circlet.png', 'Runes/Desert.png',
         ],
     );
@@ -65,6 +67,8 @@ it("resolves a gem's own hover art and falls back to the vendored placeholder", 
     $resolver = new IconResolver;
 
     expect($resolver->gemHoverImage('SkillGemAlpha'))->toBe('/icons/poe2/Hover/Alpha.png')
+        // Sprite-name art reference: the extractor keys its PNG by the name plus .png.
+        ->and($resolver->gemHoverImage('SkillGemDelta'))->toBe('/icons/poe2/Hover/Delta.png')
         ->and($resolver->gemHoverImage('SkillGemGamma'))->toBe('/icons/poe2/ui/gem-hover-placeholder.png')
         ->and($resolver->gemHoverImage('SkillGemUnknown'))->toBeNull()
         ->and($resolver->gemHoverImage(null))->toBeNull();

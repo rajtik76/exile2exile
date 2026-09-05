@@ -2,6 +2,10 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-09-05
+- Gem tooltips keep their background art on patch 4.5.5. The game data stopped pointing at hover art by file path and started naming it through the client's own UI sprite index instead, which the extractor did not read, so every gem would have fallen back to the generic placeholder. Both forms are understood now, and the art is cut to the exact rectangle the game itself draws rather than the whole source image.
+- For contributors: the fix lives in `@poe2-toolkit` (ggpk 1.1.0, gem-extractor 2.0.0), where the game-data contract belongs, not as a patch-up in this repo. It also fixes a race in the sprite index: with sixteen icons decoding at once, lookups that arrived while the index was still downloading were told the art did not exist, which is exactly how art GGG has removed looks. Gem icons now fail the extraction loudly like item and rune icons do, instead of being exempt.
+
 ## 2026-09-01
 - Passive tree search understands regular expressions, so a build's whole pool can be highlighted in one go instead of one stat at a time: `ailment|channelling` rings the nodes for either word, `minion.*(life|damage)` wants both in that order, `\d+% increased Attack Speed` ignores the number, `^Life` anchors to the start of a name. Nothing about plain searches changed - a query only switches to pattern mode when it carries regex punctuation, and a bare `+` or `.` deliberately does not count, since stat lines are full of both and `+5 to Strength` has to keep finding what you expect. Anything the engine rejects, a half-typed `(chan` included, quietly searches as plain text instead of erroring out. The pattern is tested against each node name and each stat line on its own, so one condition cannot span two different stats of the same node.
 - The search box gained an info icon: the syntax is invisible otherwise, so it opens a short panel with the rules and the worked examples above.

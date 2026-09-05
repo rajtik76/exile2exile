@@ -296,8 +296,14 @@ writeJson('mods', mods);
 // inventory art and the fixed item-socket UI textures (the empty ring + rune star /
 // soul-core orb, keyed `ui/*.png`), so the item display draws real GGPK socket art,
 // not an approximation.
+// Gems were exempt until @poe2-toolkit/gem-extractor 2.0, whose `missing` counter
+// mixed base icons with hover art that could not decode: `SkillGems.UI_Image`
+// moved to UIImages sprite names in 4.5.5 and the extractor only read DDS paths.
+// Both forms resolve now, so any gem miss is a real gap, and the Contract suite
+// would reject it downstream anyway.
 for (const [label, report] of [
     ['items', items.icons.report],
+    ['gems', gems.icons.report],
     ['runes', runes.icons.report],
     ['tooltip header', tooltipHeader.report],
 ]) {
@@ -307,29 +313,6 @@ for (const [label, report] of [
         );
     }
 }
-
-// Gems are exempt from the fail-loud check above because @poe2-toolkit/gem-
-// extractor's combined `missing` counter covers both `icon` (should always
-// decode) and `hoverImage` (genuinely sparse in the game's own data - no
-// support gem has hover art, and most active gems don't have it yet either -
-// see the package's README), so a nonzero `missing` there is an expected
-// steady state, not necessarily a decoder gap. Fail loud on `icon` alone,
-// checked directly against the packed map so a real base-icon regression
-// still surfaces instead of being absorbed into the sparse-hoverImage noise.
-const gemIconPngPath = (ddsPath) => `${ddsPath.slice(0, -4)}.png`;
-const missingGemIcons = Object.values(gems.data.gems).filter(
-    (gem) => gem.icon && !(gemIconPngPath(gem.icon) in gems.icons.icons),
-).length;
-
-if (missingGemIcons > 0) {
-    throw new Error(
-        `gems: ${missingGemIcons} base icon(s) could not be decoded from the CDN - extend the DDS decoder in @poe2-toolkit/ggpk instead of falling back to committed art`,
-    );
-}
-
-console.log(
-    `gems icons: ${gems.icons.report.packed} packed, ${gems.icons.report.missing} missing overall (hoverImage sparsity expected; base gem icons checked separately above)`,
-);
 
 // DATA_JSON_ONLY (the pre-test extraction for CI and local runs) skips writing the
 // heavy PNG art - the server and tests only read the JSON mappings above, never the

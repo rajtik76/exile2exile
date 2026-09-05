@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Pob\GameData\GameDataStore;
 use App\Pob\IconResolver;
 use App\Tree\TreeIndex;
 use Illuminate\Support\Facades\Storage;
@@ -146,13 +147,16 @@ it('ships every fixed UI banner and socket asset the frontend hardcodes', functi
  * since that method silently falls back to the generic placeholder when the specific
  * file is missing, which would mask exactly the regression this test exists to catch.
  *
- * `gems.json` stores the raw GGPK `.dds` path (decoding it is IconResolver::gems()'s
- * own job, via ddsToPng()); the extractor only ever writes the decoded `.png` to
- * disk, so the check below mirrors that same extension swap.
+ * `gems.json` stores the raw GGPK art reference - a `.dds` path, or (since patch
+ * 4.5.5) a UIImages sprite name with no extension at all. Mapping it to the file
+ * is IconResolver::gems()'s own job, via GameDataStore::artToPng(); the extractor
+ * only ever writes the decoded `.png` to disk, so the check below asks that method
+ * instead of restating its rule.
  */
 it('ships every gem hoverImage path the data points at', function () {
     $gems = gameData('resources/poe2/ggpk/gems.json');
     $disk = Storage::disk('game-data');
+    $store = new GameDataStore;
 
     $withHoverImage = 0;
 
@@ -164,9 +168,7 @@ it('ships every gem hoverImage path the data points at', function () {
         }
 
         $withHoverImage++;
-        $pngPath = str_ends_with((string) $hoverImage, '.dds')
-            ? substr((string) $hoverImage, 0, -4).'.png'
-            : $hoverImage;
+        $pngPath = $store->artToPng($hoverImage);
 
         expect($disk->exists("public/icons/poe2/{$pngPath}"))
             ->toBeTrue("gem {$id} points at a hoverImage that does not exist on disk: {$pngPath}");

@@ -551,7 +551,7 @@ final class ItemCatalog
         foreach ($this->store->load('ggpk/items.json') as $name => $value) {
             $name = (string) $name;
 
-            $index[$name] = $this->store->ddsToPng($value['icon'] ?? null);
+            $index[$name] = $this->store->artToPng($value['icon'] ?? null);
             $twoHanded[$name] = (bool) ($value['twoHanded'] ?? false);
             $rarities[$name] = ($value['rarity'] ?? null) === 'unique' ? 'unique' : 'normal';
 

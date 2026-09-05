@@ -61,15 +61,25 @@ final readonly class GameDataStore
     }
 
     /**
-     * Map a GGPK `.dds` art path to the `.png` the extractor actually vendors.
+     * Map a GGPK art reference to the `.png` the extractor actually vendors.
+     *
+     * The data references art two ways, and a column can switch between them
+     * across patches (`SkillGems.UI_Image` did, in 4.5.5): a DDS path, whose
+     * extension is swapped, or a UIImages sprite name with no extension, which
+     * gains one. The extractor keys its PNGs the same way, so both forms land
+     * on the file it wrote.
      */
-    public function ddsToPng(mixed $dds): ?string
+    public function artToPng(mixed $art): ?string
     {
-        if (! is_string($dds) || ! str_ends_with($dds, '.dds')) {
-            return is_string($dds) ? $dds : null;
+        if (! is_string($art)) {
+            return null;
         }
 
-        return substr($dds, 0, -4).'.png';
+        if (str_ends_with($art, '.dds')) {
+            return substr($art, 0, -4).'.png';
+        }
+
+        return str_ends_with($art, '.png') ? $art : $art.'.png';
     }
 
     /**
