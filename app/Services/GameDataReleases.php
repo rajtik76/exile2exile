@@ -23,6 +23,9 @@ use RuntimeException;
  */
 class GameDataReleases
 {
+    /** How long a staging directory may sit untouched before it counts as abandoned. */
+    private const int STALE_STAGING_HOURS = 24;
+
     /**
      * Accepts dotted patch versions like "4.5.4.3". Also the path-safety gate:
      * everything else (traversal attempts, ".staging" leftovers) is rejected
@@ -140,7 +143,12 @@ class GameDataReleases
      * as rollback targets. A release's tarball and checksum go with it; the
      * live release's artifacts are never touched.
      *
-     * @return list<string> the versions removed
+     * Two kinds of leftover are swept alongside them, because neither is
+     * reachable by version name and nothing else would ever remove them: the
+     * staging dir of an extraction that died before its rename, and a tarball
+     * whose release directory is already gone.
+     *
+     * @return array{releases: list<string>, staging: list<string>, artifacts: list<string>}
      */
     public function prune(?int $keep = null): array
     {
@@ -167,6 +175,57 @@ class GameDataReleases
             @unlink($this->tarballPath($version));
             @unlink($this->checksumPath($version));
             $removed[] = $version;
+        }
+
+        return [
+            'releases' => $removed,
+            'staging' => $this->pruneStaleStaging(),
+            'artifacts' => $this->pruneOrphanedArtifacts(),
+        ];
+    }
+
+    /**
+     * Drop staging directories no extraction is writing to any more. A live run
+     * touches its own for the few minutes it takes, so the age cutoff is what
+     * separates a dead one from a run in flight.
+     *
+     * @return list<string>
+     */
+    private function pruneStaleStaging(): array
+    {
+        $cutoff = now()->subHours(self::STALE_STAGING_HOURS)->getTimestamp();
+        $removed = [];
+
+        foreach (glob($this->root().'/releases/*.staging', GLOB_ONLYDIR) ?: [] as $dir) {
+            if ((filemtime($dir) ?: 0) > $cutoff) {
+                continue;
+            }
+
+            File::deleteDirectory($dir);
+            $removed[] = basename($dir);
+        }
+
+        return $removed;
+    }
+
+    /**
+     * Drop tarballs whose release directory is gone. Nothing serves them: the
+     * download endpoint only answers for a version that is still staged.
+     *
+     * @return list<string>
+     */
+    private function pruneOrphanedArtifacts(): array
+    {
+        $removed = [];
+
+        foreach (glob($this->root().'/releases/*.tar.gz') ?: [] as $tarball) {
+            if (is_dir($this->releasePath(basename($tarball, '.tar.gz')))) {
+                continue;
+            }
+
+            @unlink($tarball);
+            @unlink($tarball.'.sha256');
+            $removed[] = basename($tarball);
         }
 
         return $removed;

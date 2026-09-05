@@ -20,6 +20,13 @@ Schedule::command('poe2:prune-patch-subscribers')
     ->daily()
     ->onOneServer();
 
+// Sweep the game-data release store: releases past the rollback window, staging
+// dirs from an extraction that died, tarballs whose release is already gone.
+// Activation prunes as well, but only on the days a patch actually ships.
+Schedule::command('poe2:prune-game-data')
+    ->daily()
+    ->onOneServer();
+
 // Refresh the cached poe2scout economy prices on their 6-hour publish cadence; the
 // loot-filter generator reads this snapshot instead of ever calling poe2scout live.
 $economySync = Schedule::command('poe2:sync-economy')

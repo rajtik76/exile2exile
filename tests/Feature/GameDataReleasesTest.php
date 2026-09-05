@@ -69,10 +69,65 @@ test('pruning keeps the live release plus the newest rollback targets', function
     $releases->activate('4.5.2.0');
 
     // Removal order is newest-first after the kept ones.
-    expect($releases->prune())->toBe(['4.5.3.0', '4.5.1.0'])
+    expect($releases->prune()['releases'])->toBe(['4.5.3.0', '4.5.1.0'])
         ->and($releases->has('4.5.2.0'))->toBeTrue()
         ->and($releases->has('4.5.4.0'))->toBeTrue()
         ->and(File::exists($releases->tarballPath('4.5.1.0')))->toBeFalse();
+});
+
+test('pruning clears staging dirs an extraction abandoned, leaving a live run alone', function () {
+    $root = fakeGameDataRoot();
+    fakeGameDataRelease('4.5.5.0');
+    $releases = app(GameDataReleases::class);
+    $releases->activate('4.5.5.0');
+
+    File::ensureDirectoryExists($releases->stagingPath('4.5.4.0'));
+    File::ensureDirectoryExists($releases->stagingPath('4.5.5.1'));
+    // An extraction that died days ago, versus one writing right now.
+    touch($releases->stagingPath('4.5.4.0'), now()->subDays(3)->getTimestamp());
+
+    expect($releases->prune()['staging'])->toBe(['4.5.4.0.staging'])
+        ->and(File::isDirectory($releases->stagingPath('4.5.4.0')))->toBeFalse()
+        ->and(File::isDirectory($releases->stagingPath('4.5.5.1')))->toBeTrue()
+        ->and(File::isDirectory("{$root}/releases/4.5.5.0"))->toBeTrue();
+});
+
+test('pruning clears a tarball whose release directory is gone', function () {
+    fakeGameDataRoot();
+    fakeGameDataRelease('4.5.5.0');
+    $releases = app(GameDataReleases::class);
+    $releases->activate('4.5.5.0');
+
+    File::put($releases->tarballPath('4.5.4.0'), 'bytes');
+    File::put($releases->checksumPath('4.5.4.0'), 'checksum');
+    File::put($releases->tarballPath('4.5.5.0'), 'bytes');
+
+    expect($releases->prune()['artifacts'])->toBe(['4.5.4.0.tar.gz'])
+        ->and(File::exists($releases->tarballPath('4.5.4.0')))->toBeFalse()
+        ->and(File::exists($releases->checksumPath('4.5.4.0')))->toBeFalse()
+        // The live release keeps its own artifacts.
+        ->and(File::exists($releases->tarballPath('4.5.5.0')))->toBeTrue();
+});
+
+test('the prune command reports what it removed', function () {
+    fakeGameDataRoot();
+    config()->set('poe.data.keep_releases', 0);
+    fakeGameDataRelease('4.5.4.0');
+    fakeGameDataRelease('4.5.5.0');
+    $releases = app(GameDataReleases::class);
+    $releases->activate('4.5.5.0');
+
+    File::ensureDirectoryExists($releases->stagingPath('4.5.4.1'));
+    touch($releases->stagingPath('4.5.4.1'), now()->subDays(3)->getTimestamp());
+
+    $this->artisan('poe2:prune-game-data')
+        ->expectsOutput('removed 4.5.4.0')
+        ->expectsOutput('removed 4.5.4.1.staging')
+        ->expectsOutput('Pruned 1 release(s), 1 stale staging dir(s), 0 orphaned artifact(s).')
+        ->assertSuccessful();
+
+    expect($releases->has('4.5.4.0'))->toBeFalse()
+        ->and($releases->currentVersion())->toBe('4.5.5.0');
 });
 
 test('packing a staged release writes the tarball checksum sidecar', function () {
