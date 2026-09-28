@@ -3,9 +3,12 @@
 namespace App\Jobs;
 
 use App\Services\GameDataReleases;
+use App\Support\GameEra;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use RuntimeException;
 
@@ -25,6 +28,13 @@ use RuntimeException;
  * never went live (a lost dispatch, a failed run fixed later). Pass force to
  * re-run the extraction anyway - needed when only the extractor packages
  * changed (poe2:restage-data), since the game patch itself did not move.
+ *
+ * A patch that belongs to no configured game era (`poe.eras`) is put on hold
+ * before anything is downloaded: an era change is a human call, and a new era
+ * usually needs extractor changes first, so an extraction now would only stage
+ * output of the old extractor that a later run would then reuse. The operator is
+ * told once on Discord; once the prefix is mapped and deployed, the watcher's
+ * next nudge extracts and validates it like any other release.
  */
 class StageGameData implements ShouldQueue
 {
@@ -58,6 +68,12 @@ class StageGameData implements ShouldQueue
             throw new RuntimeException("refusing to stage an invalid version: {$this->version}");
         }
 
+        if (app(GameEra::class)->forPatch($this->version) === null) {
+            $this->holdUnmappedEra();
+
+            return;
+        }
+
         $extracted = $this->force || ! $releases->has($this->version);
 
         if ($extracted) {
@@ -70,6 +86,20 @@ class StageGameData implements ShouldQueue
         $checksum ??= $releases->pack($this->version);
 
         TriggerContractRun::dispatch($this->version, $checksum);
+    }
+
+    /**
+     * Leave a patch of no configured era untouched and tell the operator. The
+     * watcher re-dispatches this job every few hours while the patch is not live,
+     * so the Discord notice is sent once per version, not on every nudge.
+     */
+    private function holdUnmappedEra(): void
+    {
+        Log::warning("Patch {$this->version} belongs to no configured game era and is on hold; map its prefix in poe.eras to stage it.");
+
+        if (Cache::add("poe2:unmapped-era:{$this->version}", now()->toIso8601String())) {
+            SendDiscordUnmappedEraNotification::dispatch($this->version);
+        }
     }
 
     private function extract(GameDataReleases $releases): void

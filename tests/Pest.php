@@ -94,6 +94,17 @@ function fakeGameDataRelease(string $version, ?string $patch = null): void
     ]));
 }
 
+/**
+ * Map an older game era ("0.4", patches "4.4.*") ahead of the configured live one and
+ * return a patch of it, for stamping a build that is not of the live era.
+ */
+function olderEraPatch(): string
+{
+    config()->set('poe.eras', ['4.4' => '0.4', ...config()->array('poe.eras')]);
+
+    return '4.4.3.1';
+}
+
 // The heaviest build pages render two passive-tree canvases at once and flake under
 // the parallel run's 5s assertion timeout. A higher ceiling only hits genuinely slow
 // cases (assertions wait for the condition), not the happy path.

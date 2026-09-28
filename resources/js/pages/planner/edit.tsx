@@ -24,6 +24,7 @@ import { Modal } from '@/components/planner/ui/Overlay';
 import { Panel } from '@/components/planner/ui/Panel';
 import { Eyebrow } from '@/components/planner/ui/Text';
 import { xsrfToken } from '@/lib/csrf';
+import { useLoadedGameData } from '@/lib/gameEra';
 import { loadGemsView, saveGemsView } from '@/lib/gemsView';
 import type { GemsView } from '@/lib/gemsView';
 import type { ModInfo, ModMap } from '@/lib/modLines';
@@ -94,8 +95,9 @@ export default function PlannerEdit({
     // A draft autosaved before the last save survives a hard refresh; when present
     // it seeds the editor instead of the server copy, so unsaved work isn't lost.
     // The token is never taken from the draft - it always comes fresh from props.
+    const { patch: gamePatch, era: gameEra } = useLoadedGameData();
     const draftKey = draftKeyFor(pageMode === 'edit' ? slug : null);
-    const [draft] = useState(() => loadDraft(draftKey));
+    const [draft] = useState(() => loadDraft(draftKey, gameEra));
 
     // The reference map (icon/tooltip/flavour for each token) is display-only data,
     // never persisted: only the token id lives in the text. Seeded from the server's
@@ -136,7 +138,7 @@ export default function PlannerEdit({
     // Errors are keyed by the transformed payload's fields (title, tabs, sections…), not
     // the form's own data shape, so read them through a wider type.
     const formErrors = form.errors as Partial<
-        Record<'title' | 'tabs' | 'description', string>
+        Record<'title' | 'tabs' | 'description' | 'gamePatch', string>
     >;
 
     interface PlanContent {
@@ -177,7 +179,10 @@ export default function PlannerEdit({
         }
 
         loadedSlug.current = slug;
-        const fresh = loadDraft(draftKeyFor(pageMode === 'edit' ? slug : null));
+        const fresh = loadDraft(
+            draftKeyFor(pageMode === 'edit' ? slug : null),
+            gameEra,
+        );
 
         setPlanData({
             title: fresh?.title ?? title,
@@ -243,11 +248,12 @@ export default function PlannerEdit({
                 sections: data.sections as Record<string, PlanSection>,
                 activeTabId,
                 ascendancyName: resolvedAscName,
+                gameEra,
             });
         }, 400);
 
         return () => window.clearTimeout(timer);
-    }, [draftKey, data, activeTabId, resolvedAscName]);
+    }, [draftKey, data, activeTabId, resolvedAscName, gameEra]);
 
     // Resolve any reference token present in the text but not yet in the map (e.g.
     // tokens restored from a draft on a hard refresh, or pasted) to live catalogue
@@ -597,8 +603,9 @@ export default function PlannerEdit({
 
         // The plan content lives in local state, so fold it into the request payload at
         // submit time. The edit is authorised by the unlocked session (never a token in
-        // the body), so nothing secret rides along.
-        form.transform(() => data);
+        // the body), so nothing secret rides along. The patch the editor loaded with
+        // lets the server refuse a save made on data whose era has since moved on.
+        form.transform(() => ({ ...data, gamePatch }));
 
         // On a successful save the server copy is now authoritative, so drop the
         // draft. For a new plan this clears the shared "new" draft before the
@@ -798,6 +805,14 @@ export default function PlannerEdit({
                                                 editToken={editToken}
                                                 slug={slug}
                                             />
+                                        )}
+
+                                        {/* The game data moved to a new era since the editor
+                                        opened: the save is refused until a reload. */}
+                                        {formErrors.gamePatch && (
+                                            <p className="pl-text-sm mb-4 rounded-[var(--pl-radius)] border border-[var(--pl-danger)] bg-[var(--pl-danger-soft)] px-3 py-2 text-[var(--pl-danger-lit)]">
+                                                {formErrors.gamePatch}
+                                            </p>
                                         )}
 
                                         {formErrors.tabs && (

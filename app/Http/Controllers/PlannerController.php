@@ -15,6 +15,8 @@ use App\Http\Requests\UpdatePlanRequest;
 use App\Models\BuildPlan;
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
+use App\Support\ArchivedBuild;
+use App\Support\GameEra;
 use App\Support\Planner\PlanReferences;
 use App\Support\Planner\PlanSchema;
 use App\Support\Planner\PobPlanMapper;
@@ -27,6 +29,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
  * The build planner: a guest authors a build guide (a description, plus per-phase
@@ -137,13 +140,19 @@ class PlannerController extends Controller
     /**
      * The read-only guide, resolved by its public slug. An unknown slug 404s.
      */
-    public function show(BuildPlan $plan, IconResolver $icons, ModCatalogue $catalogue, NeversinkFilterRepository $filters, TreeIndex $tree): Response
+    public function show(BuildPlan $plan, IconResolver $icons, ModCatalogue $catalogue, NeversinkFilterRepository $filters, TreeIndex $tree, ArchivedBuild $archived): Response|HttpResponse
     {
         // Record the visit so a future cleanup can prune guides nobody opens, without
         // touching `updated_at` or firing model events.
         $plan->forceFill(['last_viewed_at' => now()])->saveQuietly();
 
         $data = PlanSchema::normalize($plan->data, $plan->schema_version);
+
+        // Its items, gems and tree belong to an older era's data: resolving them
+        // against the live catalogues would show a different game.
+        if (! $plan->isFromCurrentEra()) {
+            return $archived->render('plan', $plan->slug, $plan->title, $data['build']['className'], $plan->game_patch, Str::limit(trim((string) $data['description']), 160));
+        }
 
         return Inertia::render('planner/show', [
             'slug' => $plan->slug,
@@ -178,6 +187,11 @@ class PlannerController extends Controller
      */
     public function edit(BuildPlan $plan, Request $request, IconResolver $icons, ModCatalogue $catalogue, TreeIndex $tree): Response|RedirectResponse
     {
+        // A plan from an older game era is read-only: it has no editor at all.
+        if (! $plan->isFromCurrentEra()) {
+            return to_route('planner.show', ['plan' => $plan->slug]);
+        }
+
         $token = $request->query('token');
 
         if (is_string($token) && $plan->matchesEditToken($token)) {
@@ -217,6 +231,8 @@ class PlannerController extends Controller
      */
     public function unlock(BuildPlan $plan, Request $request): RedirectResponse
     {
+        abort_unless($plan->isFromCurrentEra(), 404);
+
         $validated = $request->validate([
             'token' => ['required', 'string'],
         ]);
@@ -250,9 +266,11 @@ class PlannerController extends Controller
      * Save an edit. The token is verified in {@see UpdatePlanRequest::authorize()};
      * the blob is canonicalised and re-stamped to the current schema version.
      */
-    public function update(BuildPlan $plan, UpdatePlanRequest $request): RedirectResponse
+    public function update(BuildPlan $plan, UpdatePlanRequest $request, GameEra $eras): RedirectResponse
     {
         $plan->update([
+            // Re-stamped with the live patch read here, never one the client sent.
+            'game_patch' => $eras->livePatchOrFail(),
             'title' => $request->title(),
             'schema_version' => PlanSchema::CURRENT_VERSION,
             'data' => $request->planData(),

@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\SharedTree;
+use App\Rules\LiveGameEra;
+use App\Support\GameEra;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 
@@ -451,4 +453,110 @@ test('an unknown from slug opens the planner empty', function () {
             ->component('tree')
             ->where('initialBuild', null)
         );
+});
+
+test('a from slug of a tree from an older game era opens the planner empty', function () {
+    // Its nodes belong to the older era's tree, and a save from here would stamp the
+    // old allocation with the live era.
+    $shared = makeSharedTree(['slug' => 'oldEraSeed01', 'game_patch' => olderEraPatch()]);
+
+    $this->get(route('tree', ['from' => $shared->slug]))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('tree')
+            ->where('initialBuild', null)
+        );
+});
+
+/*
+ * Game eras - a tree stores the live patch it was last saved on, its era is derived
+ * from that patch, and one from another era is read-only and never drawn or
+ * summarised over the live era's tree.
+ */
+
+test('saving a tree stamps it with the live patch read on the server', function () {
+    $livePatch = app(GameEra::class)->livePatch();
+
+    $this->post(route('shared.store'), shareableBuild(['gamePatch' => $livePatch]))->assertRedirect();
+
+    expect(SharedTree::sole()->game_patch)->toBe($livePatch);
+});
+
+test('an edit re-stamps the tree with the live patch, never one the client sent', function () {
+    $shared = makeSharedTree(['game_patch' => '4.5.0.1']);
+
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->put(route('shared.update', ['sharedTree' => $shared->slug]), shareableBuild(['allocated' => [4, 16], 'gamePatch' => '4.5.9.9']))
+        ->assertRedirect();
+
+    expect($shared->fresh()->game_patch)->toBe(app(GameEra::class)->livePatch());
+});
+
+test('a save from an editor loaded on an older game era is rejected without saving', function () {
+    $this->post(route('shared.store'), shareableBuild(['gamePatch' => olderEraPatch()]))
+        ->assertSessionHasErrors('gamePatch');
+
+    expect(SharedTree::count())->toBe(0);
+});
+
+test('a tree from an older game era renders the archived viewer and an archived json document', function () {
+    $shared = makeSharedTree(['game_patch' => olderEraPatch()]);
+
+    $this->get(route('shared.show', $shared))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('archived-build')
+            ->where('kind', 'tree')
+            ->where('className', 'Witch')
+            ->where('gameEra', '0.4')
+            ->missing('build')
+        );
+
+    $this->get(route('shared.json', ['slug' => $shared->slug]))
+        ->assertOk()
+        ->assertExactJson([
+            'schemaVersion' => 1,
+            'game' => 'poe2',
+            'gameEra' => '0.4',
+            'gamePatch' => '4.4.3.1',
+            'archived' => true,
+            'class' => 'Witch',
+        ]);
+});
+
+test('a tree whose patch belongs to no game era shows an error page and json instead', function () {
+    $shared = makeSharedTree(['game_patch' => '9.9.0.1']);
+
+    $this->get(route('shared.show', $shared))
+        ->assertStatus(500)
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('archived-build')
+            ->where('gameEra', null)
+            ->where('gamePatch', '9.9.0.1')
+        );
+
+    $this->get(route('shared.json', ['slug' => $shared->slug]))
+        ->assertStatus(500)
+        ->assertJson(['gameEra' => null, 'gamePatch' => '9.9.0.1']);
+});
+
+test('a tree from an older game era has no editor, even for an unlocked session', function () {
+    $shared = makeSharedTree(['game_patch' => olderEraPatch()]);
+
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->get(route('shared.edit', ['sharedTree' => $shared->slug]))
+        ->assertRedirect(route('shared.show', ['sharedTree' => $shared->slug]));
+
+    $this->post(route('shared.unlock', ['sharedTree' => $shared->slug]), ['token' => $shared->edit_token])
+        ->assertNotFound();
+});
+
+test('an editor left open across a swap to a new era cannot save, and is told to reload', function () {
+    $shared = makeSharedTree(['game_patch' => olderEraPatch()]);
+
+    $this->withSession([$shared->unlockSessionKey() => $shared->edit_token])
+        ->put(route('shared.update', ['sharedTree' => $shared->slug]), shareableBuild(['allocated' => [4, 16]]))
+        ->assertSessionHasErrors(['gamePatch' => LiveGameEra::MESSAGE]);
+
+    expect($shared->fresh()->build->allocation->allocated)->toBe([4, 16, 30]);
 });

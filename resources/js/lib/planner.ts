@@ -192,7 +192,17 @@ export interface PlanDraft {
      * Optional: drafts written before this field existed must still load.
      */
     ascendancyName?: string | null;
+    /**
+     * The game era the draft was written on. A draft from another era is dropped
+     * on load: its items, gems and tree belong to a different game's data.
+     *
+     * Optional: drafts written before this field existed count as {@link PRE_ERA_DRAFT_ERA}.
+     */
+    gameEra?: string | null;
 }
+
+/** The era every draft written before drafts carried one was made on. */
+const PRE_ERA_DRAFT_ERA = '0.5';
 
 /** localStorage key for a plan's draft: per-slug when editing, a shared key for a
  *  brand-new plan (which has no slug yet). */
@@ -255,11 +265,21 @@ function isPlanDraft(value: unknown): value is PlanDraft {
         // constrained - a missing one restores as "no resolved name".
         (value.ascendancyName === undefined ||
             value.ascendancyName === null ||
-            typeof value.ascendancyName === 'string')
+            typeof value.ascendancyName === 'string') &&
+        (value.gameEra === undefined ||
+            value.gameEra === null ||
+            typeof value.gameEra === 'string')
     );
 }
 
-export function loadDraft(key: string): PlanDraft | null {
+/**
+ * Read a draft back, or null when there is none, it lost its shape, or it was
+ * written on a different game era than the one the editor now runs on.
+ */
+export function loadDraft(
+    key: string,
+    gameEra: string | null,
+): PlanDraft | null {
     if (typeof window === 'undefined') {
         return null;
     }
@@ -273,7 +293,13 @@ export function loadDraft(key: string): PlanDraft | null {
 
         const parsed: unknown = JSON.parse(raw);
 
-        return isPlanDraft(parsed) ? parsed : null;
+        if (!isPlanDraft(parsed)) {
+            return null;
+        }
+
+        return (parsed.gameEra ?? PRE_ERA_DRAFT_ERA) === gameEra
+            ? parsed
+            : null;
     } catch {
         return null;
     }

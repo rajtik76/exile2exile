@@ -19,7 +19,11 @@ use Illuminate\Support\Facades\File;
  */
 final class PobUniqueStore
 {
-    private function path(): string
+    /**
+     * The live snapshot's file, also read by {@see GameDataReleases} to freeze it
+     * alongside the release of a game era that is ending.
+     */
+    public function path(): string
     {
         return rtrim(config()->string('poe.pob_uniques.storage_path'), '/').'/current.json';
     }

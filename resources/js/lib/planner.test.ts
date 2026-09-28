@@ -263,17 +263,17 @@ describe('drafts', () => {
         const key = draftKeyFor('slug');
 
         saveDraft(key, draft);
-        expect(loadDraft(key)).toEqual(draft);
+        expect(loadDraft(key, '0.5')).toEqual(draft);
 
         clearDraft(key);
-        expect(loadDraft(key)).toBeNull();
+        expect(loadDraft(key, '0.5')).toBeNull();
     });
 
     test('returns null for a missing or corrupt draft', () => {
-        expect(loadDraft('planner-draft:none')).toBeNull();
+        expect(loadDraft('planner-draft:none', '0.5')).toBeNull();
 
         window.localStorage.setItem('planner-draft:bad', '{not json');
-        expect(loadDraft('planner-draft:bad')).toBeNull();
+        expect(loadDraft('planner-draft:bad', '0.5')).toBeNull();
     });
 
     test('carries the resolved ascendancy name across a refresh', () => {
@@ -294,7 +294,7 @@ describe('drafts', () => {
 
         saveDraft(key, draft);
 
-        expect(loadDraft(key)?.ascendancyName).toBe('Witchhunter');
+        expect(loadDraft(key, '0.5')?.ascendancyName).toBe('Witchhunter');
     });
 
     test('accepts a draft written before the ascendancy name was stored', () => {
@@ -314,11 +314,52 @@ describe('drafts', () => {
             JSON.stringify(legacy),
         );
 
-        const restored = loadDraft('planner-draft:new');
+        const restored = loadDraft('planner-draft:new', '0.5');
 
         expect(restored).not.toBeNull();
         expect(restored?.title).toBe('Older draft');
         expect(restored?.ascendancyName).toBeUndefined();
+    });
+
+    test('drops a draft written on another game era', () => {
+        // Its items, gems and tree belong to that era's data, so restoring it into an
+        // editor running on the next era's tree would carry nodes that no longer exist.
+        const draft: PlanDraft = {
+            title: 'Old era',
+            description: '',
+            mode: 'single',
+            build: emptyBuild(),
+            tabs: [],
+            sections: {},
+            activeTabId: SINGLE_KEY,
+            gameEra: '0.5',
+        };
+        const key = draftKeyFor(null);
+
+        saveDraft(key, draft);
+
+        expect(loadDraft(key, '0.5')).toEqual(draft);
+        expect(loadDraft(key, '1.0')).toBeNull();
+    });
+
+    test('treats a draft written before drafts carried an era as a 0.5 draft', () => {
+        window.localStorage.setItem(
+            'planner-draft:new',
+            JSON.stringify({
+                title: 'Pre-era draft',
+                description: '',
+                mode: 'single',
+                build: emptyBuild(),
+                tabs: [],
+                sections: {},
+                activeTabId: SINGLE_KEY,
+            }),
+        );
+
+        expect(loadDraft('planner-draft:new', '0.5')?.title).toBe(
+            'Pre-era draft',
+        );
+        expect(loadDraft('planner-draft:new', '1.0')).toBeNull();
     });
 
     test('round-trips a draft with populated sections', () => {
@@ -334,7 +375,7 @@ describe('drafts', () => {
         const key = draftKeyFor('full');
 
         saveDraft(key, draft);
-        expect(loadDraft(key)).toEqual(draft);
+        expect(loadDraft(key, '0.5')).toEqual(draft);
     });
 
     test('drops a draft whose shape no longer matches', () => {
@@ -342,7 +383,7 @@ describe('drafts', () => {
 
         // Valid JSON, wrong shape: a pre-schema-change or hand-edited value.
         window.localStorage.setItem(key, JSON.stringify({ title: 'x' }));
-        expect(loadDraft(key)).toBeNull();
+        expect(loadDraft(key, '0.5')).toBeNull();
 
         window.localStorage.setItem(
             key,
@@ -356,7 +397,7 @@ describe('drafts', () => {
                 activeTabId: SINGLE_KEY,
             }),
         );
-        expect(loadDraft(key)).toBeNull();
+        expect(loadDraft(key, '0.5')).toBeNull();
     });
 
     test('drops a draft carrying a malformed section group', () => {
@@ -381,6 +422,6 @@ describe('drafts', () => {
                 activeTabId: SINGLE_KEY,
             }),
         );
-        expect(loadDraft(key)).toBeNull();
+        expect(loadDraft(key, '0.5')).toBeNull();
     });
 });

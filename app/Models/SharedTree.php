@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Http\Controllers\SharedTreeController;
+use App\Support\GameEra;
 use App\Tree\TreeSnapshot;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
@@ -22,6 +23,7 @@ use Illuminate\Support\Carbon;
  * read-only (see {@see SharedTreeController}).
  *
  * @property string $slug
+ * @property string $game_patch
  * @property string|null $hash
  * @property string|null $edit_token
  * @property TreeSnapshot $build
@@ -49,6 +51,37 @@ use Illuminate\Support\Carbon;
 class SharedTree extends Model
 {
     /**
+     * Stamp a new tree with the raw patch of the live game data it was made on,
+     * read on the server, unless the caller set one explicitly. An edit re-stamps it
+     * the same way (see the controller's update).
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $tree): void {
+            $tree->game_patch ??= app(GameEra::class)->livePatchOrFail();
+        });
+    }
+
+    /**
+     * The game era this tree belongs to, derived from its patch through poe.eras,
+     * or null when the map no longer covers that patch.
+     */
+    public function gameEra(): ?string
+    {
+        return app(GameEra::class)->forPatch($this->game_patch);
+    }
+
+    /**
+     * Whether this tree was made on the live era's data. One from an older (or an
+     * unmapped) era is read-only: the live tree it would be drawn and edited over is
+     * a different game.
+     */
+    public function isFromCurrentEra(): bool
+    {
+        return app(GameEra::class)->isLive($this->game_patch);
+    }
+
+    /**
      * Resolve route-model bindings by the public slug, not the numeric id.
      */
     #[\Override]
@@ -62,6 +95,7 @@ class SharedTree extends Model
      */
     protected $fillable = [
         'slug',
+        'game_patch',
         'hash',
         'edit_token',
         'build',

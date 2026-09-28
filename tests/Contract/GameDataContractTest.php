@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Pob\GameData\GameDataStore;
 use App\Pob\IconResolver;
+use App\Support\GameEra;
+use App\Support\TreeDataVersion;
 use App\Tree\TreeIndex;
 use Illuminate\Support\Facades\Storage;
 
@@ -21,6 +23,15 @@ function gameData(string $path): array
 
     return json_decode((string) $raw, true);
 }
+
+it('serves data that belongs to a configured game era', function () {
+    // Every build saved on this data is stamped with its era, so a patch whose
+    // prefix is missing from poe.eras must not go live. Map it by hand first.
+    $patch = app(TreeDataVersion::class)->current();
+
+    expect(app(GameEra::class)->forPatch($patch))
+        ->not->toBeNull("patch {$patch} belongs to no game era; add its prefix to poe.eras");
+});
 
 it('publishes a passive tree with nodes and classes', function () {
     $data = gameData('public/tree/current/data.json');

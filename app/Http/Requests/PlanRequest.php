@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
+use App\Rules\LiveGameEra;
 use App\Support\Planner\PlanItemSchema;
 use App\Support\Planner\PlanSchema;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -37,6 +38,10 @@ abstract class PlanRequest extends FormRequest
             'title' => ['required', 'string', 'max:120'],
             'description' => ['required', 'string', 'max:20000'],
             'mode' => ['required', 'string', 'in:'.implode(',', PlanSchema::MODES)],
+            // The patch the editor loaded its data with, checked against the live era
+            // and never stored. Optional only so a tab opened before the field existed
+            // can still save; when sent it must belong to the live era.
+            'gamePatch' => ['nullable', 'string', 'max:32', new LiveGameEra],
 
             // Build-level class + ascendancy (one per plan) for the visual tree.
             'build' => ['nullable', 'array'],

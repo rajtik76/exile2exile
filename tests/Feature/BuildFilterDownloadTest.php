@@ -83,3 +83,9 @@ test('a build filter works even with no economy data', function () {
     $this->get(route('filter.build', ['plan' => 'demobuild']))
         ->assertOk();
 });
+
+test('a plan from an older game era has no build filter', function () {
+    seedBuild()->forceFill(['game_patch' => olderEraPatch()])->save();
+
+    $this->get(route('filter.build', ['plan' => 'demobuild']))->assertNotFound();
+});

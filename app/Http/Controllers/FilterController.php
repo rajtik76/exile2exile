@@ -79,10 +79,14 @@ class FilterController extends Controller
 
     /**
      * Stream a build's own filter: the NeverSink base with the app's economy highlights and
-     * the build-aware overlay (bases and mods the build wants) prepended.
+     * the build-aware overlay (bases and mods the build wants) prepended. A plan from an
+     * older game era has none: its bases and mods belong to that era's data, not the live
+     * catalogues the overlay is built from.
      */
     public function build(Request $request, BuildPlan $plan, NeversinkFilterRepository $repo, EconomyFilterBuilder $economy, BuildFilterBuilder $buildAware): Response
     {
+        abort_unless($plan->isFromCurrentEra(), 404);
+
         $style = $this->resolveStyle($request->query('theme'));
         $strictness = $this->resolveStrictness($request->query('strictness'));
         $league = $this->resolveLeague($request->query('league'));

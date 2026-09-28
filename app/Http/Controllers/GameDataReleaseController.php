@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\GameDataReleases;
+use App\Support\GameEra;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -46,7 +47,7 @@ class GameDataReleaseController extends Controller
         return response($checksum, 200, ['Content-Type' => 'text/plain']);
     }
 
-    public function activate(Request $request, GameDataReleases $releases): JsonResponse
+    public function activate(Request $request, GameDataReleases $releases, GameEra $eras): JsonResponse
     {
         $token = config()->string('poe.data.activate_token', '');
 
@@ -62,6 +63,10 @@ class GameDataReleaseController extends Controller
         }
 
         abort_unless($releases->has($version), 404, "Release {$version} is not staged.");
+
+        // An era change is a human call: a patch with no mapping in poe.eras stays
+        // staged until someone maps it, however green its Contract run was.
+        abort_if($eras->forPatch($version) === null, 409, "Release {$version} belongs to no configured game era.");
 
         $releases->activate($version);
         $releases->prune();

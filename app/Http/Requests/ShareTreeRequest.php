@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Pob\Reference\BuildReference;
+use App\Rules\LiveGameEra;
 use App\Tree\TreeAllocation;
 use App\Tree\TreeSnapshot;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -44,6 +45,10 @@ class ShareTreeRequest extends FormRequest
             'allocated' => ['required', 'array', 'max:'.self::MAX_NODES],
             'allocated.*' => ['integer'],
             'treeVersion' => ['nullable', 'string', 'max:20'],
+            // The patch the editor loaded its data with, checked against the live era
+            // and never stored. Optional only so a tab opened before the field existed
+            // can still save; when sent it must belong to the live era.
+            'gamePatch' => ['nullable', 'string', 'max:32', new LiveGameEra],
             // Node id -> chosen attribute, for generic +attribute nodes.
             'attributeChoices' => ['nullable', 'array', 'max:'.self::MAX_NODES],
             'attributeChoices.*' => ['in:str,dex,int'],

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\GameEra;
 use App\Support\Poe2PatchStatus;
 use App\Support\TreeDataVersion;
 use Illuminate\Http\Request;
@@ -52,6 +53,9 @@ class HandleInertiaRequests extends Middleware
             // The patch the app's own committed data was built from. Request-only
             // (never polled): it only moves when a data refresh ships a new build.
             'dataVersion' => app(TreeDataVersion::class)->current(),
+            // The game era of that data (poe.eras). Editors send it back on save, so a
+            // tab opened before a swap to a new era can't stamp an old-era build as new.
+            'gameEra' => app(GameEra::class)->current(),
         ];
     }
 }

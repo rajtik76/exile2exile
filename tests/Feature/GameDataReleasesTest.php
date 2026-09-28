@@ -54,6 +54,72 @@ test('a release stamped with a different patch does not count as staged', functi
     expect(app(GameDataReleases::class)->has('4.5.5.0'))->toBeFalse();
 });
 
+test('activation refuses a release whose patch belongs to no configured game era', function () {
+    fakeGameDataRoot();
+    fakeGameDataRelease('4.5.5.0');
+    fakeGameDataRelease('5.0.0.1');
+    $releases = app(GameDataReleases::class);
+    $releases->activate('4.5.5.0');
+
+    expect(fn () => $releases->activate('5.0.0.1'))->toThrow(RuntimeException::class, 'no configured game era')
+        ->and($releases->currentVersion())->toBe('4.5.5.0');
+});
+
+test('activating a release of a new era freezes the outgoing one by its patch, which pruning then leaves alone', function () {
+    $root = fakeGameDataRoot();
+    $uniques = fakePobUniquesRoot();
+    config()->set('poe.eras', ['4.5' => '0.5', '5.0' => '1.0']);
+    config()->set('poe.data.keep_releases', 0);
+    fakeGameDataRelease('4.5.5.0');
+    fakeGameDataRelease('5.0.0.1');
+    File::ensureDirectoryExists($uniques);
+    File::put("{$uniques}/current.json", '{"uniques":{}}');
+    $releases = app(GameDataReleases::class);
+    $releases->activate('4.5.5.0');
+
+    $releases->activate('5.0.0.1');
+    $releases->prune();
+
+    $archived = "{$root}/archive/4.5.5.0/public/tree/current/version.json";
+
+    expect($releases->currentVersion())->toBe('5.0.0.1')
+        ->and($releases->has('4.5.5.0'))->toBeFalse()
+        ->and($releases->archivedVersions())->toBe(['4.5.5.0'])
+        ->and(json_decode((string) File::get($archived), true)['patch'])->toBe('4.5.5.0')
+        ->and(File::get("{$root}/archive/4.5.5.0/pob-uniques/current.json"))->toBe('{"uniques":{}}');
+});
+
+test('an era keeps a single archive: freezing it again replaces the older one', function () {
+    fakeGameDataRoot();
+    config()->set('poe.eras', ['4.5' => '0.5', '5.0' => '1.0']);
+    foreach (['4.5.5.0', '4.5.5.1', '5.0.0.1', '5.0.0.2'] as $version) {
+        fakeGameDataRelease($version);
+    }
+    $releases = app(GameDataReleases::class);
+
+    // 0.5 -> 1.0, a rollback onto a newer 0.5 release, then 1.0 again.
+    $releases->activate('4.5.5.0');
+    $releases->activate('5.0.0.1');
+    $releases->activate('4.5.5.1');
+    $releases->activate('5.0.0.2');
+
+    // 0.5 is frozen once, as the last release that was live in it; 1.0 was frozen by
+    // the rollback and stays the only 1.0 archive.
+    expect($releases->archivedVersions())->toBe(['4.5.5.1', '5.0.0.1']);
+});
+
+test('activating a release of the same era freezes nothing', function () {
+    $root = fakeGameDataRoot();
+    fakeGameDataRelease('4.5.4.0');
+    fakeGameDataRelease('4.5.5.0');
+    $releases = app(GameDataReleases::class);
+    $releases->activate('4.5.4.0');
+
+    $releases->activate('4.5.5.0');
+
+    expect(File::exists("{$root}/archive"))->toBeFalse();
+});
+
 test('pruning keeps the live release plus the newest rollback targets', function () {
     fakeGameDataRoot();
     config()->set('poe.data.keep_releases', 1);
@@ -213,6 +279,17 @@ test('activation rejects a malformed version', function () {
 
     $this->postJson('/api/data/activate', ['version' => '../evil'], activateHeaders())
         ->assertStatus(422);
+});
+
+test('activation over the api leaves a release of an unmapped era staged', function () {
+    config()->set('poe.data.activate_token', 'secret-token');
+    fakeGameDataRoot();
+    fakeGameDataRelease('5.0.0.1');
+
+    $this->postJson('/api/data/activate', ['version' => '5.0.0.1'], activateHeaders())
+        ->assertStatus(409);
+
+    expect(app(GameDataReleases::class)->currentVersion())->toBeNull();
 });
 
 test('activation 404s for a version that is not staged', function () {

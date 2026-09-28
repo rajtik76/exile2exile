@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Http\Controllers\PlannerController;
+use App\Support\GameEra;
 use App\Support\Planner\PlanSchema;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
@@ -20,6 +21,7 @@ use Illuminate\Support\Carbon;
  * with the secret {@see $edit_token}: there are no accounts (see {@see PlannerController}).
  *
  * @property string $slug
+ * @property string $game_patch
  * @property string $edit_token
  * @property string $title
  * @property int $schema_version
@@ -47,6 +49,37 @@ use Illuminate\Support\Carbon;
 class BuildPlan extends Model
 {
     /**
+     * Stamp a new plan with the raw patch of the live game data it was made on,
+     * read on the server, unless the caller set one explicitly. An edit re-stamps it
+     * the same way (see the controller's update).
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $plan): void {
+            $plan->game_patch ??= app(GameEra::class)->livePatchOrFail();
+        });
+    }
+
+    /**
+     * The game era this plan belongs to, derived from its patch through poe.eras,
+     * or null when the map no longer covers that patch.
+     */
+    public function gameEra(): ?string
+    {
+        return app(GameEra::class)->forPatch($this->game_patch);
+    }
+
+    /**
+     * Whether this plan was made on the live era's data. One from an older (or an
+     * unmapped) era is read-only: the live tree it would be drawn and edited over is
+     * a different game.
+     */
+    public function isFromCurrentEra(): bool
+    {
+        return app(GameEra::class)->isLive($this->game_patch);
+    }
+
+    /**
      * Resolve route-model bindings by the public slug, not the numeric id.
      */
     #[\Override]
@@ -60,6 +93,7 @@ class BuildPlan extends Model
      */
     protected $fillable = [
         'slug',
+        'game_patch',
         'edit_token',
         'title',
         'schema_version',

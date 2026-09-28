@@ -12,6 +12,7 @@ import type {
 } from '@poe2-toolkit/tree-core';
 import { useMemo, useState } from 'react';
 import { resolveClassId } from '@/lib/classCatalog';
+import { useLoadedGameData } from '@/lib/gameEra';
 import { isNumberArray, isRecord } from '@/lib/guards';
 import shared from '@/routes/shared';
 import type { TreeSnapshot } from '@/types/tree';
@@ -90,6 +91,7 @@ export function usePlannerState(
     // screen has drifted from its saved copy.
     const [lastSaved, setLastSaved] = useState<BuildAllocation | null>(null);
     const [saving, setSaving] = useState(false);
+    const { patch: gamePatch } = useLoadedGameData();
     const [saved, setSaved] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -301,7 +303,12 @@ export function usePlannerState(
             weaponSets: savedAllocation.weaponSets ?? {},
             jewels: savedAllocation.jewels ?? {},
             treeVersion: savedAllocation.treeVersion ?? null,
-        } satisfies TreeSnapshot as unknown as RequestPayload;
+            // The patch this tree was loaded with, so a save from a tab opened
+            // before the data moved to a new era is refused, not mis-stamped.
+            gamePatch,
+        } satisfies TreeSnapshot & {
+            gamePatch: string | null;
+        } as unknown as RequestPayload;
 
         setSaveError(null);
         setSaving(true);

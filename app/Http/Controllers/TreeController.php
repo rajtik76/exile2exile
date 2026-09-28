@@ -20,15 +20,16 @@ class TreeController extends Controller
      * The passive-tree planner. With `?from={slug}` it opens seeded with a shared
      * build's allocation, handed in as `initialBuild` so the editable planner can
      * adopt it as a snapshot - the tree only, no gems or items, since a shared
-     * build carries no gear. An unknown slug is ignored and the planner opens empty.
+     * build carries no gear. An unknown slug is ignored and the planner opens empty,
+     * and so is a tree from an older game era: its nodes belong to that era's tree,
+     * and saving it here would stamp the old allocation with the live era.
      */
     public function index(Request $request): Response
     {
         $from = $request->query('from');
 
-        $initialBuild = is_string($from)
-            ? SharedTree::where('slug', $from)->value('build')
-            : null;
+        $seed = is_string($from) ? SharedTree::where('slug', $from)->first() : null;
+        $initialBuild = $seed?->isFromCurrentEra() === true ? $seed->build : null;
 
         return Inertia::render('tree', [
             'mode' => 'create',

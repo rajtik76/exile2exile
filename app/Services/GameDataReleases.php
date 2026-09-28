@@ -2,9 +2,15 @@
 
 namespace App\Services;
 
+use App\Pob\Uniques\PobUniqueStore;
+use App\Support\GameEra;
+use FilesystemIterator;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use RuntimeException;
+use SplFileInfo;
 
 /**
  * The on-disk store of extracted game-data releases and the "current" pointer.
@@ -16,6 +22,11 @@ use RuntimeException;
  *                                   public/icons/poe2, resources/poe2/ggpk)
  *   releases/<version>.tar.gz       the same release packed for CI to download
  *   current -> releases/<version>   the live release, swapped atomically
+ *   archive/<version>/              the last live release of a finished game era,
+ *                                   frozen (with the PoB unique mods) when a
+ *                                   release of the next era is activated. Named
+ *                                   by patch, so its era is derived like a
+ *                                   build's; one archive per era, never pruned
  *
  * The app's own public/tree/current, public/icons/poe2 and resources/poe2/ggpk
  * are static symlinks through `current`, so one rename() flips all three at
@@ -25,6 +36,11 @@ class GameDataReleases
 {
     /** How long a staging directory may sit untouched before it counts as abandoned. */
     private const int STALE_STAGING_HOURS = 24;
+
+    public function __construct(
+        private readonly GameEra $eras,
+        private readonly PobUniqueStore $uniques,
+    ) {}
 
     /**
      * Accepts dotted patch versions like "4.5.4.3". Also the path-safety gate:
@@ -57,6 +73,24 @@ class GameDataReleases
         return $this->releasePath($version).'.tar.gz';
     }
 
+    /** Where the frozen release of a finished game era lives, named by its patch. */
+    public function archivePath(string $version): string
+    {
+        return $this->root()."/archive/{$version}";
+    }
+
+    /**
+     * The archived releases, as patch versions.
+     *
+     * @return list<string>
+     */
+    public function archivedVersions(): array
+    {
+        $versions = array_map(basename(...), glob($this->root().'/archive/*', GLOB_ONLYDIR) ?: []);
+
+        return array_values(array_filter($versions, self::isValidVersion(...)));
+    }
+
     public function checksumPath(string $version): string
     {
         return $this->tarballPath($version).'.sha256';
@@ -80,12 +114,24 @@ class GameDataReleases
      * Symlink-then-rename: the new link is created under a temporary name and
      * rename(2) replaces the old one in a single step, so there is never a
      * moment without a valid `current`.
+     *
+     * A release must belong to a configured game era (see `poe.eras`), since every
+     * build saved on it is stamped with that era. When it starts a new era, the
+     * outgoing release is frozen first, so the builds of the ending era keep their data.
      */
     public function activate(string $version): void
     {
         if (! $this->has($version)) {
             throw new RuntimeException("release {$version} is not staged");
         }
+
+        $era = $this->eras->forPatch($version);
+
+        if ($era === null) {
+            throw new RuntimeException("release {$version} belongs to no configured game era");
+        }
+
+        $this->freezeOutgoingEra($era);
 
         $tmp = $this->currentLink().'.'.bin2hex(random_bytes(4));
 
@@ -229,6 +275,76 @@ class GameDataReleases
         }
 
         return $removed;
+    }
+
+    /**
+     * Freeze the live release under archive/<version> when the release about to go
+     * live belongs to a different era. The copy is hard-linked, so it costs next to
+     * no disk while the release itself is still kept, and it survives the release
+     * being pruned later. The PoB unique mods ride along, since they sit outside
+     * releases.
+     *
+     * One archive per era: any other archive whose patch belongs to the same era is
+     * removed once the new one is in place, so the store never piles up archives and
+     * an era always keeps the last release that was live in it - even after a
+     * rollback across eras.
+     */
+    private function freezeOutgoingEra(string $incomingEra): void
+    {
+        $current = $this->currentVersion();
+        $outgoingEra = $this->eras->forPatch($current);
+
+        if ($current === null || $outgoingEra === null || $outgoingEra === $incomingEra) {
+            return;
+        }
+
+        $target = $this->archivePath($current);
+        $staging = $target.'.staging';
+
+        File::deleteDirectory($staging);
+        $this->linkTree($this->releasePath($current), $staging);
+
+        if (is_file($this->uniques->path())) {
+            File::ensureDirectoryExists($staging.'/pob-uniques');
+            File::copy($this->uniques->path(), $staging.'/pob-uniques/current.json');
+        }
+
+        File::deleteDirectory($target);
+
+        if (! @rename($staging, $target)) {
+            throw new RuntimeException("could not freeze release {$current} of era {$outgoingEra}");
+        }
+
+        foreach ($this->archivedVersions() as $version) {
+            if ($version !== $current && $this->eras->forPatch($version) === $outgoingEra) {
+                File::deleteDirectory($this->archivePath($version));
+            }
+        }
+    }
+
+    /**
+     * Mirror a directory tree with hard links, falling back to a copy for a file
+     * that cannot be linked (e.g. a different filesystem).
+     */
+    private function linkTree(string $source, string $target): void
+    {
+        File::ensureDirectoryExists($target);
+
+        $items = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST,
+        );
+
+        /** @var SplFileInfo $item */
+        foreach ($items as $item) {
+            $destination = $target.'/'.substr($item->getPathname(), strlen($source) + 1);
+
+            if ($item->isDir()) {
+                File::ensureDirectoryExists($destination);
+            } elseif (! @link($item->getPathname(), $destination) && ! @copy($item->getPathname(), $destination)) {
+                throw new RuntimeException("could not freeze {$item->getPathname()}");
+            }
+        }
     }
 
     private function currentLink(): string

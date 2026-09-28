@@ -27,6 +27,9 @@ use Illuminate\Console\Command;
  * Idempotent: a stat that already carries a `text` key is left untouched, so running
  * this twice (or over a database with a mix of old and already-migrated plans) is safe.
  *
+ * Only plans of the live game era are touched: the catalogue it freezes from is that
+ * era's, so an older era's plan would be rewritten with a different game's mods.
+ *
  * Never run against production without approval - see the project's CLAUDE.md.
  */
 #[Signature('planner:migrate-stat-snapshots {--dry-run : Report what would change without saving}')]
@@ -43,6 +46,11 @@ class MigrateBuildPlanStatSnapshots extends Command
         BuildPlan::query()->orderBy('id')->chunkById(50, function ($plans) use ($catalogue, $dryRun, &$plansChanged, &$statsFrozen, &$statsDropped): void {
             foreach ($plans as $plan) {
                 /** @var BuildPlan $plan */
+                // The era is derived from the stored patch, so it can't be a SQL filter.
+                if (! $plan->isFromCurrentEra()) {
+                    continue;
+                }
+
                 $data = $plan->data;
                 $sections = is_array($data['sections'] ?? null) ? $data['sections'] : [];
                 $changed = false;

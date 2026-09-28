@@ -9,6 +9,8 @@ use App\Http\Requests\ShareTreeRequest;
 use App\Http\Requests\UpdateSharedTreeRequest;
 use App\Http\Resources\TreeSummaryResource;
 use App\Models\SharedTree;
+use App\Support\ArchivedBuild;
+use App\Support\GameEra;
 use App\Tree\TreeSummary;
 use App\Tree\TreeSummaryBuilder;
 use Illuminate\Contracts\Cache\Repository as Cache;
@@ -19,6 +21,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
  * Shared passive trees: a guest saves an allocation under a public slug (/t/{slug})
@@ -87,12 +90,18 @@ class SharedTreeController extends Controller
      * plate over a full-screen, non-editable passive tree. The slug resolves the
      * row through route-model binding; an unknown slug 404s.
      */
-    public function show(SharedTree $sharedTree, TreeSummaryBuilder $builder, Cache $cache): Response
+    public function show(SharedTree $sharedTree, TreeSummaryBuilder $builder, Cache $cache, ArchivedBuild $archived): Response|HttpResponse
     {
         // Record the visit so a future cleanup can prune links nobody opens.
         // forceFill + saveQuietly leaves `updated_at` untouched - viewing mutates
         // nothing else, and no model events need to fire on a view.
         $sharedTree->forceFill(['last_viewed_at' => now()])->saveQuietly();
+
+        if (! $sharedTree->isFromCurrentEra()) {
+            $className = $sharedTree->build->className;
+
+            return $archived->render('tree', $sharedTree->slug, "{$className} passive tree", $className, $sharedTree->game_patch);
+        }
 
         // Resolve once and cache; the JSON endpoint shares this exact entry, so a
         // build is built at most once however it is first opened, then served from
@@ -131,11 +140,12 @@ class SharedTreeController extends Controller
      * The editor for an existing shared tree. Reachable only once the session has
      * been unlocked with the secret token (via {@see unlock()}); otherwise it shows
      * the unlock form instead of the editor, so the public slug alone can't reach it.
-     * Legacy token-less rows have no editor at all and bounce to the viewer.
+     * Legacy token-less rows and trees from an older game era have no editor at all
+     * and bounce to the viewer.
      */
     public function edit(SharedTree $sharedTree, Request $request): Response|RedirectResponse
     {
-        if (! $sharedTree->isEditable()) {
+        if (! $sharedTree->isEditable() || ! $sharedTree->isFromCurrentEra()) {
             return to_route('shared.show', ['sharedTree' => $sharedTree->slug]);
         }
 
@@ -162,7 +172,7 @@ class SharedTreeController extends Controller
      */
     public function unlock(SharedTree $sharedTree, Request $request): RedirectResponse
     {
-        abort_unless($sharedTree->isEditable(), 404);
+        abort_unless($sharedTree->isEditable() && $sharedTree->isFromCurrentEra(), 404);
 
         $validated = $request->validate([
             'token' => ['required', 'string'],
@@ -199,9 +209,10 @@ class SharedTreeController extends Controller
      * same checks a fresh share passes. The forever-cached resolved document is dropped
      * so the viewer and JSON endpoint re-resolve the edited tree.
      */
-    public function update(SharedTree $sharedTree, UpdateSharedTreeRequest $request, Cache $cache): RedirectResponse
+    public function update(SharedTree $sharedTree, UpdateSharedTreeRequest $request, Cache $cache, GameEra $eras): RedirectResponse
     {
-        $sharedTree->update(['build' => $request->build()]);
+        // Re-stamped with the live patch read here, never one the client sent.
+        $sharedTree->update(['build' => $request->build(), 'game_patch' => $eras->livePatchOrFail()]);
 
         $cache->forget($this->summaryKey($sharedTree->slug));
 
@@ -256,11 +267,23 @@ class SharedTreeController extends Controller
         $data = $cache->get($this->summaryKey($slug));
 
         if ($data === null) {
-            $build = SharedTree::where('slug', $slug)->value('build');
+            $sharedTree = SharedTree::where('slug', $slug)->firstOrFail();
 
-            abort_if($build === null, 404);
+            // Resolving it would name nodes from the live era's tree, not its own.
+            if (! $sharedTree->isFromCurrentEra()) {
+                $era = $sharedTree->gameEra();
 
-            $data = $builder->build($build)->toArray();
+                return response()->json([
+                    'schemaVersion' => 1,
+                    'game' => 'poe2',
+                    'gameEra' => $era,
+                    'gamePatch' => $sharedTree->game_patch,
+                    'archived' => true,
+                    'class' => $sharedTree->build->className,
+                ], $era === null ? 500 : 200);
+            }
+
+            $data = $builder->build($sharedTree->build)->toArray();
 
             $cache->forever($this->summaryKey($slug), $data);
         }

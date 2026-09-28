@@ -2,6 +2,8 @@
 
 use App\Models\BuildPlan;
 use App\Pob\Uniques\PobUniqueStore;
+use App\Rules\LiveGameEra;
+use App\Support\GameEra;
 use App\Support\Planner\PlanSchema;
 use Inertia\Testing\AssertableInertia;
 
@@ -1265,4 +1267,84 @@ test('deleting hard-locks after three wrong tokens', function () {
         ->assertSessionHasErrors('token');
 
     expect(BuildPlan::count())->toBe(1);
+});
+
+/*
+ * Game eras - a plan stores the live patch it was last saved on, its era is derived
+ * from that patch, and one from another era is read-only and never resolved against
+ * the live era's catalogues.
+ */
+
+test('storing a plan stamps it with the live patch read on the server', function () {
+    $livePatch = app(GameEra::class)->livePatch();
+
+    $this->post(route('planner.store'), planPayload(['gamePatch' => $livePatch]))->assertRedirect();
+
+    expect(BuildPlan::sole()->game_patch)->toBe($livePatch);
+});
+
+test('an edit re-stamps the plan with the live patch, never one the client sent', function () {
+    $plan = makePlan(['game_patch' => '4.5.0.1']);
+
+    $this->withSession([$plan->unlockSessionKey() => $plan->edit_token])
+        ->put(route('planner.update', ['plan' => $plan->slug]), planPayload(['gamePatch' => '4.5.9.9']))
+        ->assertRedirect();
+
+    expect($plan->fresh()->game_patch)->toBe(app(GameEra::class)->livePatch());
+});
+
+test('a save from an editor loaded on an older game era is rejected without saving', function () {
+    $this->post(route('planner.store'), planPayload(['gamePatch' => olderEraPatch()]))
+        ->assertSessionHasErrors('gamePatch');
+
+    expect(BuildPlan::count())->toBe(0);
+});
+
+test('a plan from an older game era renders the archived viewer with its era and name, not the live one', function () {
+    config()->set('poe.eras', ['4.4' => ['era' => '0.4', 'name' => 'The Last of the Druids'], '4.5' => '0.5']);
+    $plan = makePlan(['game_patch' => '4.4.3.1', 'title' => 'Old Freeze Witch']);
+
+    $this->get(route('planner.show', $plan))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('archived-build')
+            ->where('kind', 'plan')
+            ->where('title', 'Old Freeze Witch')
+            ->where('gameEra', '0.4')
+            ->where('eraName', 'The Last of the Druids')
+            ->missing('references')
+        );
+});
+
+test('a plan whose patch belongs to no game era shows an error page instead', function () {
+    $plan = makePlan(['game_patch' => '9.9.0.1']);
+
+    $this->get(route('planner.show', $plan))
+        ->assertStatus(500)
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('archived-build')
+            ->where('gameEra', null)
+            ->where('gamePatch', '9.9.0.1')
+        );
+});
+
+test('a plan from an older game era has no editor, even for an unlocked session', function () {
+    $plan = makePlan(['game_patch' => olderEraPatch()]);
+
+    $this->withSession([$plan->unlockSessionKey() => $plan->edit_token])
+        ->get(route('planner.edit', ['plan' => $plan->slug]))
+        ->assertRedirect(route('planner.show', ['plan' => $plan->slug]));
+
+    $this->post(route('planner.unlock', ['plan' => $plan->slug]), ['token' => $plan->edit_token])
+        ->assertNotFound();
+});
+
+test('an editor left open across a swap to a new era cannot save, and is told to reload', function () {
+    $plan = makePlan(['game_patch' => olderEraPatch(), 'title' => 'Original']);
+
+    $this->withSession([$plan->unlockSessionKey() => $plan->edit_token])
+        ->put(route('planner.update', ['plan' => $plan->slug]), planPayload(['title' => 'Renamed']))
+        ->assertSessionHasErrors(['gamePatch' => LiveGameEra::MESSAGE]);
+
+    expect($plan->fresh()->title)->toBe('Original');
 });

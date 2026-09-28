@@ -35,6 +35,10 @@ vi.mock('@inertiajs/react', () => ({
     router: routerMock,
 }));
 
+vi.mock('@/lib/gameEra', () => ({
+    useLoadedGameData: () => ({ patch: '4.5.5.4', era: '0.5' }),
+}));
+
 // Resolve a class name to the live id, the same join classCatalog does, but
 // without dragging the portrait-sheet asset imports into the test.
 vi.mock('@/lib/classCatalog', () => ({
@@ -278,6 +282,7 @@ describe('usePlannerState', () => {
         expect(payload).toMatchObject({
             className: 'Warrior',
             allocated: [100],
+            gamePatch: '4.5.5.4',
         });
         expect(routerMock.put).not.toHaveBeenCalled();
     });

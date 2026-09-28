@@ -1,10 +1,12 @@
 <?php
 
+use App\Jobs\SendDiscordUnmappedEraNotification;
 use App\Jobs\StageGameData;
 use App\Jobs\TriggerContractRun;
 use App\Services\GameDataReleases;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 
 /*
@@ -44,6 +46,33 @@ test('staging a new version extracts, packs and dispatches CI validation', funct
         ->and($releases->checksum('4.5.5.0'))->not->toBeNull();
 
     Bus::assertDispatched(TriggerContractRun::class, fn ($job) => $job->version === '4.5.5.0');
+});
+
+test('a patch of no configured game era is held before anything is extracted, with one discord notice', function () {
+    fakeGameDataRoot();
+    Process::fake();
+    Bus::fake([TriggerContractRun::class, SendDiscordUnmappedEraNotification::class]);
+    $releases = app(GameDataReleases::class);
+
+    // The watcher nudges a patch that is not live every few hours.
+    new StageGameData('5.0.0.1')->handle($releases);
+    new StageGameData('5.0.0.1')->handle($releases);
+
+    Process::assertNothingRan();
+    expect($releases->has('5.0.0.1'))->toBeFalse();
+    Bus::assertNotDispatched(TriggerContractRun::class);
+    Bus::assertDispatchedTimes(SendDiscordUnmappedEraNotification::class, 1);
+});
+
+test('the unmapped-era discord notice names the patch and what to do', function () {
+    config()->set('services.discord.patch_webhook', 'https://discord.com/api/webhooks/1/abc');
+    Http::fake();
+
+    new SendDiscordUnmappedEraNotification('5.0.0.1')->handle();
+
+    Http::assertSent(fn ($request) => $request->url() === 'https://discord.com/api/webhooks/1/abc'
+        && str_contains($request['embeds'][0]['description'], '**5.0.0.1**')
+        && str_contains($request['embeds'][0]['description'], 'poe.eras'));
 });
 
 test('staging an already-staged version without force skips extraction and reuses the checksum', function () {

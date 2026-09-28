@@ -23,6 +23,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Game eras
+    |--------------------------------------------------------------------------
+    |
+    | Raw GGG patch prefix => the player-facing game era its data belongs to.
+    | Maintained by hand on purpose: GGG's raw build numbering does not map onto
+    | the player-facing version predictably, so an era change is a human call,
+    | never derived. Every saved tree and plan stores the raw patch it was last
+    | saved on and its era is derived through this map, so correcting an entry
+    | re-files every build at once. A release whose patch matches no prefix
+    | here is neither extracted nor activated. Activating a release of a new
+    | era freezes the outgoing one under releases_root/archive/<patch> (one
+    | archive per era), so older builds keep the data of their own era. The
+    | longest matching prefix wins; the last
+    | entry is the newest era. An entry is the bare era label, or
+    | ['era' => ..., 'name' => ...] to carry the name GGG gave the era.
+    |
+    */
+
+    'eras' => [
+        '4.5' => ['era' => '0.5', 'name' => 'Return of the Ancients'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Game-data releases (staged extraction + validated activation)
     |--------------------------------------------------------------------------
     |
