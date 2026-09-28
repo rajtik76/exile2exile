@@ -86,6 +86,9 @@ sequenceDiagram
 
     App->>GGG: poll current version (every 5 min)
     Note over App: new patch detected -> Discord + webhooks
+    opt patch belongs to no game era in poe.eras
+        Note over App: on hold - nothing extracted, one Discord notice
+    end
     App->>App: extract into releases/version (live data untouched)
     App->>App: pack tarball + sha256
     App->>CI: dispatch data-contract.yml (version, sha256)
@@ -129,9 +132,47 @@ How it holds together:
   GGPK extraction even though the version is already staged. Either way it
   still goes through the same CI Contract gate before anything is activated.
 
+### Game eras
+
+A saved tree or build guide only makes sense on the data it was made on. When
+PoE2 moves to a new era (0.5 to 1.0), node ids, items and mods change, and an
+old build drawn over the new tree would show the wrong thing. So every saved
+tree and plan stores the raw GGG patch of the live data it was last saved on,
+read on the server (never taken from the client), and its game era is derived
+from that patch.
+
+- The era comes from a hand-maintained map in [`config/poe.php`](config/poe.php):
+  raw patch prefix => era, optionally with the name GGG gave it, e.g.
+  `'4.5' => ['era' => '0.5', 'name' => 'Return of the Ancients']`. It is never
+  derived from the number alone: GGG's raw build numbering does not map onto
+  the player-facing version predictably, so an era change is a human call.
+  Prefixes need at least `major.minor`; the longest match on whole segments
+  wins. Since builds store the patch, not the era, correcting the map re-files
+  every build at once.
+- A patch that matches no prefix is put on hold before anything is downloaded.
+  Nothing is extracted or sent to CI, the site stays on its current data, and
+  one Discord notice asks for the prefix to be mapped. The activation endpoint
+  refuses such a release too (409), and the Contract suite fails on it.
+- Activating the first release of a new era freezes the outgoing one under
+  `storage/game-data/archive/<patch>` (hard links, plus the PoB unique mods).
+  Each era keeps a single archive, the last release that was live in it;
+  pruning never reaches the archive.
+- A tree or plan from another era is read-only: its page shows a stand-in
+  instead of drawing it over the live tree, its JSON carries `archived: true`,
+  and editing, the loot filter and `/tree?from=` are off for it. One whose
+  patch no longer maps to any era shows an error page asking the visitor to
+  get in touch, and is logged. The editors send the patch they loaded with,
+  which the server only compares, so a tab opened before a swap to a new era
+  cannot save an old allocation.
+
+To start a new era: adapt the extractor if the data format changed, add the
+new prefix to `poe.eras` and deploy. The watcher's next nudge (or
+`poe2:restage-data`) then extracts and validates it like any other patch.
+
 The moving parts: the `poe2:watch-patch` command (detection + notifications),
 the `StageGameData` and `TriggerContractRun` jobs, the `GameDataReleases`
-service (release store, atomic swap, pruning), the token-gated
+service (release store, atomic swap, pruning, era archives), the `GameEra`
+support class (the `poe.eras` map), the token-gated
 `POST /api/data/activate` endpoint, and the `poe2:link-game-data` /
 `poe2:pack-release` / `poe2:restage-data` commands for deploy wiring, tarball
 repair and manual re-staging. Deployment

@@ -2,6 +2,12 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-09-28
+- Saved trees and build guides now remember which version of the game they were made on. Path of Exile 2 leaves Early Access on 11 December, and a new version changes the passive tree, items and mods. A build from 0.5 drawn over the 1.0 tree would show nodes that moved or no longer exist, so it will not be drawn over it at all: its link keeps working and shows the build's name, class and game version, read-only, until older versions can be drawn from their own data. Everything saved so far counts as made on the current patch.
+- The data of a version that is ending is kept on the server as it was, so builds made on it can be drawn from the right data later.
+- If the site switches to a new game version while an editor is open, saving asks you to reload the page instead of storing a tree made on the old data under the new version. An unsaved build guide draft from an older version is dropped for the same reason.
+- For contributors: builds store the raw patch they were last saved on (`game_patch`, read on the server), and the era is derived through `poe.eras` (`config/poe.php`), which is maintained by hand and can name each era. A patch with no mapping is not extracted, not sent to CI and cannot be activated; the operator gets one Discord notice instead. Activating the first release of a new era freezes the outgoing one under `storage/game-data/archive/<patch>`, one archive per era, out of reach of pruning. Details in the README under "Game eras".
+
 ## 2026-09-05
 - Gem tooltips keep their background art on patch 4.5.5. The game data stopped pointing at hover art by file path and started naming it through the client's own UI sprite index instead, which the extractor did not read, so every gem would have fallen back to the generic placeholder. Both forms are understood now, and the art is cut to the exact rectangle the game itself draws rather than the whole source image.
 - For contributors: a daily `poe2:prune-game-data` command sweeps the game-data release store. Pruning used to happen only when a release was activated, so anything that never got that far - a staging directory from an extraction that died, a tarball whose release had already been removed - sat on the server until someone noticed. Superseded releases past the rollback window still go the same way they always did.
