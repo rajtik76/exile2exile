@@ -436,12 +436,6 @@ function Footer() {
                     <nav className="flex flex-col gap-2.5">
                         <FooterHeading>Project</FooterHeading>
                         <FooterLink
-                            href="https://discord.gg/mNcjdkcBFB"
-                            external
-                        >
-                            Join the Discord
-                        </FooterLink>
-                        <FooterLink
                             href="https://github.com/rajtik76/exile2exile"
                             external
                         >

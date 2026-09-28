@@ -8,9 +8,8 @@
 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/mNcjdkcBFB)
 
-**Live:** https://poe.rajtik.com · **Discord:** https://discord.gg/mNcjdkcBFB
+**Live:** https://poe.rajtik.com
 
 Import your Path of Exile 2 character, point it at a build you're following, and
 get a concrete **diff** - what's missing or different across your passive tree,
