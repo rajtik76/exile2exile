@@ -43,6 +43,14 @@ test('a stored patch is live only when its era is the live one, hotfixes include
         ->and($eras->isLive(null))->toBeFalse();
 });
 
+test('the shipped map keeps builds of the old 4.x numbering live on renumbered 0.x data', function () {
+    config()->set('poe.eras', (require config_path('poe.php'))['eras']);
+    $this->mock(TreeDataVersion::class)->shouldReceive('current')->andReturn('0.5.5.4');
+
+    expect(app(GameEra::class)->isLive('4.5.5.4'))->toBeTrue()
+        ->and(app(GameEra::class)->current())->toBe('0.5');
+});
+
 test('with no game data installed the newest configured prefix is the live patch', function () {
     $this->mock(TreeDataVersion::class)->shouldReceive('current')->andReturn(null);
 

@@ -43,6 +43,8 @@ return [
 
     'eras' => [
         '4.5' => ['era' => '0.5', 'name' => 'Return of the Ancients'],
+        // GGG renumbered its raw builds mid-era (4.5.5.4 -> 0.5.5.4), same data.
+        '0.5' => ['era' => '0.5', 'name' => 'Return of the Ancients'],
     ],
 
     /*
