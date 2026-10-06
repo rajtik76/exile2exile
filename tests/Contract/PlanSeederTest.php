@@ -4,6 +4,7 @@ use App\Models\BuildPlan;
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
 use App\Support\Planner\PlanSchema;
+use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\PlanSeeder;
 
 /**
@@ -23,6 +24,14 @@ test('the plan seeder creates three distinct-class builds', function () {
         ->all();
 
     expect(array_unique($classes))->toHaveCount(3);
+});
+
+test('seeded plans carry a game patch even with model events disabled', function () {
+    // DatabaseSeeder runs under WithoutModelEvents, so the creating hook never stamps the patch.
+    $this->seed(DatabaseSeeder::class);
+
+    expect(BuildPlan::whereIn('slug', ['build1', 'build2', 'build3'])->whereNull('game_patch')->count())->toBe(0)
+        ->and(BuildPlan::whereIn('slug', ['build1', 'build2', 'build3'])->count())->toBe(3);
 });
 
 test('every phase of every seeded build is fully populated with resolvable data', function () {

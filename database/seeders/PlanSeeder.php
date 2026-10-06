@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Models\BuildPlan;
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
+use App\Support\GameEra;
 use App\Support\Planner\PlanSchema;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
@@ -194,6 +195,7 @@ class PlanSeeder extends Seeder
                     'edit_token' => $build['token'],
                     'title' => $build['title'],
                     'schema_version' => PlanSchema::CURRENT_VERSION,
+                    'game_patch' => app(GameEra::class)->livePatchOrFail(),
                     'data' => $data,
                 ],
             );
