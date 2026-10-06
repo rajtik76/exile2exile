@@ -255,6 +255,7 @@ test('canonicalize coerces equipment items and drops empty or unknown slots', fu
                 ['modId' => 'IncreasedLife5', 'text' => '+100 to maximum Life', 'name' => null, 'type' => null, 'family' => null, 'tier' => null, 'rolls' => null, 'values' => [100]],
             ],
             'uniqueMods' => [],
+            'variant' => [],
             'sockets' => [],
             'priority' => null,
         ]);

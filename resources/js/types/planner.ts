@@ -4,6 +4,7 @@
  * the stored shape is a new schema version there and an update here.
  */
 
+import type { UniqueVariantSelection } from '@/lib/uniqueVariants';
 import type { TreeAllocation } from '@/types/tree';
 
 export type PlanMode = 'phases' | 'single';
@@ -118,6 +119,11 @@ export interface ItemPlan {
     stats: ItemMod[];
     /** A unique item's own rolled mod values (see {@link UniqueModStat}); empty otherwise. */
     uniqueMods: UniqueModStat[];
+    /**
+     * A unique's Path of Building variant pick (e.g. Guiding Palm's Cold variant), which
+     * decides which of its lines apply. Absent/empty means PoB's default variant.
+     */
+    variant?: UniqueVariantSelection | [];
     sockets: (RuneRef | null)[];
     /**
      * The item's gearing priority (1..{@link MAX_PRIORITY}), or null when unset. A number

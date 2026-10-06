@@ -42,7 +42,46 @@ test('it syncs unique mods from PoB and writes the snapshot', function () {
 
     expect($snapshot)->not->toBeNull()
         ->and($snapshot['uniques'])->toHaveKey('Constricting Command')
-        ->and($snapshot['uniques']['Constricting Command']['mods'])->toBe(['+(80-120) to maximum Life']);
+        ->and($snapshot['uniques']['Constricting Command']['lines'])->toBe([['text' => '+(80-120) to maximum Life', 'implicit' => false]]);
+});
+
+test('a name PoB has on several bases is keyed by name and base, like PoB itself', function () {
+    Http::preventStrayRequests();
+
+    Http::fake([
+        'api.github.com/repos/*/contents/*' => Http::response([
+            ['type' => 'file', 'name' => 'jewel.lua', 'download_url' => 'https://raw.example/jewel.lua'],
+        ]),
+        'api.github.com/repos/*/commits/*' => Http::response(['sha' => 'fakecommit123']),
+        'raw.example/jewel.lua' => Http::response(<<<'LUA'
+            return {
+            [[
+            Grand Spectrum
+            Ruby
+            Limited to: 3
+            2% increased Maximum Life per socketed Grand Spectrum
+            ]],[[
+            Grand Spectrum
+            Sapphire
+            Limited to: 3
+            +6% to all Elemental Resistances per socketed Grand Spectrum
+            ]],[[
+            Megalomaniac
+            Diamond
+            Has 3 Notable Passive Skills
+            ]],
+            }
+            LUA),
+    ]);
+
+    $this->artisan('poe2:sync-pob-uniques')
+        ->doesntExpectOutputToContain('Duplicate')
+        ->assertSuccessful();
+
+    $uniques = app(PobUniqueStore::class)->read()['uniques'];
+
+    expect(array_keys($uniques))->toBe(['Grand Spectrum, Ruby', 'Grand Spectrum, Sapphire', 'Megalomaniac'])
+        ->and($uniques['Grand Spectrum, Sapphire']['lines'])->toBe([['text' => '+6% to all Elemental Resistances per socketed Grand Spectrum', 'implicit' => false]]);
 });
 
 test('only .lua files are fetched', function () {

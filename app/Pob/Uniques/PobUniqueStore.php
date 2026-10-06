@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Pob\Uniques;
 
+use App\Pob\GameData\UniqueCatalog;
 use App\Services\GameDataReleases;
 use Illuminate\Support\Facades\File;
 
@@ -34,7 +35,12 @@ final class PobUniqueStore
      * into place in one step - the same idiom {@see GameDataReleases} uses
      * for the release `current` symlink.
      *
-     * @param  array<string, array{name: string, base: string, league: ?string, implicitCount: int, mods: list<string>}>  $uniques  keyed by unique name
+     * Entries are keyed by unique id: the unique's name, or "Name, Base" when PoB has the
+     * same name on more than one base (Grand Spectrum on Ruby, Emerald and Sapphire) - the
+     * same "Title, BaseName" key PoB's own uniqueDB uses (`Classes/Item.lua`). Older
+     * snapshots carry `implicitCount` + `mods` instead of `lines` (see {@see UniqueCatalog}).
+     *
+     * @param  array<string, array{name: string, base: string, league: ?string, variants?: ?array<string, mixed>, lines?: list<array{text: string, implicit: bool, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, implicitCount?: int, mods?: list<string>}>  $uniques  keyed by unique id
      */
     public function write(array $uniques, string $sourceRef): void
     {
@@ -55,7 +61,7 @@ final class PobUniqueStore
     /**
      * The live snapshot, or null before the first successful sync.
      *
-     * @return array{syncedAt: string, sourceRef: string, uniques: array<string, array{name: string, base: string, league: ?string, implicitCount: int, mods: list<string>}>}|null
+     * @return array{syncedAt: string, sourceRef: string, uniques: array<string, array{name: string, base: string, league: ?string, variants?: ?array<string, mixed>, lines?: list<array{text: string, implicit: bool, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, implicitCount?: int, mods?: list<string>}>}|null
      */
     public function read(): ?array
     {
@@ -65,7 +71,7 @@ final class PobUniqueStore
             return null;
         }
 
-        /** @var array{syncedAt: string, sourceRef: string, uniques: array<string, array{name: string, base: string, league: ?string, implicitCount: int, mods: list<string>}>}|null $decoded */
+        /** @var array{syncedAt: string, sourceRef: string, uniques: array<string, array{name: string, base: string, league: ?string, variants?: ?array<string, mixed>, lines?: list<array{text: string, implicit: bool, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, implicitCount?: int, mods?: list<string>}>}|null $decoded */
         $decoded = json_decode(File::get($path), true);
 
         return $decoded;

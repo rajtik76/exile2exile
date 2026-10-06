@@ -11,6 +11,8 @@
  * still a real value of a `PlanReference.type` the `ReferenceMap` server-side can
  * return, so it has to be part of the same union.
  */
+import type { UniqueVariantModel } from '@/lib/uniqueVariants';
+
 export type RefType = 'gem' | 'rune' | 'unique' | 'notable' | 'base';
 
 export interface PlanReference {
@@ -34,6 +36,12 @@ export interface PlanReference {
      */
     modLines?: UniqueModLine[];
     implicitLines?: UniqueModLine[];
+    /**
+     * A unique's Path of Building variant model: `modLines`/`implicitLines` carry every
+     * variant's lines, and the item's own pick decides which apply
+     * (`activeUniqueLines`). Null/absent for a unique without variants.
+     */
+    variants?: UniqueVariantModel | null;
     /**
      * A unique's underlying base item (e.g. "Viper Cap" for Constricting Command),
      * synced from Path of Building alongside its mods - .dat carries no unique-to-
@@ -154,6 +162,14 @@ export interface UniqueModLine {
     key: string;
     template: string;
     rolls: { min: number; max: number }[];
+    /**
+     * PoB's variant tags on the line: which of the unique's variants, versions and
+     * variant groups it belongs to (see `uniqueVariants.ts`). Absent on a line every
+     * variant shares.
+     */
+    variants?: number[];
+    versions?: number[];
+    groups?: number[];
 }
 
 /** A rect within a sprite atlas sheet, enough to crop one icon out with CSS. */

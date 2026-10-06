@@ -31,7 +31,7 @@ class SyncPobUniques extends Command
             return self::FAILURE;
         }
 
-        $uniques = [];
+        $parsed = [];
         $failed = 0;
 
         foreach ($files as $file) {
@@ -39,16 +39,7 @@ class SyncPobUniques extends Command
                 $lua = $source->fetch($file['downloadUrl']);
 
                 foreach ($parser->parse($lua) as $unique) {
-                    // A later file overwriting an earlier one would silently drop a unique;
-                    // names are unique across PoB's own data, so a collision means a parsing
-                    // bug and is worth surfacing rather than swallowing.
-                    if (isset($uniques[$unique['name']])) {
-                        $this->warn("  Duplicate unique name \"{$unique['name']}\" (in {$file['name']}) - keeping the first.");
-
-                        continue;
-                    }
-
-                    $uniques[$unique['name']] = $unique;
+                    $parsed[] = ['file' => $file['name'], 'unique' => $unique];
                 }
             } catch (\Throwable $e) {
                 // Isolate a per-file failure so the rest of the sync still completes - a
@@ -58,6 +49,8 @@ class SyncPobUniques extends Command
                 report($e);
             }
         }
+
+        $uniques = $this->keyById($parsed);
 
         if ($failed === count($files)) {
             $this->error('Every source file failed - not overwriting the last known-good snapshot.');
@@ -95,6 +88,43 @@ class SyncPobUniques extends Command
         $this->info(sprintf('%d unique(s) cached from %d file(s)%s.', count($uniques), count($files), $failed > 0 ? ", {$failed} file(s) failed" : ''));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Key the parsed uniques the way PoB's own uniqueDB does (`Classes/Item.lua`: an item's
+     * name is "Title, BaseName"), but keep the bare name wherever it is unambiguous, so
+     * existing plans keep resolving: only a name PoB has on more than one base (Grand
+     * Spectrum on Ruby, Emerald and Sapphire) gets the "Name, Base" id. The same name on the
+     * same base twice has no PoB key to tell the two apart, so the first is kept.
+     *
+     * @param  list<array{file: string, unique: array{name: string, base: string, league: ?string, variants: ?array<string, mixed>, lines: list<array{text: string, implicit: bool, variants?: list<int>, versions?: list<int>, groups?: list<int>}>}}>  $parsed
+     * @return array<string, array{name: string, base: string, league: ?string, variants: ?array<string, mixed>, lines: list<array{text: string, implicit: bool, variants?: list<int>, versions?: list<int>, groups?: list<int>}>}>
+     */
+    private function keyById(array $parsed): array
+    {
+        $basesByName = [];
+
+        foreach ($parsed as ['unique' => $unique]) {
+            $basesByName[$unique['name']][$unique['base']] = true;
+        }
+
+        $uniques = [];
+
+        foreach ($parsed as ['file' => $file, 'unique' => $unique]) {
+            $id = count($basesByName[$unique['name']]) > 1
+                ? $unique['name'].', '.$unique['base']
+                : $unique['name'];
+
+            if (isset($uniques[$id])) {
+                $this->warn("  Duplicate unique \"{$unique['name']}\" on \"{$unique['base']}\" (in {$file}) - keeping the first.");
+
+                continue;
+            }
+
+            $uniques[$id] = $unique;
+        }
+
+        return $uniques;
     }
 
     /**

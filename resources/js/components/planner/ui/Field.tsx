@@ -46,3 +46,15 @@ export function NumberInput({
         />
     );
 }
+
+export function SelectInput({
+    className,
+    ...props
+}: React.ComponentProps<'select'>) {
+    return (
+        <select
+            className={cn(INPUT_CLASS, 'pl-text-sm px-2 py-1', className)}
+            {...props}
+        />
+    );
+}

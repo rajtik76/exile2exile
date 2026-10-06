@@ -11,6 +11,7 @@ import {
     visiblePropFields,
     withBasePicked,
     withUniqueModValues,
+    withVariantPicked,
 } from './itemEdits';
 
 function item(overrides: Partial<ItemPlan> = {}): ItemPlan {
@@ -259,4 +260,66 @@ test('gates the defence fields by the resolved base and falls back to the shield
         'evasion',
         'energyShield',
     ]);
+});
+
+test('picking another variant keeps only the rolled values its lines still carry', () => {
+    const guidingPalm = reference({
+        type: 'unique',
+        id: 'Guiding Palm',
+        variants: {
+            variants: ['Fire', 'Cold'],
+            versions: [],
+            altSlots: [],
+            groups: [],
+            defaults: [],
+        },
+        implicitLines: [
+            {
+                key: 'Purity of Fire',
+                template: 'Purity of Fire',
+                rolls: [],
+                variants: [1],
+            },
+            {
+                key: 'Purity of Ice',
+                template: 'Purity of Ice',
+                rolls: [],
+                variants: [2],
+            },
+        ],
+        modLines: [
+            {
+                key: '+# to all Attributes',
+                template: '+(5-10) to all Attributes',
+                rolls: [{ min: 5, max: 10 }],
+            },
+        ],
+    });
+    const picked = withVariantPicked(
+        item({
+            rarity: 'unique',
+            base: { type: 'unique', id: 'Guiding Palm' },
+            variant: { variant: 1 },
+            uniqueMods: [
+                { key: 'Purity of Fire', values: [] },
+                { key: '+# to all Attributes', values: [8] },
+            ],
+        }),
+        { variant: 2 },
+        guidingPalm,
+    );
+
+    expect(picked.variant).toEqual({ variant: 2 });
+    expect(picked.uniqueMods).toEqual([
+        { key: '+# to all Attributes', values: [8] },
+    ]);
+});
+
+test('picking a new base starts on its default variant', () => {
+    const picked = withBasePicked(
+        item({ variant: { variant: 1 } }),
+        reference({ type: 'unique', id: 'Guiding Palm' }),
+    );
+
+    expect(picked.variant).toEqual({});
 });

@@ -14,11 +14,13 @@ import {
     visiblePropFields,
     withBasePicked,
     withUniqueModValues,
+    withVariantPicked,
 } from '@/components/planner/equipment/itemEdits';
 import ModRow from '@/components/planner/equipment/ModRow';
 import Socket from '@/components/planner/equipment/Socket';
 import { MOD_TYPE_STYLE } from '@/components/planner/equipment/style';
 import UniqueModRow from '@/components/planner/equipment/UniqueModRow';
+import UniqueVariantPicker from '@/components/planner/equipment/UniqueVariantPicker';
 import ModPicker from '@/components/planner/ModPicker';
 import ReferencePicker from '@/components/planner/ReferencePicker';
 import { useReferences } from '@/components/planner/ReferencesContext';
@@ -29,6 +31,8 @@ import { deriveRarity } from '@/lib/itemRarity';
 import { itemErrors } from '@/lib/itemRules';
 import { refKey } from '@/lib/planReferences';
 import type { PlanReference } from '@/lib/planReferences';
+import { activeUniqueLines } from '@/lib/uniqueVariants';
+import type { UniqueVariantSelection } from '@/lib/uniqueVariants';
 import { weaponStatLines } from '@/lib/weaponStats';
 import {
     MAX_ITEM_LEVEL,
@@ -203,8 +207,17 @@ export default function SlotEditor({
     // A unique's own mods/implicits, structured - rendered with editable value inputs
     // instead of the base's plain-text `implicits` above (which stays as read-only GGPK
     // data for a non-unique). See UniqueModRow.
-    const uniqueImplicitLines = reference?.implicitLines ?? [];
-    const uniqueExplicitLines = reference?.modLines ?? [];
+    // Only the lines of the item's own Path of Building variant pick apply.
+    const uniqueImplicitLines = activeUniqueLines(
+        reference?.implicitLines ?? [],
+        reference?.variants,
+        item.variant,
+    );
+    const uniqueExplicitLines = activeUniqueLines(
+        reference?.modLines ?? [],
+        reference?.variants,
+        item.variant,
+    );
     // The fields gated by the resolved base's own GGPK defensive stats (null when
     // unresolved, or for a unique with no synced base type yet - every defence field
     // then stays visible), with a shield-name heuristic as block's fallback.
@@ -275,6 +288,10 @@ export default function SlotEditor({
 
     function setUniqueModValues(key: string, values: number[]): void {
         commit(withUniqueModValues(item, key, values));
+    }
+
+    function setVariant(variant: UniqueVariantSelection): void {
+        commit(withVariantPicked(item, variant, reference));
     }
 
     function addModifier(mod: ItemMod): void {
@@ -594,6 +611,15 @@ export default function SlotEditor({
                                 <>
                                     <Divider />
                                     <EditorSection label="Modifiers">
+                                        {reference?.variants && (
+                                            <div className="mb-3">
+                                                <UniqueVariantPicker
+                                                    model={reference.variants}
+                                                    selection={item.variant}
+                                                    onChange={setVariant}
+                                                />
+                                            </div>
+                                        )}
                                         <div className="flex flex-col gap-1.5">
                                             {uniqueImplicitLines.map((line) => (
                                                 <UniqueModRow

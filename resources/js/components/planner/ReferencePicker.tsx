@@ -146,6 +146,11 @@ export default function ReferencePicker({
                         {reference.category && (
                             <span className="pl-text-xs block truncate text-[var(--pl-muted)]">
                                 {reference.category}
+                                {/* A unique PoB has on several bases (Grand Spectrum)
+                                is one entry per base, told apart by its base. */}
+                                {reference.id !== reference.name &&
+                                    reference.baseType &&
+                                    ` · ${reference.baseType}`}
                             </span>
                         )}
                     </span>

@@ -244,7 +244,7 @@ final class PobPlanMapper
      * Pelt" on a "Slipstrike Vest") and defensive properties (quality, armour, evasion,
      * energy shield, block) come across for every rarity.
      *
-     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: ?int, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<float>}>, sockets: list<array{type: string, id: string}>}
+     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: ?int, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<float>}>, variant: array{variant?: int, alts?: array<int, int>, version?: int, groups?: array<int, int>}, sockets: list<array{type: string, id: string}>}
      */
     private function item(EquippedItem $item, string $slotKey): array
     {
@@ -274,13 +274,16 @@ final class PobPlanMapper
             ],
             'stats' => $isUnique ? [] : $this->matchMods($item, $rarity, $slotKey),
             'uniqueMods' => $isUnique ? $this->matchUniqueMods($item, $slotKey) : [],
+            // The unique's own PoB variant pick (e.g. Guiding Palm's Cold variant), so the
+            // planner shows the same variant's lines the build has. Empty without variants.
+            'variant' => $isUnique ? ($item->variantSelection?->toArray() ?? []) : [],
             'sockets' => $this->sockets($item),
         ];
     }
 
     /**
-     * The item's base/unique reference: a unique points at the unique by name, everything
-     * else at its base type. Null when neither is a known GGPK item (a defunct or
+     * The item's base/unique reference: a unique points at the unique by id (its name, or
+     * "Name, Base" for a name PoB has on several bases), everything else at its base type. Null when neither is a known GGPK item (a defunct or
      * mis-parsed name), which drops the reference but keeps any mods/runes the item has.
      *
      * @return array{type: string, id: string}|null
@@ -288,7 +291,7 @@ final class PobPlanMapper
     private function baseReference(EquippedItem $item, bool $isUnique): ?array
     {
         if ($isUnique && $this->icons->isUnique($item->name) === true) {
-            return ['type' => 'unique', 'id' => $item->name];
+            return ['type' => 'unique', 'id' => $this->icons->uniqueId($item->name, $item->baseType)];
         }
 
         if ($this->icons->isBaseType($item->baseType)) {
@@ -312,7 +315,8 @@ final class PobPlanMapper
      */
     private function matchUniqueMods(EquippedItem $item, string $slotKey): array
     {
-        $result = $this->uniqueMatcher->match($item->name, $item->mods);
+        $uniqueId = $this->icons->uniqueId($item->name, $item->baseType);
+        $result = $this->uniqueMatcher->match($uniqueId, $item->mods, $item->variantSelection);
         $matched = $result['matched'];
         $unmatched = $result['unmatched'];
 

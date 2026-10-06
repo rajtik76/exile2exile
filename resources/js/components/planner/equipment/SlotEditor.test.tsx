@@ -26,6 +26,35 @@ const references: ReferenceMap = {
             },
         ],
     },
+    [refKey('unique', 'Guiding Palm')]: {
+        type: 'unique',
+        id: 'Guiding Palm',
+        name: 'Guiding Palm',
+        category: 'Unique Sceptre',
+        implicits: [],
+        implicitLines: [
+            {
+                key: 'Grants Skill: Level # Purity of Fire',
+                template: 'Grants Skill: Level (1-20) Purity of Fire',
+                rolls: [{ min: 1, max: 20 }],
+                variants: [1],
+            },
+            {
+                key: 'Grants Skill: Level # Purity of Ice',
+                template: 'Grants Skill: Level (1-20) Purity of Ice',
+                rolls: [{ min: 1, max: 20 }],
+                variants: [2],
+            },
+        ],
+        modLines: [],
+        variants: {
+            variants: ['Fire', 'Cold'],
+            versions: [],
+            altSlots: [],
+            groups: [],
+            defaults: [],
+        },
+    },
     [refKey('base', 'Strider Vest')]: {
         type: 'base',
         id: 'Strider Vest',
@@ -361,4 +390,30 @@ test('switching to a pure-evasion base clears a stale Armour value the old base 
         energyShield: 0,
         block: 0,
     });
+});
+
+test("a unique with variants shows its picked variant's lines and switches on a new pick", () => {
+    const onChange = vi.fn();
+
+    renderEditor(
+        itemWith({
+            base: { type: 'unique', id: 'Guiding Palm' },
+            variant: { variant: 1 },
+            uniqueMods: [
+                { key: 'Grants Skill: Level # Purity of Fire', values: [20] },
+            ],
+        }),
+        { onChange },
+    );
+
+    expect(screen.getByTitle('Valid range: 1-20')).toBeTruthy();
+    expect(screen.queryByText(/Purity of Ice/)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Variant'), {
+        target: { value: '2' },
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: { variant: 2 }, uniqueMods: [] }),
+    );
 });

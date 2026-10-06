@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Pob\Uniques\PobUniqueModsParser;
 
-test('it parses name, base, league, implicit count and mod lines', function () {
+test('it parses name, base, league and mod lines with their variant tags', function () {
     $lua = <<<'LUA'
         -- Item data (c) Grinding Gear Games
 
@@ -38,17 +38,18 @@ test('it parses name, base, league, implicit count and mod lines', function () {
     expect($constrictingCommand['name'])->toBe('Constricting Command')
         ->and($constrictingCommand['base'])->toBe('Viper Cap')
         ->and($constrictingCommand['league'])->toBe('Dawn of the Hunt')
-        ->and($constrictingCommand['implicitCount'])->toBe(0)
-        ->and($constrictingCommand['mods'])->toBe([
-            '+(80-120) to maximum Life',
-            '+(10-15) to all Attributes',
-            '(8-12) Life Regeneration per second',
-            'Pin Enemies which are Primed for Pinning',
-            'Require (2-4) fewer enemies to be Surrounded',
+        ->and($constrictingCommand['variants']['variants'])->toBe(['Pre 0.3.0', 'Current'])
+        ->and($constrictingCommand['lines'])->toBe([
+            ['text' => '+(80-120) to maximum Life', 'implicit' => false],
+            ['text' => '+(10-15) to all Attributes', 'implicit' => false],
+            ['text' => '(8-12) Life Regeneration per second', 'implicit' => false],
+            ['text' => 'Pin Enemies which are Primed for Pinning', 'implicit' => false, 'variants' => [1]],
+            ['text' => 'Require (2-4) fewer enemies to be Surrounded', 'implicit' => false, 'variants' => [2]],
         ]);
 
     expect($uniques[1]['name'])->toBe('Black Sun Crest')
-        ->and($uniques[1]['league'])->toBeNull();
+        ->and($uniques[1]['league'])->toBeNull()
+        ->and($uniques[1]['variants'])->toBeNull();
 });
 
 test('it strips stacked tags and honours the implicit count', function () {
@@ -66,11 +67,10 @@ test('it strips stacked tags and honours the implicit count', function () {
 
     $unique = (new PobUniqueModsParser)->parse($lua)[0];
 
-    expect($unique['implicitCount'])->toBe(1)
-        ->and($unique['mods'])->toBe([
-            '+(30-40) to maximum Life',
-            '10% reduced Movement Speed',
-        ]);
+    expect($unique['lines'])->toBe([
+        ['text' => '+(30-40) to maximum Life', 'implicit' => true],
+        ['text' => '10% reduced Movement Speed', 'implicit' => false, 'variants' => [1]],
+    ]);
 });
 
 test('it drops metadata-only lines (Source, Radius, Sockets)', function () {
@@ -89,7 +89,52 @@ test('it drops metadata-only lines (Source, Radius, Sockets)', function () {
 
     $unique = (new PobUniqueModsParser)->parse($lua)[0];
 
-    expect($unique['mods'])->toBe(['+1 to Level of all Corrupted Skill Gems']);
+    expect($unique['lines'])->toBe([['text' => '+1 to Level of all Corrupted Skill Gems', 'implicit' => true]]);
+});
+
+test('item properties PoB reads as specs are never mods, and do not shift the implicit count', function () {
+    $lua = <<<'LUA'
+        return {
+        [[
+        Guiding Palm
+        Shrine Sceptre
+        Variant: Fire
+        Variant: Cold
+        Requires Level 65
+        Limited to: 1
+        Implicits: 2
+        {variant:1}Grants Skill: Level (1-20) Purity of Fire
+        {variant:2}Grants Skill: Level (1-20) Purity of Ice
+        +(5-10) to all Attributes
+        ]],
+        }
+        LUA;
+
+    $unique = (new PobUniqueModsParser)->parse($lua)[0];
+
+    expect($unique['lines'])->toBe([
+        ['text' => 'Grants Skill: Level (1-20) Purity of Fire', 'implicit' => true, 'variants' => [1]],
+        ['text' => 'Grants Skill: Level (1-20) Purity of Ice', 'implicit' => true, 'variants' => [2]],
+        ['text' => '+(5-10) to all Attributes', 'implicit' => false],
+    ]);
+});
+
+test('a colon line PoB does not know as a spec is a mod', function () {
+    $lua = <<<'LUA'
+        return {
+        [[
+        Ring of Choice
+        Gold Ring
+        Left ring slot: Projectiles from Spells Fork
+        Right ring slot: Projectiles from Spells Chain +1 times
+        ]],
+        }
+        LUA;
+
+    expect(array_column((new PobUniqueModsParser)->parse($lua)[0]['lines'], 'text'))->toBe([
+        'Left ring slot: Projectiles from Spells Fork',
+        'Right ring slot: Projectiles from Spells Chain +1 times',
+    ]);
 });
 
 test('a block with no mod lines is skipped', function () {

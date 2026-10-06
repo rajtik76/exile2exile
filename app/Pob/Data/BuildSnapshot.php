@@ -20,7 +20,7 @@ final readonly class BuildSnapshot
      * {@see CachingBuildDecoder}) is invalidated and stale,
      * differently-shaped entries are never read back.
      */
-    public const int SCHEMA_VERSION = 4;
+    public const int SCHEMA_VERSION = 5;
 
     /**
      * @param  list<int>  $passiveNodes  Allocated passive skill node IDs.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Pob\GameData;
 
 use App\Pob\TextSearch;
+use App\Pob\Uniques\TaggedLine;
 use App\Pob\Uniques\UniqueModLine;
 
 /**
@@ -12,7 +13,7 @@ use App\Pob\Uniques\UniqueModLine;
  * the display payload the reference picker and tooltips render from, composing the
  * per-domain catalogues.
  *
- * @phpstan-type ReferenceEntry array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, weapon?: array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null, spirit?: int, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null, levelRequirement?: ?int}
+ * @phpstan-type ReferenceEntry array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, variants?: array{variants: list<string>, versions: list<string>, altSlots: list<int>, groups: array<int, array<int, list<int>>>, defaults: array{variant?: int, alts?: array<int, int>, version?: int, groups?: array<int, int>}}|null, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, weapon?: array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null, spirit?: int, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage?: ?string, scaling?: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires?: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null, levelRequirement?: ?int}
  */
 final readonly class ReferenceResolver
 {
@@ -75,7 +76,10 @@ final readonly class ReferenceResolver
                     continue;
                 }
 
-                $matches[] = $this->uniqueReference($name);
+                // A name PoB has on several bases (Grand Spectrum) is one entry per base.
+                foreach ($this->uniques->idsNamed($name) ?: [$name] as $id) {
+                    $matches[] = $this->uniqueReference($id);
+                }
             }
         }
 
@@ -131,7 +135,7 @@ final readonly class ReferenceResolver
             'notable' => ($node = $this->notables->all()[$id] ?? null) !== null
                 ? $this->notableReference($id, $node)
                 : null,
-            'unique' => $this->items->isUnique($id) === true
+            'unique' => $this->items->isUnique($this->uniques->nameOf($id)) === true
                 ? $this->uniqueReference($id)
                 : null,
             'base' => $this->items->isBaseType($id)
@@ -142,7 +146,7 @@ final readonly class ReferenceResolver
     }
 
     /**
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, weapon?: array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null, spirit?: int, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, variants?: array{variants: list<string>, versions: list<string>, altSlots: list<int>, groups: array<int, array<int, list<int>>>, defaults: array{variant?: int, alts?: array<int, int>, version?: int, groups?: array<int, int>}}|null, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, weapon?: array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null, spirit?: int, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function baseReference(string $name): array
     {
@@ -174,7 +178,7 @@ final readonly class ReferenceResolver
 
     /**
      * @param  array{name: string, icon: ?string, color: string, type: string, description: ?string, tags: list<string>, hoverImage: ?string}  $entry
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage: ?string, scaling: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, variants?: array{variants: list<string>, versions: list<string>, altSlots: list<int>, groups: array<int, array<int, list<int>>>, defaults: array{variant?: int, alts?: array<int, int>, version?: int, groups?: array<int, int>}}|null, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, hoverImage: ?string, scaling: array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}|null, requires: array{level: array{int, int}, str: array{int, int}|null, dex: array{int, int}|null, int: array{int, int}|null}|null}
      */
     private function gemReference(string $id, array $entry): array
     {
@@ -202,7 +206,7 @@ final readonly class ReferenceResolver
 
     /**
      * @param  array{levelRequirement: ?int, effects: list<string>}  $data
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, levelRequirement?: ?int}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, variants?: array{variants: list<string>, versions: list<string>, altSlots: list<int>, groups: array<int, array<int, list<int>>>, defaults: array{variant?: int, alts?: array<int, int>, version?: int, groups?: array<int, int>}}|null, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null, levelRequirement?: ?int}
      */
     private function runeReference(string $name, array $data): array
     {
@@ -231,7 +235,7 @@ final readonly class ReferenceResolver
 
     /**
      * @param  array{stats: list<string>, ascendancy: bool, keystone: bool, icon: ?string}  $node
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, variants?: array{variants: list<string>, versions: list<string>, altSlots: list<int>, groups: array<int, array<int, list<int>>>, defaults: array{variant?: int, alts?: array<int, int>, version?: int, groups?: array<int, int>}}|null, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
     private function notableReference(string $name, array $node): array
     {
@@ -260,58 +264,79 @@ final readonly class ReferenceResolver
     }
 
     /**
-     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>}>, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, weapon?: array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null, spirit?: int, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
+     * @return array{type: string, id: string, name: string, icon: ?string, category: ?string, color: ?string, tags: list<string>, tooltip: ?string, flavour: ?string, twoHanded: bool, implicits: list<string>, modLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, implicitLines?: list<array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}>, variants?: array{variants: list<string>, versions: list<string>, altSlots: list<int>, groups: array<int, array<int, list<int>>>, defaults: array{variant?: int, alts?: array<int, int>, version?: int, groups?: array<int, int>}}|null, baseType?: ?string, armour?: array{armour: int, evasion: int, energyShield: int, ward: int, block: int}|null, weapon?: array{damageMin: int, damageMax: int, critical: int, attackTime: int, rangeMax: int, reloadTime: int}|null, spirit?: int, sprite: array{url: string, x: int, y: int, w: int, h: int, sheetW: int, sheetH: int}|null}
      */
-    private function uniqueReference(string $name): array
+    private function uniqueReference(string $id): array
     {
+        // Icon, category and flavour come from GGPK, keyed by the unique's name; a name
+        // PoB has on several bases shares them across its ids.
+        $name = $this->uniques->nameOf($id);
         $category = $this->items->category($name);
         // Not in .dat at all - the game composes a unique's rolls at runtime, so this is
         // the one field on this reference sourced from Path of Building, not GGPK (see
-        // UniqueCatalog::mods()). Absent (no sync yet, or an unmatched name) just means no
-        // mods show yet; the reference itself (icon, category, flavour) still resolves from GGPK.
-        $mods = $this->uniques->mods()[$name] ?? null;
-        $lines = $this->uniques->modLines($name);
+        // UniqueCatalog). Absent (no sync yet, or an unmatched id) just means no mods show
+        // yet; the reference itself (icon, category, flavour) still resolves from GGPK.
+        // The plain-text tooltip and implicits show PoB's default variant.
+        $default = $this->uniques->modLines($id);
+        $tagged = $this->uniques->taggedModLines($id);
+        $base = $this->uniques->baseType($id);
 
         return [
             'type' => 'unique',
-            'id' => $name,
+            'id' => $id,
             'name' => $name,
             'icon' => $this->items->icon($name),
             'category' => $category !== null ? 'Unique '.$category : 'Unique',
             'color' => null,
             'tags' => [],
-            'tooltip' => $mods !== null && $mods['mods'] !== [] ? implode("\n", $mods['mods']) : null,
+            'tooltip' => $default['mods'] !== [] ? implode("\n", array_map(static fn (UniqueModLine $line): string => $line->template, $default['mods'])) : null,
             'flavour' => $this->items->flavour($name),
             'twoHanded' => $this->items->isTwoHanded($name),
-            'implicits' => $mods['implicits'] ?? [],
-            // Structured (key/rolls) form of the same mods, for the equipped-item editor to
-            // render inputs and substitute a stored rolled value into.
-            'modLines' => array_map(self::uniqueModLineArray(...), $lines['mods']),
-            'implicitLines' => array_map(self::uniqueModLineArray(...), $lines['implicits']),
+            'implicits' => array_map(static fn (UniqueModLine $line): string => $line->template, $default['implicits']),
+            // Structured (key/rolls) form of every variant's lines, each with its PoB
+            // variant tags, plus the variant model itself: the equipped-item editor shows
+            // the lines of the item's own variant pick and substitutes stored rolled values
+            // into them (resources/js/lib/uniqueVariants.ts).
+            'modLines' => array_values(array_map(
+                static fn (array $entry): array => self::uniqueModLineArray($entry['line'], $entry['tags']),
+                array_filter($tagged, static fn (array $entry): bool => ! $entry['implicit']),
+            )),
+            'implicitLines' => array_values(array_map(
+                static fn (array $entry): array => self::uniqueModLineArray($entry['line'], $entry['tags']),
+                array_filter($tagged, static fn (array $entry): bool => $entry['implicit']),
+            )),
+            'variants' => $this->uniques->variants($id)?->toArray(),
             // The unique's underlying base item (e.g. "Viper Cap" for Constricting
             // Command) - synced from Path of Building alongside its mods, since .dat
             // carries no unique-to-base-type link either. Shown under the item's name
             // in the tooltip, same as the game's own unique tooltip does. Absent when
             // unsynced, same as the mods themselves.
-            'baseType' => $mods['base'] ?? null,
+            'baseType' => $base,
             // The unique's own defensive stats, looked up via its synced base type -
             // .dat itself has no unique-to-base-type link, but the PoB-sourced base name
             // above is a real GGPK base, so its ArmourTypes/ShieldTypes row still
             // resolves. Null when unsynced (no base name to look up yet).
-            'armour' => $this->items->armour($mods['base'] ?? null),
+            'armour' => $this->items->armour($base),
             // Same synced-base lookup for the weapon row and Spirit - a unique weapon
             // shows its base's stats (its own mod lines carry no stat ids to derive from).
-            'weapon' => $this->items->weapon($mods['base'] ?? null),
-            'spirit' => $this->items->spirit($mods['base'] ?? null),
+            'weapon' => $this->items->weapon($base),
+            'spirit' => $this->items->spirit($base),
             'sprite' => null,
         ];
     }
 
     /**
-     * @return array{key: string, template: string, rolls: list<array{min: float, max: float}>}
+     * @return array{key: string, template: string, rolls: list<array{min: float, max: float}>, variants?: list<int>, versions?: list<int>, groups?: list<int>}
      */
-    private static function uniqueModLineArray(UniqueModLine $line): array
+    private static function uniqueModLineArray(UniqueModLine $line, TaggedLine $tags): array
     {
-        return ['key' => $line->key, 'template' => $line->template, 'rolls' => $line->rolls];
+        return array_filter([
+            'key' => $line->key,
+            'template' => $line->template,
+            'rolls' => $line->rolls,
+            'variants' => $tags->variants,
+            'versions' => $tags->versions,
+            'groups' => $tags->groups,
+        ], static fn (mixed $value): bool => $value !== null);
     }
 }

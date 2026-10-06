@@ -7,6 +7,7 @@ import type {
     UniqueModLine,
 } from '@/lib/planReferences';
 import { renderUniqueModLine } from '@/lib/uniqueModLines';
+import { activeUniqueLines } from '@/lib/uniqueVariants';
 import { weaponStatLines } from '@/lib/weaponStats';
 import type { EQUIPMENT_SLOTS } from '@/types/planner';
 import type { ItemPlan, RuneRef, UniqueModStat } from '@/types/planner';
@@ -107,8 +108,23 @@ export function referenceToDisplayItem(reference: PlanReference): Item {
         twoHanded: reference.twoHanded ?? false,
         runes: [],
         category: reference.category?.replace(/^Unique\s+/, '') ?? null,
-        implicitMods: renderUniqueLines(reference.implicitLines ?? [], []),
-        explicitMods: renderUniqueLines(reference.modLines ?? [], []),
+        // A bare reference has no variant pick of its own - PoB's default variant shows.
+        implicitMods: renderUniqueLines(
+            activeUniqueLines(
+                reference.implicitLines ?? [],
+                reference.variants,
+                undefined,
+            ),
+            [],
+        ),
+        explicitMods: renderUniqueLines(
+            activeUniqueLines(
+                reference.modLines ?? [],
+                reference.variants,
+                undefined,
+            ),
+            [],
+        ),
         flavour: reference.flavour ?? null,
     };
 }
@@ -156,11 +172,16 @@ export function toDisplayItem(
         emptySockets: item.sockets.filter((socket) => socket === null).length,
         // A base's own fixed implicit lines (read-only), from the resolved base ref. For a
         // unique, its own synced implicit mods instead, with any stored rolled value
-        // substituted in (see IconResolver::uniqueReference / UniqueModRow).
+        // substituted in (see IconResolver::uniqueReference / UniqueModRow). Only the
+        // lines of the item's own variant pick apply (see uniqueVariants.ts).
         implicitMods:
             item.base?.type === 'unique'
                 ? renderUniqueLines(
-                      baseRef?.implicitLines ?? [],
+                      activeUniqueLines(
+                          baseRef?.implicitLines ?? [],
+                          baseRef?.variants,
+                          item.variant,
+                      ),
                       item.uniqueMods,
                   )
                 : (baseRef?.implicits ?? []),
@@ -174,7 +195,14 @@ export function toDisplayItem(
         // always present and is the sole source of truth for display, matched or not.
         explicitMods:
             item.base?.type === 'unique'
-                ? renderUniqueLines(baseRef?.modLines ?? [], item.uniqueMods)
+                ? renderUniqueLines(
+                      activeUniqueLines(
+                          baseRef?.modLines ?? [],
+                          baseRef?.variants,
+                          item.variant,
+                      ),
+                      item.uniqueMods,
+                  )
                 : aggregateModLines(
                       item.stats.flatMap((stat) =>
                           (stat.text ?? '').split('\n'),

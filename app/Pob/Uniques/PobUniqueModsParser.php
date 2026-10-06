@@ -6,31 +6,55 @@ namespace App\Pob\Uniques;
 
 /**
  * Parses one PoB `Data/Uniques/*.lua` file (a `return { [[ ... ]], [[ ... ]] }` table of
- * long-bracket strings, one per unique) into plain data. Not a Lua interpreter - PoB's
- * unique data has never used anything beyond this fixed line-based shape, so a regex/line
- * split is enough and avoids a Lua runtime dependency for one narrow data feed.
- *
- * Block shape (see PathOfBuildingCommunity/PathOfBuilding-PoE2, src/Data/Uniques/*.lua):
+ * long-bracket strings, one per unique) into plain data. Not a Lua interpreter - the
+ * blocks are PoB item text, read the way PathOfBuilding-PoE2's `Classes/Item.lua`
+ * ParseRaw reads it:
  *
  *   Name
  *   Base type
- *   Source: ...        (optional, metadata - dropped)
- *   League: ...         (optional)
- *   Variant: ...         (zero or more, dropped - the mod lines below carry the {variant:N}
- *                          tag when a line only applies to some variants)
- *   Radius: ... / Sockets: ...  (optional, metadata - dropped)
- *   Implicits: N         (optional, how many of the following lines are implicit mods)
- *   mod line
- *   mod line
- *   ...
+ *   spec lines           `Name: value` specs PoB knows (Source, League, Variant, Version,
+ *                         Has Alt Variant, Selected ..., Limited to, Radius, Sockets, ...)
+ *                         and `Requires Level N` - item properties, never mods
+ *   Implicits: N         how many of the following mod lines are implicit
+ *   mod line             any other line, including `Grants Skill: ...` and similar
+ *   ...                  `Name: value` lines PoB does not know as a spec
  *
- * A mod line may be prefixed by one or more `{tag:value}` groups (variant selector, mod
- * tags, …); the tags are stripped, only the display text is kept.
+ * Mod lines keep their variant-selection tags (see {@see TaggedLine}); which lines are the
+ * unique's real mods depends on the picked variant (see {@see PobItemVariants}). The
+ * implicit count covers mod lines in source order, every variant's lines included, as PoB
+ * counts them.
  */
 final class PobUniqueModsParser
 {
     /**
-     * @return list<array{name: string, base: string, league: ?string, implicitCount: int, mods: list<string>}>
+     * Spec names ParseRaw handles as item properties (`parseItemSpec` + the spec branches
+     * of ParseRaw). A `Name: value` line with any other name is a mod line.
+     */
+    private const array SPEC_NAMES = [
+        'Version', 'Base Variant', 'Variant', 'Selected Version', 'Selected Variant Group',
+        'Selected Variant', 'Selected Base Variant', 'Unique ID', 'Item Level', 'Requires Class',
+        'Charm Slots', 'Spirit', 'Quality', 'Sockets', 'Rune', 'Radius', 'Limited to',
+        'Talisman Tier', 'Runic Ward', 'Evasion Rating', 'Energy Shield', 'Level',
+        'Requires Level', 'LevelReq', 'Has Alt Variant', 'Has Alt Variant Two',
+        'Has Alt Variant Three', 'Has Alt Variant Four', 'Has Alt Variant Five',
+        'Selected Alt Variant', 'Selected Alt Variant Two', 'Selected Alt Variant Three',
+        'Selected Alt Variant Four', 'Selected Alt Variant Five', 'Allow Duplicate Variants',
+        'Has Variants', 'Selected Variants', 'League', 'Crafted', 'Implicit', 'Prefix', 'Suffix',
+        'Implicits', 'Unreleased', 'Upgrade', 'Source', 'Cluster Jewel Skill',
+        'Cluster Jewel Node Count', 'Catalyst', 'CatalystQuality', 'Note', 'Critical Hit Range',
+        'Attacks per Second', 'Weapon Range', 'Critical Hit Chance', 'Physical Damage',
+        'Elemental Damage', 'Chaos Damage', 'Fire Damage', 'Cold Damage', 'Lightning Damage',
+        'Reload Time', 'Chance to Block', 'Block chance', 'Armour', 'Evasion', 'Requires',
+    ];
+
+    /** Whole lines ParseRaw reads as item flags or separators, never as mods. */
+    private const array FLAG_LINES = [
+        '--------', 'Requirements:', 'Sanctified', 'Mirrored', 'Corrupted', 'Twice Corrupted',
+        'Desecrated Prefix', 'Desecrated Suffix',
+    ];
+
+    /**
+     * @return list<array{name: string, base: string, league: ?string, variants: ?array<string, mixed>, lines: list<array{text: string, implicit: bool, variants?: list<int>, versions?: list<int>, groups?: list<int>}>}>
      */
     public function parse(string $lua): array
     {
@@ -52,59 +76,109 @@ final class PobUniqueModsParser
     }
 
     /**
-     * @return array{name: string, base: string, league: ?string, implicitCount: int, mods: list<string>}|null
+     * @return array{name: string, base: string, league: ?string, variants: ?array<string, mixed>, lines: list<array{text: string, implicit: bool, variants?: list<int>, versions?: list<int>, groups?: list<int>}>}|null
      */
     private function parseBlock(string $block): ?array
     {
         $lines = array_values(array_filter(
-            preg_split('/\r?\n/', trim($block)) ?: [],
-            static fn (string $line): bool => trim($line) !== '',
+            array_map(trim(...), preg_split('/\r?\n/', trim($block)) ?: []),
+            static fn (string $line): bool => $line !== '',
         ));
 
         if (count($lines) < 2) {
             return null;
         }
 
-        $name = trim(array_shift($lines));
-        $base = trim((string) array_shift($lines));
+        $name = array_shift($lines);
+        $base = (string) array_shift($lines);
         $league = null;
         $implicitCount = 0;
-        $mods = [];
+        $foundExplicit = false;
+        $modLines = [];
+
+        $inReminder = false;
 
         foreach ($lines as $line) {
-            if (str_starts_with($line, 'Variant:')
-                || str_starts_with($line, 'Radius:')
-                || str_starts_with($line, 'Sockets:')
-                || str_starts_with($line, 'Source:')
-            ) {
-                continue;
-            }
-
-            if (str_starts_with($line, 'League:')) {
-                $league = trim(substr($line, strlen('League:')));
+            // Reminder text "(Explanation ...)", possibly over several lines.
+            if ($inReminder || preg_match('/^\([A-Za-z]/', $line) === 1) {
+                $inReminder = ! str_ends_with($line, ')');
 
                 continue;
             }
 
-            if (str_starts_with($line, 'Implicits:')) {
-                $implicitCount = (int) trim(substr($line, strlen('Implicits:')));
-
+            if (in_array($line, self::FLAG_LINES, true) || preg_match('/^Requires:? Level \d+/', $line) === 1) {
                 continue;
             }
 
-            $mods[] = trim(preg_replace('/^(\{[^}]*\})+/', '', $line) ?? $line);
+            $spec = self::specName($line);
+
+            if ($spec !== null) {
+                if ($spec === 'League') {
+                    $league = trim(substr($line, strlen('League:')));
+                }
+
+                if ($spec === 'Implicits') {
+                    $implicitCount = (int) trim(substr($line, strlen('Implicits:')));
+
+                    continue;
+                }
+
+                if (! in_array($spec, self::SPEC_NAMES, true)) {
+                    // ParseRaw: "Anything else is an explicit with a colon in it".
+                    $foundExplicit = true;
+                } elseif (! $foundExplicit) {
+                    continue;
+                }
+            }
+
+            $modLines[] = TaggedLine::parse($line);
         }
 
-        if ($name === '' || $mods === []) {
+        $modLines = array_values(array_filter($modLines, static fn (TaggedLine $line): bool => $line->text !== ''));
+
+        if ($modLines === []) {
             return null;
         }
+
+        $variants = PobItemVariants::fromItemLines($lines);
 
         return [
             'name' => $name,
             'base' => $base,
             'league' => $league,
-            'implicitCount' => $implicitCount,
-            'mods' => $mods,
+            'variants' => $variants?->toArray(),
+            'lines' => array_map(
+                static fn (TaggedLine $line, int $index): array => array_filter([
+                    'text' => $line->text,
+                    'implicit' => $index < $implicitCount,
+                    'variants' => $line->variants,
+                    'versions' => $line->versions,
+                    'groups' => $line->groups,
+                ], static fn (mixed $value): bool => $value !== null),
+                $modLines,
+                array_keys($modLines),
+            ),
         ];
+    }
+
+    /**
+     * The spec name of an untagged `Name: value` / `Requires X value` line, as PoB's
+     * `parseItemSpec` reads it, or null for anything else. A tagged line is never a spec.
+     */
+    private static function specName(string $line): ?string
+    {
+        if (str_starts_with($line, '{')) {
+            return null;
+        }
+
+        if (preg_match('/^([A-Za-z ()]+:?): (.+)$/', $line, $match) === 1) {
+            return $match[1] === 'Class:' ? 'Requires Class' : $match[1];
+        }
+
+        if (preg_match('/^(Requires [A-Za-z]+) (.+)$/', $line, $match) === 1) {
+            return $match[1];
+        }
+
+        return null;
     }
 }

@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
+use App\Pob\Uniques\VariantSelection;
 use App\Rules\LiveGameEra;
 use App\Support\Planner\PlanItemSchema;
 use App\Support\Planner\PlanSchema;
@@ -85,6 +86,7 @@ abstract class PlanRequest extends FormRequest
             // UniqueModLine::$key) - distinct from `stats`, which is the author-picked
             // affixes only a base/rare/magic item carries. Decimals are real PoB rolls
             // (e.g. "11.9 Life Regeneration per second"), so values are plain `numeric`.
+            'sections.*.items.slots.*.variant' => ['nullable', 'array', 'max:4'],
             'sections.*.items.slots.*.uniqueMods' => ['nullable', 'array', 'max:20'],
             'sections.*.items.slots.*.uniqueMods.*.key' => ['required', 'string', 'max:200'],
             'sections.*.items.slots.*.uniqueMods.*.values' => ['nullable', 'array', 'max:8'],
@@ -306,7 +308,7 @@ abstract class PlanRequest extends FormRequest
     /**
      * A unique item's rolled mod values, checked against its synced catalogue lines - the
      * counterpart to {@see ModCatalogue::modErrors} for `stats`. Each `uniqueMods` entry's
-     * `key` must name a real line on the unique ({@see IconResolver::uniqueModLines}), with
+     * `key` must name a real line of the unique's picked variant ({@see IconResolver::uniqueModLines}), with
      * exactly one value per that line's rolls, each within its `[min, max]` (decimals
      * allowed - PoB's own data carries fractional rolls).
      *
@@ -323,7 +325,9 @@ abstract class PlanRequest extends FormRequest
             return [];
         }
 
-        $catalogue = $icons->uniqueModLines($base['id']);
+        // Only the lines of the item's own variant pick are its mods - another variant's
+        // line can share a key with different rolls.
+        $catalogue = $icons->uniqueModLines($base['id'], VariantSelection::fromArray($item['variant'] ?? null));
         $byKey = [];
 
         foreach ([...$catalogue['implicits'], ...$catalogue['mods']] as $line) {

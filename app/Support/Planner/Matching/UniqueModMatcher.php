@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Planner\Matching;
 
 use App\Pob\IconResolver;
+use App\Pob\Uniques\VariantSelection;
 
 /**
  * Reverse-matches a unique's rendered mod lines to its synced catalogue lines,
@@ -29,17 +30,20 @@ final readonly class UniqueModMatcher
      * match a known catalogue line (an unsynced/renamed mod) is returned unmatched,
      * same as an unresolved rare/magic affix.
      *
+     * Only the lines of the item's own variant pick are candidates: lines of other
+     * variants can share a key with different rolls (an older and a current roll range).
+     *
      * @param  list<string>  $rawLines
      * @return array{matched: list<array{key: string, values: list<float>}>, unmatched: list<string>}
      */
-    public function match(string $uniqueName, array $rawLines): array
+    public function match(string $uniqueId, array $rawLines, ?VariantSelection $selection = null): array
     {
         $lines = array_values(array_filter(
             $rawLines,
             static fn (string $line): bool => ! str_starts_with($line, 'Bonded:'),
         ));
 
-        $catalogue = $this->icons->uniqueModLines($uniqueName);
+        $catalogue = $this->icons->uniqueModLines($uniqueId, $selection);
         $candidates = [...$catalogue['implicits'], ...$catalogue['mods']];
 
         // No synced data for this unique at all (sync hasn't run yet, or it isn't in PoB's

@@ -11,8 +11,10 @@ use App\Pob\GameData\NotableCatalog;
 use App\Pob\GameData\ReferenceResolver;
 use App\Pob\GameData\RuneCatalog;
 use App\Pob\GameData\UniqueCatalog;
+use App\Pob\Uniques\PobItemVariants;
 use App\Pob\Uniques\PobUniqueStore;
 use App\Pob\Uniques\UniqueModLine;
+use App\Pob\Uniques\VariantSelection;
 use Illuminate\Contracts\Cache\Repository as Cache;
 
 /**
@@ -301,22 +303,47 @@ final readonly class IconResolver
     }
 
     /**
-     * The structured (key/rolls) form of a unique's synced mods (see
-     * {@see UniqueCatalog::modLines}).
+     * The structured (key/rolls) form of a unique's synced mods for a variant pick, its
+     * PoB default when none is given (see {@see UniqueCatalog::modLines}).
      *
      * @return array{implicits: list<UniqueModLine>, mods: list<UniqueModLine>}
      */
-    public function uniqueModLines(string $name): array
+    public function uniqueModLines(string $id, ?VariantSelection $selection = null): array
     {
-        return $this->uniques->modLines($name);
+        return $this->uniques->modLines($id, $selection);
     }
 
     /**
      * A unique's underlying base item (see {@see UniqueCatalog::baseType}).
      */
-    public function uniqueBaseType(?string $name): ?string
+    public function uniqueBaseType(?string $id): ?string
     {
-        return $this->uniques->baseType($name);
+        return $this->uniques->baseType($id);
+    }
+
+    /**
+     * The id of the unique an item names, by its base when the name alone is ambiguous
+     * (see {@see UniqueCatalog::idFor}).
+     */
+    public function uniqueId(string $name, ?string $base): string
+    {
+        return $this->uniques->idFor($name, $base);
+    }
+
+    /**
+     * The GGPK name behind a unique id (see {@see UniqueCatalog::nameOf}).
+     */
+    public function uniqueName(string $id): string
+    {
+        return $this->uniques->nameOf($id);
+    }
+
+    /**
+     * A unique's PoB variant model, null when it has none (see {@see PobItemVariants}).
+     */
+    public function uniqueVariants(string $id): ?PobItemVariants
+    {
+        return $this->uniques->variants($id);
     }
 
     /**

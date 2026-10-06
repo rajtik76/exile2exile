@@ -11,6 +11,8 @@ use App\Pob\Data\EquippedItem;
 use App\Pob\Data\Gem;
 use App\Pob\Data\GemGroup;
 use App\Pob\Decoding\BuildDecoder;
+use App\Pob\Uniques\PobItemVariants;
+use App\Pob\Uniques\TaggedLine;
 use InvalidArgumentException;
 use SimpleXMLElement;
 
@@ -408,14 +410,25 @@ final class PobImport implements BuildDecoder
         // and real PoB never shows them as part of the item's mod list either. Dropped
         // before the implicit/explicit split, so the split still lines up with PoB's
         // "Implicits: N" count for the lines that remain.
+        //
+        // An item with PoB variants (most often a unique) exports every variant's lines,
+        // each tagged {variant:N} / {version:N} / {group:N}, plus its own picks ("Selected
+        // Variant: N", ...). PoB applies only the lines active for those picks
+        // (Classes/Item.lua CheckModLineVariant), so the others are dropped here the same
+        // way, and the implicit count shrinks by those in its range.
+        $variants = PobItemVariants::fromItemLines($lines);
+        $variantSelection = $variants?->normalise();
         $modLines = $modStart === null ? [] : array_slice($lines, $modStart);
-        $runeGrantedInImplicitRange = 0;
+        $droppedInImplicitRange = 0;
         $rawModLines = [];
 
         foreach ($modLines as $i => $line) {
-            if ($this->hasRuneTag($line)) {
+            $inactiveVariant = $variants !== null && $variantSelection !== null
+                && ! $variants->isActive(TaggedLine::parse($line), $variantSelection);
+
+            if ($this->hasRuneTag($line) || $inactiveVariant) {
                 if ($i < $implicitsCount) {
-                    $runeGrantedInImplicitRange++;
+                    $droppedInImplicitRange++;
                 }
 
                 continue;
@@ -424,7 +437,7 @@ final class PobImport implements BuildDecoder
             $rawModLines[] = $this->stripModTags($line);
         }
 
-        $implicitsCount -= $runeGrantedInImplicitRange;
+        $implicitsCount -= $droppedInImplicitRange;
 
         // These are item flags PoB appends after the mods, not modifier lines; they
         // are trailing, so implicit counting is safe. See PathOfBuilding-PoE2's
@@ -460,6 +473,7 @@ final class PobImport implements BuildDecoder
             energyShield: $this->intMeta($lines, 'Energy Shield:'),
             block: $this->intMeta($lines, 'Block:'),
             corrupted: $corrupted,
+            variantSelection: $variantSelection,
         );
     }
 

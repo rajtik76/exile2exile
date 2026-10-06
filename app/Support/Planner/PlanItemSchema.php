@@ -7,6 +7,7 @@ namespace App\Support\Planner;
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
 use App\Pob\Uniques\UniqueModLine;
+use App\Pob\Uniques\VariantSelection;
 
 /**
  * The stored shape of one equipped item on the plan's paper-doll: its rarity,
@@ -113,7 +114,7 @@ final class PlanItemSchema
      * slots are dropped.
      *
      * @param  array<int|string, mixed>  $slots
-     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
+     * @return array<string, array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, variant: array{variant?: int, alts?: array<int, int>, version?: int, groups?: array<int, int>}, sockets: list<array{type: string, id: string}|null>, priority: int|null}>
      */
     public static function canonicalSlots(array $slots): array
     {
@@ -227,7 +228,7 @@ final class PlanItemSchema
      * no mod lines and no runes).
      *
      * @param  array<string, mixed>  $entry
-     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
+     * @return array{rarity: string, base: array{type: string, id: string}|null, name: string, corrupted: bool, itemLevel: int|null, props: array{quality: int, armour: int, evasion: int, energyShield: int, block: int}, stats: list<array{modId: ?string, text: string, name: ?string, type: ?string, family: ?string, tier: ?int, rolls: ?list<array{stat: string, min: int|float, max: int|float}>, values: list<int|float>}>, uniqueMods: list<array{key: string, values: list<int|float>}>, variant: array{variant?: int, alts?: array<int, int>, version?: int, groups?: array<int, int>}, sockets: list<array{type: string, id: string}|null>, priority: int|null}|null
      */
     private static function canonicalItem(array $entry): ?array
     {
@@ -288,6 +289,9 @@ final class PlanItemSchema
             'props' => $props,
             'stats' => $stats,
             'uniqueMods' => $uniqueMods,
+            // A unique's PoB variant pick (see VariantSelection); the lines it selects are
+            // resolved live against the unique's synced variants, never stored.
+            'variant' => $rarity === 'unique' ? VariantSelection::fromArray($entry['variant'] ?? null)->toArray() : [],
             'sockets' => $sockets,
             'priority' => $priority,
         ];

@@ -28,7 +28,7 @@ final class PlanSchema
      * Current JSON schema version. Bump this (and add an upgrade step below) on any
      * change to the stored shape.
      */
-    public const int CURRENT_VERSION = 3;
+    public const int CURRENT_VERSION = 4;
 
     /**
      * The fixed base phases, in their immutable display order (see {@see PlanTabs}).
@@ -232,6 +232,10 @@ final class PlanSchema
             // `req.level` which tracked nothing). Purely additive: canonicalize()
             // defaults the missing key to null, so there is nothing to rewrite.
             2 => fn (array $data): array => $data,
+            // v3 -> v4: added the per-item unique `variant` (its Path of Building variant
+            // pick, which decides which of the unique's lines apply). Purely additive:
+            // canonicalize() defaults the missing key to PoB's default pick (empty).
+            3 => fn (array $data): array => $data,
         ];
     }
 

@@ -307,6 +307,55 @@ test('a unique item mod value within its rolled range is accepted and stored', f
 
 });
 
+test('a unique item mod value is checked against the lines of its own variant pick', function (array $variant, bool $valid) {
+    fakePobUniquesRoot();
+
+    app(PobUniqueStore::class)->write([
+        'Bramblejack' => [
+            'name' => 'Bramblejack',
+            'base' => 'Thornguard',
+            'league' => null,
+            'variants' => ['variants' => ['Pre 0.4.0', 'Current'], 'versions' => [], 'altSlots' => [], 'groups' => [], 'defaults' => []],
+            'lines' => [
+                ['text' => '+(40-60) to maximum Life', 'implicit' => false, 'variants' => [1]],
+                ['text' => '+(80-120) to maximum Life', 'implicit' => false, 'variants' => [2]],
+            ],
+        ],
+    ], 'repo@sha');
+
+    $response = $this->post(route('planner.store'), planPayload([
+        'sections' => [
+            'act-1' => [
+                'items' => [
+                    'notes' => '',
+                    'entries' => [],
+                    'slots' => [
+                        'body' => [
+                            'rarity' => 'unique',
+                            'base' => ['type' => 'unique', 'id' => 'Bramblejack'],
+                            'variant' => $variant,
+                            'uniqueMods' => [['key' => '+# to maximum Life', 'values' => [110]]],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]));
+
+    if (! $valid) {
+        $response->assertInvalid(['sections.act-1.items.slots.body']);
+
+        return;
+    }
+
+    $response->assertValid();
+
+    expect(BuildPlan::first()->data['sections']['act-1']['items']['slots']['body']['variant'])->toBe($variant);
+})->with([
+    'current variant' => [['variant' => 2], true],
+    'older variant, roll out of its range' => [['variant' => 1], false],
+]);
+
 test('a unique item mod value outside its rolled range is rejected', function () {
     seedBramblejackMods();
 

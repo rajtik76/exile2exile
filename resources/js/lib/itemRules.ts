@@ -1,5 +1,6 @@
 import type { PlanReference } from '@/lib/planReferences';
 import { uniqueModValuesValid } from '@/lib/uniqueModLines';
+import { activeUniqueLines } from '@/lib/uniqueVariants';
 import {
     MAX_ITEM_NAME_LENGTH,
     MAX_ITEM_QUALITY,
@@ -77,7 +78,10 @@ export function itemErrors(
             );
         }
 
-        return [...errors, ...uniqueModErrors(item.uniqueMods, reference)];
+        return [
+            ...errors,
+            ...uniqueModErrors(item.uniqueMods, item.variant, reference),
+        ];
     }
 
     if (item.uniqueMods.length > 0) {
@@ -98,16 +102,20 @@ export function itemErrors(
  */
 function uniqueModErrors(
     uniqueMods: UniqueModStat[],
+    variant: ItemPlan['variant'],
     reference: PlanReference | undefined,
 ): string[] {
     if (uniqueMods.length === 0 || !reference) {
         return [];
     }
 
-    const lines = [
-        ...(reference.implicitLines ?? []),
-        ...(reference.modLines ?? []),
-    ];
+    // Only the lines of the item's own variant pick are its mods - another variant's
+    // line can share a key with different rolls.
+    const lines = activeUniqueLines(
+        [...(reference.implicitLines ?? []), ...(reference.modLines ?? [])],
+        reference.variants,
+        variant,
+    );
     const byKey = new Map(lines.map((line) => [line.key, line]));
     const errors: string[] = [];
 

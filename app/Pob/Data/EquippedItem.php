@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Pob\Data;
 
+use App\Pob\Uniques\VariantSelection;
+
 /**
  * An equipped item, normalized from PoB's raw item text block.
  */
@@ -14,6 +16,7 @@ final readonly class EquippedItem
      * @param  ?string  $icon  Web path to the item icon, or null when art is unavailable.
      * @param  bool  $twoHanded  Whether this is a two-handed weapon (occupies the off-hand).
      * @param  list<array{name: string, icon: ?string, levelRequirement: ?int, effects: list<string>}>  $runes  Runes socketed into the item.
+     * @param  ?VariantSelection  $variantSelection  The item's own PoB variant pick (normalised), null when it has no variants.
      */
     public function __construct(
         public string $slot,
@@ -37,6 +40,7 @@ final readonly class EquippedItem
         public ?int $energyShield = null,
         public ?int $block = null,
         public bool $corrupted = false,
+        public ?VariantSelection $variantSelection = null,
     ) {}
 
     /**

@@ -1,5 +1,7 @@
 import { deriveRarity } from '@/lib/itemRarity';
 import type { PlanReference } from '@/lib/planReferences';
+import { activeUniqueLines } from '@/lib/uniqueVariants';
+import type { UniqueVariantSelection } from '@/lib/uniqueVariants';
 import { MAX_ITEM_QUALITY } from '@/types/planner';
 import type { ItemMod, ItemPlan, ItemProps } from '@/types/planner';
 
@@ -35,7 +37,7 @@ export function normalizeItem(item: ItemPlan): ItemPlan {
  * modifiers, so any author mods are dropped on the pick. Any previously rolled
  * unique-mod values are dropped too - either they belonged to a different
  * unique (their keys won't match the new one) or the item is no longer a
- * unique at all. A defence value the new base doesn't have would otherwise
+ * unique at all, and so does a variant pick. A defence value the new base doesn't have would otherwise
  * survive as a stale, now-hidden number (the editor gates its input out) with
  * no way to fix it - it is cleared the moment the base changes; unresolved
  * picks (no armour data yet) leave every value as-is.
@@ -49,6 +51,8 @@ export function withBasePicked(
         base: { type: picked.type as 'base' | 'unique', id: picked.id },
         stats: picked.type === 'unique' ? [] : item.stats,
         uniqueMods: [],
+        // A new pick starts on PoB's default variant.
+        variant: {},
         props: picked.armour
             ? {
                   ...item.props,
@@ -73,6 +77,34 @@ export function withUniqueModValues(
     const rest = item.uniqueMods.filter((stat) => stat.key !== key);
 
     return { ...item, uniqueMods: [...rest, { key, values }] };
+}
+
+/**
+ * The unique with a new Path of Building variant pick. A rolled value is kept only while
+ * its line still applies under the new pick - a line of another variant is no longer one
+ * of the item's mods, so its value would only fail validation.
+ */
+export function withVariantPicked(
+    item: ItemPlan,
+    variant: UniqueVariantSelection,
+    reference: PlanReference | undefined,
+): ItemPlan {
+    const active = new Set(
+        activeUniqueLines(
+            [
+                ...(reference?.implicitLines ?? []),
+                ...(reference?.modLines ?? []),
+            ],
+            reference?.variants,
+            variant,
+        ).map((line) => line.key),
+    );
+
+    return {
+        ...item,
+        variant,
+        uniqueMods: item.uniqueMods.filter((stat) => active.has(stat.key)),
+    };
 }
 
 /** A property value clamped to its legal range: quality caps at {@link MAX_ITEM_QUALITY}; every property floors at 0. */
