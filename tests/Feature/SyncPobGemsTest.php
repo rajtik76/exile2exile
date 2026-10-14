@@ -56,6 +56,23 @@ test('it syncs the gem ids from PoB, keyed like the GGPK gem catalogue', functio
         ->sourceRef->toBe('PathOfBuildingCommunity/PathOfBuilding-PoE2@fakecommit123');
 });
 
+test('an entry key defined twice keeps only its last definition, as in Lua', function () {
+    fakePobGemsLua(<<<'LUA'
+        return {
+            ["Metadata/Items/Gems/SkillGemSkeletalSniper"] = {
+                gameId = "Metadata/Items/Gems/SkillGemSkeletalWarrior",
+            },
+            ["Metadata/Items/Gems/SkillGemSkeletalSniper"] = {
+                gameId = "Metadata/Items/Gems/SkillGemSkeletalSniper",
+            },
+        }
+        LUA);
+
+    $this->artisan('poe2:sync-pob-gems')->assertSuccessful();
+
+    expect(app(PobGemStore::class)->read()['gems'])->toBe(['SkillGemSkeletalSniper']);
+});
+
 test('it fails without writing when the download fails', function () {
     Http::preventStrayRequests();
     Http::fake(['raw.githubusercontent.com/*' => Http::response('', 404)]);
@@ -75,7 +92,7 @@ test('it fails without writing when the file holds no gem ids', function () {
 
 test('it keeps the last snapshot when the new list shrinks by more than the allowed ratio', function () {
     seedPobGemsSnapshot(10);
-    fakePobGemsLua('gameId = "Metadata/Items/Gems/SkillGem1"');
+    fakePobGemsLua('return { ["SkillGem1"] = { gameId = "Metadata/Items/Gems/SkillGem1" } }');
 
     $this->artisan('poe2:sync-pob-gems')
         ->expectsOutputToContain('not overwriting')
