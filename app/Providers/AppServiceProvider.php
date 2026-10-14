@@ -7,6 +7,7 @@ use App\Filter\Economy\PriceTierPolicy;
 use App\Filter\Neversink\NeversinkFilterRepository;
 use App\Pob\Decoding\BuildDecoder;
 use App\Pob\Decoding\CachingBuildDecoder;
+use App\Pob\Gems\PobGemStore;
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
 use App\Pob\PobImport;
@@ -42,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
             $app->make(Cache::class),
             config()->string('poe.data_version'),
             $app->make(PobUniqueStore::class),
+            pobGemStore: $app->make(PobGemStore::class),
         ));
 
         $this->app->singleton(ModCatalogue::class, fn ($app): ModCatalogue => new ModCatalogue(

@@ -70,7 +70,11 @@ patch. The `poe2:sync-pob-uniques` command refreshes them daily from
 community-maintained data (MIT, see [`resources/pob-uniques`](resources/pob-uniques))
 into `storage/game-data/pob-uniques`, outside the GGPK release symlink so a
 patch swap never touches it - unique mods update on their own cadence, not the
-patch cycle. Full credits on the app's Credits & Licenses page.
+patch cycle. The same goes for the gem picker: GGG's gem tables also hold gems
+no player can get, with nothing in the data to tell them apart, so
+`poe2:sync-pob-gems` refreshes PoB's gem id list daily into
+`storage/game-data/pob-gems` and the picker offers only those gems. Every gem's
+data still comes from GGPK. Full credits on the app's Credits & Licenses page.
 
 ### From patch to production
 

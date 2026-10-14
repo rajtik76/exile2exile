@@ -106,6 +106,18 @@ export default function Credits() {
                 </p>
             </LegalSection>
 
+            <LegalSection heading="Gem picker">
+                <p>
+                    GGG's gem tables also hold gems no player can get: weapon
+                    default attacks, skills granted by items or ascendancies,
+                    unreleased or removed gems. Nothing in the data tells them
+                    apart, so the gem picker offers only the gems listed in Path
+                    of Building's <code>Data/Gems.lua</code>. Only the gem ids
+                    are taken from it; every gem's data still comes from the
+                    game files.
+                </p>
+            </LegalSection>
+
             <LegalSection heading="Economy prices">
                 <p>
                     Live market prices for the loot-filter generator come from{' '}

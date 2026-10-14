@@ -162,4 +162,33 @@ return [
         'max_drop_ratio' => (float) env('POB_UNIQUES_MAX_DROP_RATIO', 0.5),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Path of Building gem list (documented GGPK exception)
+    |--------------------------------------------------------------------------
+    |
+    | GGPK's gem tables also carry gems no player can get: weapon default
+    | attacks, item and ascendancy granted skills, unreleased or removed gems.
+    | GGPK has no flag that tells them apart; PoB picks its gems by hand. Only
+    | the gem ids of PoB's Data/Gems.lua are synced and only decide which gems
+    | the gem picker offers - every gem's data still comes from GGPK. Same
+    | daily cadence and storage idiom as pob_uniques above.
+    |
+    */
+
+    'pob_gems' => [
+        'repo' => env('POB_GEMS_REPO', 'PathOfBuildingCommunity/PathOfBuilding-PoE2'),
+
+        'path' => env('POB_GEMS_PATH', 'src/Data/Gems.lua'),
+
+        'ref' => env('POB_GEMS_REF', 'dev'),
+
+        'storage_path' => env('POB_GEMS_STORAGE_PATH') ?: storage_path('game-data/pob-gems'),
+
+        'heartbeat_url' => env('POB_GEMS_SYNC_HEARTBEAT_URL'),
+
+        // Same safety floor as pob_uniques.max_drop_ratio, for the gem id count.
+        'max_drop_ratio' => (float) env('POB_GEMS_MAX_DROP_RATIO', 0.5),
+    ],
+
 ];

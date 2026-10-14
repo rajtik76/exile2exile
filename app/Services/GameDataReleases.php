@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Pob\Gems\PobGemStore;
 use App\Pob\Uniques\PobUniqueStore;
 use App\Support\GameEra;
 use FilesystemIterator;
@@ -40,6 +41,7 @@ class GameDataReleases
     public function __construct(
         private readonly GameEra $eras,
         private readonly PobUniqueStore $uniques,
+        private readonly PobGemStore $gemList,
     ) {}
 
     /**
@@ -281,8 +283,8 @@ class GameDataReleases
      * Freeze the live release under archive/<version> when the release about to go
      * live belongs to a different era. The copy is hard-linked, so it costs next to
      * no disk while the release itself is still kept, and it survives the release
-     * being pruned later. The PoB unique mods ride along, since they sit outside
-     * releases.
+     * being pruned later. The PoB unique mods and gem list ride along, since they
+     * sit outside releases.
      *
      * One archive per era: any other archive whose patch belongs to the same era is
      * removed once the new one is in place, so the store never piles up archives and
@@ -307,6 +309,11 @@ class GameDataReleases
         if (is_file($this->uniques->path())) {
             File::ensureDirectoryExists($staging.'/pob-uniques');
             File::copy($this->uniques->path(), $staging.'/pob-uniques/current.json');
+        }
+
+        if (is_file($this->gemList->path())) {
+            File::ensureDirectoryExists($staging.'/pob-gems');
+            File::copy($this->gemList->path(), $staging.'/pob-gems/current.json');
         }
 
         File::deleteDirectory($target);

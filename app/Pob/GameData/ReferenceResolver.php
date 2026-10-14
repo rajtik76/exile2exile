@@ -28,7 +28,9 @@ final readonly class ReferenceResolver
     /**
      * Search the gem, rune and unique-item catalogues by name for the reference
      * picker. Returns a flat, ranked list (prefix matches first, then shorter names)
-     * of at most $limit entries.
+     * of at most $limit entries. Gems are limited to the ones the picker offers
+     * ({@see GemCatalog::isOffered}); {@see resolve} still resolves any gem, so a plan
+     * holding a gem PoB has since dropped keeps rendering it.
      *
      * @param  list<string>  $types  any of 'gem', 'rune', 'unique'
      * @param  list<string>  $categories  restrict uniques to these base categories (e.g. equipment slots); empty = any
@@ -48,6 +50,10 @@ final readonly class ReferenceResolver
         if (in_array('gem', $types, true)) {
             foreach ($this->gems->all() as $id => $entry) {
                 if ($gemKind !== null && ! $this->gems->matchesKind($entry['type'], $gemKind)) {
+                    continue;
+                }
+
+                if (! $this->gems->isOffered((string) $id)) {
                     continue;
                 }
 

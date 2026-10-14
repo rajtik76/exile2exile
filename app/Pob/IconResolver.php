@@ -11,6 +11,7 @@ use App\Pob\GameData\NotableCatalog;
 use App\Pob\GameData\ReferenceResolver;
 use App\Pob\GameData\RuneCatalog;
 use App\Pob\GameData\UniqueCatalog;
+use App\Pob\Gems\PobGemStore;
 use App\Pob\Uniques\PobItemVariants;
 use App\Pob\Uniques\PobUniqueStore;
 use App\Pob\Uniques\UniqueModLine;
@@ -54,10 +55,11 @@ final readonly class IconResolver
         string $dataVersion = 'dev',
         ?PobUniqueStore $pobUniqueStore = null,
         GemRequirements $gemRequirements = new GemRequirements,
+        ?PobGemStore $pobGemStore = null,
     ) {
         $store = new GameDataStore($cache, $dataVersion);
 
-        $this->gems = new GemCatalog($store, $gemRequirements);
+        $this->gems = new GemCatalog($store, $gemRequirements, $pobGemStore);
         $this->items = new ItemCatalog($store);
         $this->runes = new RuneCatalog($store);
         $this->uniques = new UniqueCatalog($pobUniqueStore);

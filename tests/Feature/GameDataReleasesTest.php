@@ -74,6 +74,9 @@ test('activating a release of a new era freezes the outgoing one by its patch, w
     fakeGameDataRelease('5.0.0.1');
     File::ensureDirectoryExists($uniques);
     File::put("{$uniques}/current.json", '{"uniques":{}}');
+    $gems = fakePobGemsRoot();
+    File::ensureDirectoryExists($gems);
+    File::put("{$gems}/current.json", '{"gems":[]}');
     $releases = app(GameDataReleases::class);
     $releases->activate('4.5.5.0');
 
@@ -86,7 +89,8 @@ test('activating a release of a new era freezes the outgoing one by its patch, w
         ->and($releases->has('4.5.5.0'))->toBeFalse()
         ->and($releases->archivedVersions())->toBe(['4.5.5.0'])
         ->and(json_decode((string) File::get($archived), true)['patch'])->toBe('4.5.5.0')
-        ->and(File::get("{$root}/archive/4.5.5.0/pob-uniques/current.json"))->toBe('{"uniques":{}}');
+        ->and(File::get("{$root}/archive/4.5.5.0/pob-uniques/current.json"))->toBe('{"uniques":{}}')
+        ->and(File::get("{$root}/archive/4.5.5.0/pob-gems/current.json"))->toBe('{"gems":[]}');
 });
 
 test('an era keeps a single archive: freezing it again replaces the older one', function () {

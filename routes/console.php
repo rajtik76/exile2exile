@@ -54,3 +54,16 @@ $pobUniquesHeartbeatUrl = config('poe.pob_uniques.heartbeat_url');
 if (is_string($pobUniquesHeartbeatUrl) && $pobUniquesHeartbeatUrl !== '') {
     $pobUniquesSync->pingOnSuccess($pobUniquesHeartbeatUrl);
 }
+
+// Refresh the PoB gem list once a day: it decides which GGPK gems the gem picker
+// offers (GGPK also carries gems no player can get, with nothing to tell them apart).
+$pobGemsSync = Schedule::command('poe2:sync-pob-gems')
+    ->daily()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+$pobGemsHeartbeatUrl = config('poe.pob_gems.heartbeat_url');
+
+if (is_string($pobGemsHeartbeatUrl) && $pobGemsHeartbeatUrl !== '') {
+    $pobGemsSync->pingOnSuccess($pobGemsHeartbeatUrl);
+}

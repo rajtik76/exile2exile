@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Pob\Gems\PobGemStore;
 use App\Pob\IconResolver;
 
 // Arbitrary game data - what matters is each catalogue's lookup/guard logic
@@ -217,4 +218,21 @@ it('returns no reference matches for a blank query or an unsupported type', func
 
     expect($resolver->searchReferences('   ', ['gem', 'rune']))->toBe([])
         ->and($resolver->resolveReference('mystery', 'Anything'))->toBeNull();
+});
+
+it('offers only the gems in the synced PoB gem list, yet still resolves the rest', function () {
+    fakePobGemsRoot();
+    app(PobGemStore::class)->write(['SkillGemAlpha'], 'test');
+    $resolver = new IconResolver(pobGemStore: app(PobGemStore::class));
+
+    expect(array_column($resolver->searchReferences('alpha', ['gem']), 'id'))->toBe(['SkillGemAlpha'])
+        ->and($resolver->searchReferences('gamma', ['gem']))->toBe([])
+        ->and($resolver->resolveReference('gem', 'SkillGemGamma'))->not->toBeNull();
+});
+
+it('offers every gem before the first PoB gem list sync', function () {
+    fakePobGemsRoot();
+    $resolver = new IconResolver(pobGemStore: app(PobGemStore::class));
+
+    expect(array_column($resolver->searchReferences('gamma', ['gem']), 'id'))->toBe(['SkillGemGamma']);
 });

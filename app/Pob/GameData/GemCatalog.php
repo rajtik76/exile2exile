@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Pob\GameData;
 
 use App\Pob\GemRequirements;
+use App\Pob\Gems\PobGemStore;
 use App\Pob\PobImport;
 use App\Support\Planner\PlanReferences;
 
@@ -49,9 +50,15 @@ final class GemCatalog
      */
     private ?array $gemRequirementsIndex = null;
 
+    /**
+     * @var array<string, true>|null
+     */
+    private ?array $offeredGemIds = null;
+
     public function __construct(
         private readonly GameDataStore $store,
         private readonly GemRequirements $gemRequirements = new GemRequirements,
+        private readonly ?PobGemStore $offeredGems = null,
     ) {}
 
     /**
@@ -63,6 +70,23 @@ final class GemCatalog
     public function all(): array
     {
         return $this->gems();
+    }
+
+    /**
+     * Whether the gem picker offers the gem: only gems in the synced PoB gem list, since
+     * GGPK also carries gems no player can get (see {@see PobGemStore}). Before the first
+     * sync every gem is offered. Read straight from the store rather than through
+     * {@see GameDataStore::remembered()}, like {@see UniqueCatalog}: the list moves on
+     * PoB's daily cadence, not with the GGPK data version.
+     */
+    public function isOffered(string $gemId): bool
+    {
+        if ($this->offeredGemIds === null) {
+            $gems = $this->offeredGems?->read()['gems'] ?? [];
+            $this->offeredGemIds = array_fill_keys($gems, true);
+        }
+
+        return $this->offeredGemIds === [] || isset($this->offeredGemIds[$gemId]);
     }
 
     /**

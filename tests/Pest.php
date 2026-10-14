@@ -81,6 +81,19 @@ function fakePobUniquesRoot(): string
 }
 
 /**
+ * Point the PoB gem-list store at a throwaway per-process dir and return it, the same
+ * idiom as {@see fakePobUniquesRoot}.
+ */
+function fakePobGemsRoot(): string
+{
+    $root = storage_path('framework/testing/pob-gems-'.getmypid());
+    File::deleteDirectory($root);
+    config()->set('poe.pob_gems.storage_path', $root);
+
+    return $root;
+}
+
+/**
  * Drop a minimal staged release (just its version.json stamp) into the fake
  * releases root, so GameDataReleases::has() and activation see it.
  */
