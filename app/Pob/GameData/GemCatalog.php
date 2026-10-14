@@ -202,7 +202,7 @@ final class GemCatalog
             return null;
         }
 
-        return $this->gemScalingIndex()[$gemId] ?? null;
+        return $this->store->rememberedEntry('gem_scaling', $gemId, $this->gemScalingIndex(...));
     }
 
     /**
@@ -227,7 +227,7 @@ final class GemCatalog
             return null;
         }
 
-        $curve = $this->gemRequirementsIndex()[$gemId]['levels'] ?? null;
+        $curve = $this->store->rememberedEntry('gem_requirements', $gemId, $this->gemRequirementsIndex(...))['levels'] ?? null;
 
         if ($curve === null || $curve === []) {
             return null;
@@ -316,34 +316,30 @@ final class GemCatalog
 
     /**
      * Load the per-level tooltip scaling index (resources/poe2/ggpk/gem_scaling.json),
-     * already keyed by gem id and shaped exactly as {@see scaling} returns it.
+     * already keyed by gem id and shaped exactly as {@see scaling} returns it. Only read
+     * when the per-gem cache {@see GameDataStore::rememberedEntry()} misses.
      *
      * @return array<string, array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}>
      */
     private function gemScalingIndex(): array
     {
-        return $this->gemScalingIndex ??= $this->store->remembered('gem_scaling', function (): array {
-            /** @var array<string, array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}> $decoded */
-            $decoded = $this->store->load('ggpk/gem_scaling.json');
+        /** @var array<string, array{name: string, levels: list<array{level: int, cost: ?int, castTime: ?float, cooldown: ?float, reservation: ?float, spellCritChance: ?float, attackCritChance: ?float, stats: list<array{text: string, min: float, max: float}>}>, qualityStats: list<array{text: string, min: float, max: float}>}> $decoded */
+        $decoded = $this->gemScalingIndex ?? $this->store->load('ggpk/gem_scaling.json');
 
-            return $decoded;
-        });
+        return $this->gemScalingIndex = $decoded;
     }
 
     /**
      * The per-level level/attribute requirement curve, keyed by gem id - reuses
      * {@see GemRequirements}, the same class {@see PlanReferences}
      * relies on for build-gating, so the file is parsed once per shape rather than
-     * independently in both places. Wrapped in {@see GameDataStore::remembered()} for
-     * the across-request caching that class doesn't provide on its own.
+     * independently in both places. Cached per gem through
+     * {@see GameDataStore::rememberedEntry()}, which that class doesn't do on its own.
      *
      * @return array<string, array{name: string, levels: array<int, array{requiredLevel: int, str: int, dex: int, int: int}>}>
      */
     private function gemRequirementsIndex(): array
     {
-        return $this->gemRequirementsIndex ??= $this->store->remembered(
-            'gem_requirements',
-            fn (): array => $this->gemRequirements->all(),
-        );
+        return $this->gemRequirementsIndex ??= $this->gemRequirements->all();
     }
 }

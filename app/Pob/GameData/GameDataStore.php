@@ -61,6 +61,47 @@ final readonly class GameDataStore
     }
 
     /**
+     * One entry of a large derived index, cached per entry rather than as one blob, so a
+     * request needing a single gem never pulls the whole index out of the cache (the gem
+     * scaling index alone unpacks to ~60 MB). On the first miss the index is built once
+     * and written out entry by entry, then marked complete: from then on a missing entry
+     * means an unknown id, answered without rebuilding. Without a cache, the entry is
+     * read straight from `$build`, which the caller memoises.
+     *
+     * @template TValue
+     *
+     * @param  Closure(): array<string, TValue>  $build
+     * @return TValue|null
+     */
+    public function rememberedEntry(string $key, string $id, Closure $build): mixed
+    {
+        if ($this->cache === null) {
+            return $build()[$id] ?? null;
+        }
+
+        $version = "{$this->dataVersion}:".self::CACHE_SCHEMA;
+        $entryKey = static fn (string $entryId): string => "icons.{$key}.entry:{$version}:{$entryId}";
+
+        $entry = $this->cache->get($entryKey($id));
+
+        if ($entry !== null || $this->cache->has("icons.{$key}.split:{$version}")) {
+            return $entry;
+        }
+
+        $index = $build();
+        $entries = [];
+
+        foreach ($index as $entryId => $value) {
+            $entries[$entryKey((string) $entryId)] = $value;
+        }
+
+        $this->cache->putMany($entries);
+        $this->cache->forever("icons.{$key}.split:{$version}", true);
+
+        return $index[$id] ?? null;
+    }
+
+    /**
      * Map a GGPK art reference to the `.png` the extractor actually vendors.
      *
      * The data references art two ways, and a column can switch between them

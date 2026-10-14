@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 use App\Pob\Gems\PobGemStore;
 use App\Pob\IconResolver;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Events\CacheHit;
+use Illuminate\Cache\Repository;
+use Illuminate\Events\Dispatcher;
+use Illuminate\Support\Facades\Storage;
 
 // Arbitrary game data - what matters is each catalogue's lookup/guard logic
 // (hover art fallback, scaling/requirement curves, tag/domain/implicit joins,
@@ -241,4 +246,33 @@ it('offers every gem before the first PoB gem list sync', function () {
 it("lists a rune's bonded effects after its normal ones, prefixed like PoB", function () {
     expect((new IconResolver)->runeData('Lesser Desert Rune')['effects'])
         ->toBe(['Armour: +10% to Fire Resistance', 'Bonded: Armour: +20 to maximum Life']);
+});
+
+it('caches gem scaling and requirements per gem, building each index only once', function () {
+    $cache = new Repository(new ArrayStore);
+    $disk = Storage::disk('game-data');
+    $disk->put('resources/poe2/ggpk/gem_scaling.json', (string) json_encode([
+        'SkillGemAlpha' => ['name' => 'Alpha', 'levels' => [], 'qualityStats' => []],
+        'SkillGemGamma' => ['name' => 'Gamma', 'levels' => [], 'qualityStats' => []],
+    ]));
+
+    expect(new IconResolver($cache, 'test')->gemScaling('SkillGemAlpha')['name'])->toBe('Alpha')
+        ->and(new IconResolver($cache, 'test')->gemRequires('SkillGemAlpha'))->not->toBeNull();
+
+    // A later request is answered from the per-gem entries alone, even for a gem it
+    // never asked for before - the source files are no longer read.
+    $disk->delete(['resources/poe2/ggpk/gem_scaling.json', 'resources/poe2/ggpk/gem_requirements.json']);
+    $resolver = new IconResolver($cache, 'test');
+    $events = new Dispatcher;
+    $fetched = [];
+    $events->listen(CacheHit::class, function (CacheHit $hit) use (&$fetched): void {
+        $fetched[] = $hit->value;
+    });
+    $cache->setEventDispatcher($events);
+
+    expect($resolver->gemScaling('SkillGemGamma')['name'])->toBe('Gamma')
+        ->and($resolver->gemScaling('SkillGemUnknown'))->toBeNull()
+        ->and($resolver->gemRequires('SkillGemAlpha')['level'])->toBe([1, 52])
+        // Only the asked-for gems come out of the cache, never a whole index.
+        ->and(array_column(array_filter($fetched, is_array(...)), 'name'))->toBe(['Gamma', 'Alpha']);
 });
