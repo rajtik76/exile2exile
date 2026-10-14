@@ -456,21 +456,58 @@ function renderNumberedText(text: string): React.ReactNode {
  * {@link renderNumberedText}). Shared shape for a rune/notable tooltip's effect
  * list - anywhere a tooltip lists mechanical effect text with no bullets.
  */
-export function ModLines({ lines }: { lines: string[] }) {
+export function ModLines({
+    lines,
+    hangSigns = false,
+}: {
+    lines: string[];
+    /** Left-aligned lists: a leading +/- hangs in a gutter so the digits line up. */
+    hangSigns?: boolean;
+}) {
     return (
-        <div className="space-y-0.5" style={{ color: MOD_TEXT_COLOR }}>
-            {lines.map((line, i) => (
-                // A single line can itself carry real "\n"s (a multi-sentence
-                // passive stat, e.g.) - whitespace-pre-line renders those as
-                // actual line breaks instead of collapsing them into one run-on
-                // paragraph, the default for any block element.
-                <div key={i} className="whitespace-pre-line">
-                    {renderNumberedText(line)}
-                </div>
-            ))}
+        <div
+            className="space-y-0.5"
+            style={{
+                color: MOD_TEXT_COLOR,
+                ...(hangSigns ? { paddingLeft: SIGN_GUTTER } : {}),
+            }}
+        >
+            {lines.map((line, i) => {
+                const sign = hangSigns
+                    ? LEADING_SIGN.exec(line)?.[0]
+                    : undefined;
+
+                return (
+                    // A single line can itself carry real "\n"s (a multi-sentence
+                    // passive stat, e.g.) - whitespace-pre-line renders those as
+                    // actual line breaks instead of collapsing them into one run-on
+                    // paragraph, the default for any block element.
+                    <div key={i} className="whitespace-pre-line">
+                        {sign && (
+                            <span
+                                className="inline-block text-right"
+                                style={{
+                                    width: SIGN_GUTTER,
+                                    marginLeft: `-${SIGN_GUTTER}`,
+                                    color: '#fff',
+                                }}
+                            >
+                                {sign}
+                            </span>
+                        )}
+                        {renderNumberedText(sign ? line.slice(1) : line)}
+                    </div>
+                );
+            })}
         </div>
     );
 }
+
+/** Width of the gutter a hanging sign sits in: about one +/- glyph. */
+const SIGN_GUTTER = '0.6em';
+
+/** A +/- that opens a line and belongs to the number right after it. */
+const LEADING_SIGN = /^[+-](?=[\d(])/;
 
 /** One label:value row in a gem tooltip's stat block (Tier, Level, Cost, ...). */
 function GemStatRow({

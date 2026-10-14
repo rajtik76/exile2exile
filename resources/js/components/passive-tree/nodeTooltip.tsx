@@ -170,7 +170,7 @@ export function NodeTooltip({
                     text specifically, so it's overridden just here; the title above,
                     and the jewel/picker/allocated sections below, stay centred. */}
                 <div className="text-left">
-                    {stats.length > 0 && <ModLines lines={stats} />}
+                    {stats.length > 0 && <ModLines lines={stats} hangSigns />}
 
                     {node.flavourText && (
                         <p className="mt-1.5 text-[#9a8b6e] italic">

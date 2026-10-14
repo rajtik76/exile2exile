@@ -1,6 +1,6 @@
 import { render, within } from '@testing-library/react';
 import { expect, test } from 'vitest';
-import { TooltipCard } from './tooltip';
+import { ModLines, TooltipCard } from './tooltip';
 import type { TooltipRarityFrame } from './tooltipText';
 
 /**
@@ -44,4 +44,32 @@ test('an item rarity frame still renders its body in the small-caps face', () =>
     const body = renderCard('rare');
 
     expect(body.style.fontFamily).toContain('SmallCaps');
+});
+
+test('hanging signs move a leading +/- into the gutter and keep the line text', () => {
+    const { container } = render(
+        <ModLines
+            lines={['15% increased Armour', '+15% of Armour', 'Adds +5 Life']}
+            hangSigns
+        />,
+    );
+    const rows = [...container.querySelectorAll('.whitespace-pre-line')];
+
+    expect(rows.map((row) => row.textContent)).toEqual([
+        '15% increased Armour',
+        '+15% of Armour',
+        'Adds +5 Life',
+    ]);
+    // Only a sign that opens the line hangs, and only in a hanging list.
+    expect(rows[1].firstElementChild?.textContent).toBe('+');
+    expect((rows[1].firstElementChild as HTMLElement).style.marginLeft).toBe(
+        '-0.6em',
+    );
+    expect(rows[2].querySelector('[style*="margin-left"]')).toBeNull();
+});
+
+test('without hanging signs a leading + stays inline', () => {
+    const { container } = render(<ModLines lines={['+15% of Armour']} />);
+
+    expect(container.querySelector('[style*="margin-left"]')).toBeNull();
 });
