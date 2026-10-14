@@ -1,9 +1,10 @@
-// Runs `pathofexile-dat`'s table/file export, with one correction applied to the
-// community schema first: the QuestStaticRewards column holding a quest's weapon-set
-// passive-point grant is unnamed upstream (poe-tool-dev/dat-schema), so the stock
-// exporter can't select it. We intercept the schema fetch and name that column before
-// the export reads it; everything else passes through untouched. Drop this shim once
-// the column is named upstream.
+// Runs `pathofexile-dat`'s table/file export, with corrections applied to the
+// community schema first: a few columns we read are unnamed upstream
+// (poe-tool-dev/dat-schema) - the QuestStaticRewards weapon-set passive-point grant
+// and the PassiveSkills ApplyToArmour flag - so the stock exporter can't select them.
+// We intercept the schema fetch and name those columns before the export reads it;
+// everything else passes through untouched. Drop a correction once its column is
+// named upstream.
 //
 // The stock exporter also tells PoE1 from PoE2 by patch prefix (only "4." counts as
 // PoE2), both for the CDN host and for the table paths/schema variant. GGG renumbered
@@ -25,6 +26,16 @@ import { SCHEMA_URL } from 'pathofexile-dat-schema';
 /** Name the unnamed i32 that follows QuestFlag: the quest's weapon-set passive grant. */
 const QUEST_WEAPON_PASSIVES_INDEX = 1;
 
+/**
+ * The unnamed bool after PassiveSkills.IsFree: set on the Smith of Kitava nodes whose
+ * stats apply to the equipped body armour. Path of Building's own GGPK spec names it
+ * `ApplyToArmour?` at this position and exports it as `applyToArmour`.
+ */
+const PASSIVE_APPLY_TO_ARMOUR_INDEX = 51;
+
+/** dat-schema's `validFor` bit for PoE2 table variants. */
+const POE2 = 2;
+
 /** Apply our schema corrections in place. Scoped to PoE2 table variants only. */
 function patchSchema(schema) {
   for (const table of schema.tables) {
@@ -33,6 +44,14 @@ function patchSchema(schema) {
 
       if (column && !column.name) {
         column.name = 'WeaponPassives';
+      }
+    }
+
+    if (table.name === 'PassiveSkills' && table.validFor & POE2) {
+      const column = table.columns[PASSIVE_APPLY_TO_ARMOUR_INDEX];
+
+      if (column && !column.name && column.type === 'bool') {
+        column.name = 'ApplyToArmour';
       }
     }
   }
