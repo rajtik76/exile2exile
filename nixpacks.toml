@@ -43,5 +43,8 @@
 # public/icons/poe2, resources/poe2/ggpk) at the persistent release store via
 # the `current` symlink - the container filesystem is fresh on every deploy,
 # so the links must be recreated here. See app/Console/Commands/LinkGameData.
+# Then build the derived game-data indices into the cache (a no-op once warm), so
+# no web request has to build one; a failure there must never block the boot.
+# See app/Console/Commands/WarmGameData.
 [start]
-cmd = "sed -i 's| $uri/ | |g' /assets/nginx.template.conf && sed -i 's@location / {@location ~* ^/(build|tree)/.+.(webp|png|jpe?g|gif|avif|svg|ico|json|js|mjs|css|woff2?|ttf|map)$ { expires 365d; access_log off; try_files $uri =404; } location / {@' /assets/nginx.template.conf && node /assets/scripts/prestart.mjs /assets/nginx.template.conf /nginx.conf && php /app/artisan poe2:link-game-data --force && (while true; do php /app/artisan schedule:work; sleep 1; done & while true; do php /app/artisan queue:work --queue=default,mail --sleep=3 --max-time=3600 --tries=5; sleep 1; done & php-fpm -y /assets/php-fpm.conf & nginx -c /nginx.conf)"
+cmd = "sed -i 's| $uri/ | |g' /assets/nginx.template.conf && sed -i 's@location / {@location ~* ^/(build|tree)/.+.(webp|png|jpe?g|gif|avif|svg|ico|json|js|mjs|css|woff2?|ttf|map)$ { expires 365d; access_log off; try_files $uri =404; } location / {@' /assets/nginx.template.conf && node /assets/scripts/prestart.mjs /assets/nginx.template.conf /nginx.conf && php /app/artisan poe2:link-game-data --force && (php /app/artisan poe2:warm-game-data || true) && (while true; do php /app/artisan schedule:work; sleep 1; done & while true; do php /app/artisan queue:work --queue=default,mail --sleep=3 --max-time=3600 --tries=5; sleep 1; done & php-fpm -y /assets/php-fpm.conf & nginx -c /nginx.conf)"

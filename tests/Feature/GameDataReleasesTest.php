@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\StageGameData;
+use App\Jobs\WarmGameDataCache;
 use App\Services\GameDataReleases;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\File;
@@ -235,7 +236,8 @@ function activateHeaders(string $token = 'secret-token'): array
     return ['Authorization' => "Bearer {$token}"];
 }
 
-test('activating a staged release over the api swaps it live', function () {
+test('activating a staged release over the api swaps it live and warms its caches', function () {
+    Bus::fake([WarmGameDataCache::class]);
     config()->set('poe.data.activate_token', 'secret-token');
     fakeGameDataRoot();
     fakeGameDataRelease('4.5.5.0');
@@ -245,9 +247,11 @@ test('activating a staged release over the api swaps it live', function () {
         ->assertJson(['status' => 'activated', 'version' => '4.5.5.0']);
 
     expect(app(GameDataReleases::class)->currentVersion())->toBe('4.5.5.0');
+    Bus::assertDispatched(WarmGameDataCache::class);
 });
 
 test('activating the already live release is an idempotent no-op', function () {
+    Bus::fake([WarmGameDataCache::class]);
     config()->set('poe.data.activate_token', 'secret-token');
     fakeGameDataRoot();
     fakeGameDataRelease('4.5.5.0');
@@ -256,6 +260,8 @@ test('activating the already live release is an idempotent no-op', function () {
     $this->postJson('/api/data/activate', ['version' => '4.5.5.0'], activateHeaders())
         ->assertOk()
         ->assertJson(['status' => 'already-active', 'version' => '4.5.5.0']);
+
+    Bus::assertNotDispatched(WarmGameDataCache::class);
 });
 
 test('activation rejects a wrong bearer token', function () {

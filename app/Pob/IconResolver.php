@@ -42,6 +42,8 @@ final readonly class IconResolver
 
     private UniqueCatalog $uniques;
 
+    private NotableCatalog $notables;
+
     private ReferenceResolver $references;
 
     /**
@@ -63,13 +65,26 @@ final readonly class IconResolver
         $this->items = new ItemCatalog($store);
         $this->runes = new RuneCatalog($store);
         $this->uniques = new UniqueCatalog($pobUniqueStore);
+        $this->notables = new NotableCatalog($store);
         $this->references = new ReferenceResolver(
             $this->gems,
             $this->items,
             $this->runes,
             $this->uniques,
-            new NotableCatalog($store),
+            $this->notables,
         );
+    }
+
+    /**
+     * Build every derived index into the cache, so no request has to build one (see
+     * the poe2:warm-game-data command).
+     */
+    public function warm(): void
+    {
+        $this->gems->warm();
+        $this->items->names();
+        $this->runes->all();
+        $this->notables->all();
     }
 
     /**

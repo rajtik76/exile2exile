@@ -73,6 +73,18 @@ final class GemCatalog
     }
 
     /**
+     * Build every gem index into the cache ahead of the first request that needs one:
+     * the per-gem split of the scaling index decodes the whole multi-MB file once, too
+     * close to the web workers' memory limit to leave to a request.
+     */
+    public function warm(): void
+    {
+        $this->gems();
+        $this->store->rememberedEntry('gem_scaling', '', $this->gemScalingIndex(...));
+        $this->store->rememberedEntry('gem_requirements', '', $this->gemRequirementsIndex(...));
+    }
+
+    /**
      * Whether the gem picker offers the gem: only gems in the synced PoB gem list, since
      * GGPK also carries gems no player can get (see {@see PobGemStore}). Before the first
      * sync every gem is offered. Read straight from the store rather than through

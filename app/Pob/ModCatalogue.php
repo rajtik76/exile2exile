@@ -73,6 +73,14 @@ final class ModCatalogue
     ) {}
 
     /**
+     * Build the mod list into the cache ahead of the first request that needs it.
+     */
+    public function warm(): void
+    {
+        $this->all();
+    }
+
+    /**
      * The client-facing data for one mod id (its tier line, ranges and generation type),
      * or null when the id is unknown. The spawn-weight gate is internal, so it is dropped.
      *

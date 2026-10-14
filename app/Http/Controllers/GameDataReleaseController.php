@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\WarmGameDataCache;
 use App\Services\GameDataReleases;
 use App\Support\GameEra;
 use Illuminate\Http\JsonResponse;
@@ -77,6 +78,8 @@ class GameDataReleaseController extends Controller
         if (app()->configurationIsCached()) {
             Artisan::call('config:cache');
         }
+
+        WarmGameDataCache::dispatch();
 
         return response()->json(['status' => 'activated', 'version' => $version]);
     }
