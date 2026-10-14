@@ -70,4 +70,43 @@ describe('notableReference', () => {
     it('returns null for a non-landmark node', () => {
         expect(notableReference(data, 10)).toBeNull();
     });
+
+    it("names an overridden notable as the build's ascendancy shows it", () => {
+        // The Abyssal Lich plays on the Lich's disc and shows node 20 as node 900.
+        const lich = {
+            nodes: {
+                20: {
+                    skill: 20,
+                    name: 'Price of Power',
+                    isNotable: true,
+                    ascendancyName: 'Lich',
+                    stats: ['a'],
+                },
+                900: { skill: 900, name: 'Steward of Kulemak', stats: ['b'] },
+            },
+            classes: [
+                {
+                    id: 0,
+                    ascendancies: [
+                        { id: 'Lich' },
+                        {
+                            id: 'Abyssal Lich',
+                            replaces: 'Lich',
+                            overridePairs: { 20: 900 },
+                        },
+                    ],
+                },
+            ],
+        } as unknown as TreeData;
+
+        expect(notableReference(lich, 20, 0, 'Abyssal Lich')).toMatchObject({
+            name: 'Steward of Kulemak',
+            category: 'Abyssal Lich notable',
+            tooltip: 'b',
+        });
+        expect(notableReference(lich, 20, 0, 'Lich')).toMatchObject({
+            name: 'Price of Power',
+            category: 'Lich notable',
+        });
+    });
 });

@@ -6,7 +6,7 @@ namespace App\Tree;
 
 /**
  * Turns a stored tree snapshot into a {@see TreeSummary}: resolves node ids
- * to names (applying the class overrides exactly as the renderer does),
+ * to names (applying the class and ascendancy overrides exactly as the renderer does),
  * classifies notables and keystones, and breaks the attribute nodes down by
  * STR/DEX/INT. Unknown node ids (a tree shared against a since-changed tree
  * export) are skipped rather than guessed at.
@@ -23,7 +23,10 @@ final readonly class TreeSummaryBuilder
 
         $nodes = $this->tree->nodes();
         $class = $this->tree->classes()[$className] ?? null;
-        $overrides = $class['overrides'] ?? [];
+        $ascendancy = $this->resolveAscendancy($class, $snapshot->ascendId);
+        // Class overrides touch main-tree nodes, ascendancy overrides only the
+        // ascendancy disc, so the two never collide.
+        $overrides = ($class['overrides'] ?? []) + ($class['ascendancyOverrides'][$ascendancy ?? ''] ?? []);
 
         $notables = [];
         $keystones = [];
@@ -48,7 +51,7 @@ final readonly class TreeSummaryBuilder
 
         return new TreeSummary(
             class: $className,
-            ascendancy: $this->resolveAscendancy($class, $snapshot->ascendId),
+            ascendancy: $ascendancy,
             treeVersion: $snapshot->allocation->treeVersion,
             pointsAllocated: count($allocated),
             attributes: $this->attributeBreakdown($attributeNodeIds, $attributeChoices),
@@ -81,7 +84,7 @@ final readonly class TreeSummaryBuilder
      * like "Witch2" for tree-native shares - so we map an id to its name and pass
      * an already-named value straight through, exactly as the viewer does.
      *
-     * @param  array{overrides: array<int, int>, ascendancies: array<string, string>}|null  $class
+     * @param  array{overrides: array<int, int>, ascendancies: array<string, string>, ascendancyOverrides: array<string, array<int, int>>}|null  $class
      */
     private function resolveAscendancy(?array $class, ?string $ascendId): ?string
     {

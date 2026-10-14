@@ -853,6 +853,7 @@ export default function PlannerEdit({
                                         <SectionEditor
                                             key={`${sectionKey}:${key}`}
                                             sectionKey={key}
+                                            build={build}
                                             group={currentSection[key]}
                                             onChange={(group) =>
                                                 setGroup(key, group)

@@ -1,4 +1,7 @@
-import { ascendancyStartNode } from '@poe2-toolkit/tree-core';
+import {
+    ascendancyNodeOwner,
+    ascendancyStartNode,
+} from '@poe2-toolkit/tree-core';
 import type { TreeData } from '@poe2-toolkit/tree-core';
 
 /**
@@ -26,10 +29,12 @@ export function ascendancyPointsUsed(
     ascendancyName: string,
 ): number {
     const start = ascendancyStartNode(data, ascendancyName);
+    // A replacing ascendancy (the Abyssal Lich) spends points on another's nodes.
+    const owner = ascendancyNodeOwner(data, ascendancyName);
     let used = 0;
 
     for (const id of allocated) {
-        if (id !== start && data.nodes[id]?.ascendancyName === ascendancyName) {
+        if (id !== start && data.nodes[id]?.ascendancyName === owner) {
             used += 1;
         }
     }

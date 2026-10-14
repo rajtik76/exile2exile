@@ -1,4 +1,8 @@
-import type { TreeData } from '@poe2-toolkit/tree-core';
+import {
+    ascendancyNodeOwner,
+    classOverrideNode,
+} from '@poe2-toolkit/tree-core';
+import type { TreeData, TreeNode } from '@poe2-toolkit/tree-core';
 import type { PlanReference } from '@/lib/planReferences';
 
 /**
@@ -38,25 +42,52 @@ export function reconcileNotablePriority(
 }
 
 /**
+ * The node a build shows at `skill`: its class or ascendancy override applied (the
+ * Abyssal Lich shows the Lich's "Price of Power" as "Steward of Kulemak"), the base
+ * node otherwise. Undefined for an unknown id.
+ */
+export function shownNode(
+    data: TreeData,
+    skill: number,
+    classId: number | null = null,
+    ascendancy: string | null = null,
+): TreeNode | undefined {
+    const node = data.nodes[skill];
+
+    return node
+        ? classOverrideNode(data, classId, node, ascendancy)
+        : undefined;
+}
+
+/**
  * Build the tooltip reference for an allocated notable/keystone straight from the
- * GGPK tree data - name, its stat lines and the landmark kind. Feeds the shared
- * {@link ReferenceTooltip}, so a priority row hovers with the same card (and tree
- * location mini-map) as an inline notable reference. Null for a non-landmark id.
+ * GGPK tree data - name, its stat lines and the landmark kind, as the build's class
+ * and ascendancy show it. Feeds the shared {@link ReferenceTooltip}, so a priority row
+ * hovers with the same card (and tree location mini-map) as an inline notable
+ * reference. Null for a non-landmark id.
  */
 export function notableReference(
     data: TreeData,
     skill: number,
+    classId: number | null = null,
+    ascendancy: string | null = null,
 ): PlanReference | null {
-    const node = data.nodes[skill];
+    const node = shownNode(data, skill, classId, ascendancy);
 
     if (!node || !isPriorityNode(data, skill)) {
         return null;
     }
 
+    // A replacing ascendancy (the Abyssal Lich) owns the notables it plays on.
+    const owner =
+        ascendancy &&
+        node.ascendancyName === ascendancyNodeOwner(data, ascendancy)
+            ? ascendancy
+            : node.ascendancyName;
     const category = node.isKeystone
         ? 'Keystone'
-        : node.ascendancyName
-          ? `${node.ascendancyName} notable`
+        : owner
+          ? `${owner} notable`
           : 'Notable';
 
     return {

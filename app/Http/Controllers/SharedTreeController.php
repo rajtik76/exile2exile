@@ -56,8 +56,9 @@ class SharedTreeController extends Controller
      * summary's plain array (a value object failed to unserialize from Redis).
      * v5: the key prefix moved from `ai.build.doc` to `tree.summary` (the
      * BuildDocument -> TreeSummary rename); v4 entries are orphaned, not read.
+     * v6: ascendancy node overrides (the Abyssal Lich's notables).
      */
-    private const int SUMMARY_VERSION = 5;
+    private const int SUMMARY_VERSION = 6;
 
     /**
      * Persist a guest's passive-tree allocation under a fresh public slug, mint its

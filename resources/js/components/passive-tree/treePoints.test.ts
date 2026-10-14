@@ -32,6 +32,15 @@ const data = {
         }),
         201: node(201, { ascendancyName: 'Pathfinder' }),
     },
+    // A replacing ascendancy that plays on the Pathfinder's disc.
+    classes: [
+        {
+            ascendancies: [
+                { id: 'Pathfinder' },
+                { id: 'Wayfarer', replaces: 'Pathfinder' },
+            ],
+        },
+    ],
 } as unknown as TreeData;
 
 describe('ascendancyPointsUsed', () => {
@@ -42,6 +51,12 @@ describe('ascendancyPointsUsed', () => {
     it('ignores basic-tree and other-ascendancy nodes', () => {
         expect(
             ascendancyPointsUsed(data, [1, 100, 101, 200, 201], 'Deadeye'),
+        ).toBe(1);
+    });
+
+    it('counts a replacing ascendancy on the nodes it plays on', () => {
+        expect(
+            ascendancyPointsUsed(data, [1, 100, 101, 200, 201], 'Wayfarer'),
         ).toBe(1);
     });
 
@@ -61,6 +76,7 @@ describe('ascendancyPointsUsed', () => {
                     }),
                 ]),
             ),
+            classes: [],
         } as unknown as TreeData;
 
         expect(ascendancyPointsUsed(fullData, full, 'Pathfinder')).toBe(

@@ -203,6 +203,7 @@ export default function PlannerShow({
                                 <ReadSection
                                     key={`${sectionKey}:${key}`}
                                     sectionKey={key}
+                                    build={build}
                                     group={section[key]}
                                     action={
                                         key === 'gems' &&
@@ -284,9 +285,11 @@ function ReadSection({
     group,
     visual,
     action,
+    build,
 }: {
     sectionKey: SectionKey;
     group: PlanGroup;
+    build: PlanBuild;
     visual?: React.ReactNode;
     action?: React.ReactNode;
 }) {
@@ -310,6 +313,7 @@ function ReadSection({
                         editable={false}
                         priority={group.notablePriority ?? []}
                         allocated={allocated}
+                        build={build}
                     />
                 </div>
             )}

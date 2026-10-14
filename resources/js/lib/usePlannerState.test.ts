@@ -163,6 +163,23 @@ describe('usePlannerState', () => {
         expect(result.current.allocation?.ascendId).toBe('Warbringer');
     });
 
+    it('carries an ascendancy picked from none into the allocation, keeping its nodes', () => {
+        const { result } = renderHook(() => usePlannerState(makeTreeData()));
+
+        act(() => {
+            result.current.applyAllocation({
+                classId: 0,
+                allocated: [100, 101],
+            });
+        });
+        act(() => {
+            result.current.selectAscendancy('Titan');
+        });
+
+        expect(result.current.allocation?.ascendId).toBe('Titan');
+        expect(result.current.allocation?.allocated).toEqual([100, 101]);
+    });
+
     it('keeps the allocation when re-selecting the same ascendancy', () => {
         const { result } = renderHook(() => usePlannerState(makeTreeData()));
 

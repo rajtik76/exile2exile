@@ -2,7 +2,7 @@ import MarkdownField from '@/components/planner/MarkdownField';
 import TreeNotablePriority from '@/components/planner/TreeNotablePriority';
 import { Panel } from '@/components/planner/ui/Panel';
 import { SECTION_META } from '@/types/planner';
-import type { PlanGroup, SectionKey } from '@/types/planner';
+import type { PlanBuild, PlanGroup, SectionKey } from '@/types/planner';
 
 /**
  * The editor for one content group (items, gems or passive tree) within a phase.
@@ -16,9 +16,12 @@ export default function SectionEditor({
     onChange,
     visual,
     action,
+    build,
 }: {
     sectionKey: SectionKey;
     group: PlanGroup;
+    /** The plan's class and ascendancy, which name the tree's notables. */
+    build?: PlanBuild;
     onChange: (group: PlanGroup) => void;
     /** Optional visual (e.g. the passive tree) rendered above the priority list. */
     visual?: React.ReactNode;
@@ -39,6 +42,7 @@ export default function SectionEditor({
                     </p>
                     <TreeNotablePriority
                         editable
+                        build={build}
                         priority={group.notablePriority ?? []}
                         allocated={group.allocation?.allocated ?? []}
                         onChange={(notablePriority) =>

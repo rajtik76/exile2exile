@@ -22,7 +22,7 @@ final class CachedTreeIndex implements TreeIndex
     /** @var array<int, array{name: string, kind: string}>|null */
     private ?array $nodes = null;
 
-    /** @var array<string, array{overrides: array<int, int>, ascendancies: array<string, string>}>|null */
+    /** @var array<string, array{overrides: array<int, int>, ascendancies: array<string, string>, ascendancyOverrides: array<string, array<int, int>>}>|null */
     private ?array $classes = null;
 
     public function __construct(
@@ -44,7 +44,7 @@ final class CachedTreeIndex implements TreeIndex
     public function classes(): array
     {
         return $this->classes ??= $this->cache->rememberForever(
-            "ggg.tree.classes:{$this->dataVersion}",
+            "ggg.tree.classes:v2:{$this->dataVersion}",
             fn (): array => $this->buildClasses(),
         );
     }
@@ -108,7 +108,7 @@ final class CachedTreeIndex implements TreeIndex
     }
 
     /**
-     * @return array<string, array{overrides: array<int, int>, ascendancies: array<string, string>}>
+     * @return array<string, array{overrides: array<int, int>, ascendancies: array<string, string>, ascendancyOverrides: array<string, array<int, int>>}>
      */
     private function buildClasses(): array
     {
@@ -125,15 +125,21 @@ final class CachedTreeIndex implements TreeIndex
             }
 
             $ascendancies = [];
+            $ascendancyOverrides = [];
             foreach ($class['ascendancies'] ?? [] as $ascendancy) {
                 if (isset($ascendancy['id'], $ascendancy['name'])) {
                     $ascendancies[(string) $ascendancy['id']] = (string) $ascendancy['name'];
+
+                    foreach ($ascendancy['overridePairs'] ?? [] as $base => $target) {
+                        $ascendancyOverrides[(string) $ascendancy['name']][(int) $base] = (int) $target;
+                    }
                 }
             }
 
             $index[(string) $class['name']] = [
                 'overrides' => $overrides,
                 'ascendancies' => $ascendancies,
+                'ascendancyOverrides' => $ascendancyOverrides,
             ];
         }
 

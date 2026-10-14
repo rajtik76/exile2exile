@@ -215,17 +215,21 @@ export function usePlannerState(
     };
 
     // Switching ascendancy deactivates the previous ascendancy's nodes; the main
-    // tree, attributes and jewels carry through.
+    // tree, attributes and jewels carry through. The allocation always carries
+    // the new ascendancy, even picked from none: a replacing one (the Abyssal
+    // Lich) only shows its own passives when the scene knows it is active.
     const selectAscendancy = (nextAscendancy: string | null) => {
-        if (data && allocation && ascendancy && ascendancy !== nextAscendancy) {
+        if (data && allocation && ascendancy !== nextAscendancy) {
             setAllocation({
                 ...allocation,
                 ascendId: nextAscendancy ?? undefined,
-                allocated: clearAscendancyAllocation(
-                    data,
-                    allocation.allocated,
-                    ascendancy,
-                ),
+                allocated: ascendancy
+                    ? clearAscendancyAllocation(
+                          data,
+                          allocation.allocated,
+                          ascendancy,
+                      )
+                    : allocation.allocated,
             });
         }
 

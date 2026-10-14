@@ -23,9 +23,12 @@ interface TreeIndex
     /**
      * Every class keyed by its display name (e.g. `Witch`), carrying the
      * per-node overrides (base node id -> the node whose name/stats a class
-     * shows in its place) and its ascendancy names keyed by ascendancy id.
+     * shows in its place), its ascendancy names keyed by ascendancy id, and the
+     * overrides an ascendancy applies to the nodes it plays on, keyed by
+     * ascendancy name (the Abyssal Lich shows some of the Lich's nodes as other
+     * passives).
      *
-     * @return array<string, array{overrides: array<int, int>, ascendancies: array<string, string>}>
+     * @return array<string, array{overrides: array<int, int>, ascendancies: array<string, string>, ascendancyOverrides: array<string, array<int, int>>}>
      */
     public function classes(): array;
 

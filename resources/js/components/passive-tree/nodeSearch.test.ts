@@ -59,7 +59,23 @@ const DATA = {
         10: { skill: 10, name: 'Sponge', stats: ['25% more Life Recovery'] },
         11: { skill: 11, name: 'Patient', stats: ['0.6 seconds of Duration'] },
         12: { skill: 12, name: 'Hardy', stats: ['016 seconds of Fortify'] },
+        13: { skill: 13, name: 'Steward of Kulemak', stats: [] },
     },
+    // The Abyssal Lich plays on the Stormweaver's nodes in this fixture and shows
+    // node 5 as node 13, which sits off the tree.
+    classes: [
+        {
+            id: 0,
+            ascendancies: [
+                { id: 'Stormweaver' },
+                {
+                    id: 'Abyssal Lich',
+                    replaces: 'Stormweaver',
+                    overridePairs: { 5: 13 },
+                },
+            ],
+        },
+    ],
 } as unknown as TreeData;
 
 test('matches by node name and by stat text, case-insensitively', function () {
@@ -91,6 +107,20 @@ test("only the active ascendancy's nodes can match", function () {
         new Set([4]),
     );
     expect(searchTreeNodes(DATA, 'storm', null, null).size).toBe(0);
+});
+
+test('a replacing ascendancy searches the nodes it plays on, by what they show', function () {
+    // Node 5 shows as "Steward of Kulemak" under the Abyssal Lich: it matches by
+    // that name, not its own, and the off-tree node 13 never counts as a hit.
+    expect(searchTreeNodes(DATA, 'kulemak', 'Abyssal Lich', null, 0)).toEqual(
+        new Set([5]),
+    );
+    expect(
+        searchTreeNodes(DATA, 'storm rider', 'Abyssal Lich', null, 0).size,
+    ).toBe(0);
+    expect(
+        searchTreeNodes(DATA, 'storm rider', 'Stormweaver', null, 0),
+    ).toEqual(new Set([5]));
 });
 
 test("an allocated attribute node matches by its chosen option's text", function () {
@@ -175,9 +205,10 @@ test('a pattern that also matches the empty string rings every node', function (
     // A half-typed alternation ("ailment|") is a valid regex matching
     // anything. Pinned, not guarded against: the hit count already reports it,
     // and a two-letter literal query matches hundreds of nodes anyway.
+    // Node 13 is an override node: never drawn itself, so never on screen.
     const onScreen = new Set(
         Object.values(DATA.nodes)
-            .filter((node) => !node.ascendancyName)
+            .filter((node) => !node.ascendancyName && node.skill !== 13)
             .map((node) => node.skill),
     );
 

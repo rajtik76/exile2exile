@@ -2,12 +2,18 @@ import { useMemo } from 'react';
 import { SpriteIcon } from '@/components/build/tooltip';
 import LazyMount from '@/components/LazyMount';
 import ReferenceTooltip from '@/components/planner/ReferenceTooltip';
+import { resolveAscendancyName, resolveClassId } from '@/lib/classCatalog';
 import type { PlanReference } from '@/lib/planReferences';
 import { moveById } from '@/lib/reorder';
-import { notableReference, reconcileNotablePriority } from '@/lib/treeNotables';
+import {
+    notableReference,
+    reconcileNotablePriority,
+    shownNode,
+} from '@/lib/treeNotables';
 import { useDragReorder } from '@/lib/useDragReorder';
 import { useNotableReferences } from '@/lib/useNotableReferences';
 import { useTreeData } from '@/lib/useTreeData';
+import type { PlanBuild } from '@/types/planner';
 
 /** Notable art is teal, keystone art gold - matching the tree's own landmark tints. */
 const NOTABLE_BORDER = '#7fd4c9';
@@ -19,6 +25,8 @@ interface TreeNotablePriorityProps {
     editable: boolean;
     /** Persist a reordered priority (editable only). */
     onChange?: (priority: number[]) => void;
+    /** The build's class and ascendancy, whose node overrides name the notables. */
+    build?: PlanBuild;
 }
 
 /**
@@ -51,8 +59,21 @@ function NotablePriorityList({
     allocated,
     editable,
     onChange,
+    build,
 }: TreeNotablePriorityProps) {
     const { data } = useTreeData();
+
+    // Notables read as the build's class and ascendancy show them on the tree.
+    const className = build?.className ?? null;
+    const ascendId = build?.ascendId ?? null;
+    const classId = useMemo(
+        () => (data && className ? resolveClassId(data, className) : null),
+        [data, className],
+    );
+    const ascendancy = useMemo(
+        () => (data ? resolveAscendancyName(data, className, ascendId) : null),
+        [data, className, ascendId],
+    );
 
     // Always display the allocation reconciled against the stored order, so newly
     // allocated notables show at once and de-allocated ones drop - even for a legacy
@@ -64,8 +85,14 @@ function NotablePriorityList({
 
     const names = useMemo(
         () =>
-            data ? ordered.map((skill) => data.nodes[skill]?.name ?? '') : [],
-        [ordered, data],
+            data
+                ? ordered.map(
+                      (skill) =>
+                          shownNode(data, skill, classId, ascendancy)?.name ??
+                          '',
+                  )
+                : [],
+        [ordered, data, classId, ascendancy],
     );
     const resolved = useNotableReferences(names);
 
@@ -86,7 +113,7 @@ function NotablePriorityList({
     return (
         <ol className="flex flex-wrap gap-2">
             {ordered.map((skill, index) => {
-                const node = data.nodes[skill];
+                const node = shownNode(data, skill, classId, ascendancy);
                 const name = node?.name ?? `Node ${skill}`;
                 const isKeystone = node?.isKeystone === true;
                 const border = isKeystone ? KEYSTONE_BORDER : NOTABLE_BORDER;
@@ -94,7 +121,7 @@ function NotablePriorityList({
                 // the tree-derived stats card while the icon is still loading.
                 const reference: PlanReference | undefined =
                     resolved[name] ??
-                    notableReference(data, skill) ??
+                    notableReference(data, skill, classId, ascendancy) ??
                     undefined;
                 const key = String(skill);
 

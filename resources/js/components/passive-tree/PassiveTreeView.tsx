@@ -1,5 +1,6 @@
 import {
     allocatedBoundsWithCentre,
+    ascendancyNodeOwner,
     ascendancyStartNode,
     buildAscendancyGraph,
     buildScene,
@@ -274,8 +275,10 @@ export default function PassiveTreeView(props: PlanTreeProps) {
         y: 0,
     });
 
-    // Always pass the active class so per-class node overrides (icons) apply even
-    // before anything is allocated; `allocated` defaults to none.
+    // Always pass the active class and ascendancy so per-class and per-ascendancy
+    // node overrides (icons) apply even before anything is allocated; `allocated`
+    // defaults to none. A replacing ascendancy (the Abyssal Lich) is only drawn
+    // on its disc once the scene knows it is the active one.
     const scene = useMemo<Scene | null>(
         () =>
             data
@@ -284,10 +287,11 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                           allocated: [],
                           ...allocation,
                           ...(classId !== null ? { classId } : {}),
+                          ...(ascendancy ? { ascendId: ascendancy } : {}),
                       },
                   })
                 : null,
-        [data, allocation, classId],
+        [data, allocation, classId, ascendancy],
     );
 
     // Walkable graphs for click-to-allocate - only built when editing. Scoped to
@@ -393,6 +397,15 @@ export default function PassiveTreeView(props: PlanTreeProps) {
         const ascName = data.nodes[skill]?.ascendancyName;
 
         if (ascName) {
+            // Only the active ascendancy's disc is editable (the preview applies
+            // the same rule); any other ascendancy's node is never allocated.
+            if (
+                !ascendancy ||
+                ascName !== ascendancyNodeOwner(data, ascendancy)
+            ) {
+                return;
+            }
+
             const current = new Set(allocation?.allocated ?? []);
             const next = toggleAscendancyAllocation(
                 data,
@@ -653,8 +666,8 @@ export default function PassiveTreeView(props: PlanTreeProps) {
 
     // Skill ids whose node name OR stat description matches - drawn with a ring.
     const searchMatches = useMemo<Set<number>>(
-        () => searchTreeNodes(data, search, ascendancy, allocation),
-        [search, data, ascendancy, allocation],
+        () => searchTreeNodes(data, search, ascendancy, allocation, classId),
+        [search, data, ascendancy, allocation, classId],
     );
 
     // Frame every match (main tree only - ascendancy nodes sit off-canvas unless
@@ -705,7 +718,11 @@ export default function PassiveTreeView(props: PlanTreeProps) {
         const node = data.nodes[hovered];
 
         if (node?.ascendancyName) {
-            if (!ascGraph || node.ascendancyName !== ascendancy) {
+            if (
+                !ascGraph ||
+                !ascendancy ||
+                node.ascendancyName !== ascendancyNodeOwner(data, ascendancy)
+            ) {
                 return null;
             }
 
@@ -792,10 +809,11 @@ export default function PassiveTreeView(props: PlanTreeProps) {
     /* ------------------------------------------------------ derived view */
 
     // Apply the active class's per-node override (e.g. the Witch shows the
-    // generic "Spell Damage" node as "Spell and Minion Damage").
+    // generic "Spell Damage" node as "Spell and Minion Damage"), and the active
+    // ascendancy's (the Abyssal Lich shows some Lich nodes as other passives).
     const hoveredNode =
         hovered !== null && data
-            ? classOverrideNode(data, classId, data.nodes[hovered])
+            ? classOverrideNode(data, classId, data.nodes[hovered], ascendancy)
             : null;
     const hoveredKind =
         hovered !== null && scene
@@ -809,7 +827,12 @@ export default function PassiveTreeView(props: PlanTreeProps) {
     // The tap-revealed node (touch), resolved exactly like the hovered one.
     const tapNode =
         tapDetail && data
-            ? classOverrideNode(data, classId, data.nodes[tapDetail.skill])
+            ? classOverrideNode(
+                  data,
+                  classId,
+                  data.nodes[tapDetail.skill],
+                  ascendancy,
+              )
             : null;
     const tapKind =
         tapDetail && scene

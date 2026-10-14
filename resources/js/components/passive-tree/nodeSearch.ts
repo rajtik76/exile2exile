@@ -1,4 +1,8 @@
-import { chosenAttributeOption } from '@poe2-toolkit/tree-core';
+import {
+    ascendancyNodeOwner,
+    chosenAttributeOption,
+    classOverrideNode,
+} from '@poe2-toolkit/tree-core';
 import type { BuildAllocation, TreeData } from '@poe2-toolkit/tree-core';
 
 /** Shortest node-search query that highlights matches (avoids matching everything). */
@@ -50,6 +54,9 @@ export function compileNodeMatcher(search: string): NodeMatcher | null {
  * matching them would ring empty spots on the tree's edges. Keep the active
  * one - the renderer highlights it at its relocated position.
  *
+ * A node is matched by what it shows: a class or ascendancy override's name and
+ * stats (the Abyssal Lich's "Steward of Kulemak", not the Lich's "Price of Power").
+ *
  * An allocated "any attribute" node carries no Str/Dex/Int text on the base
  * node - the pick lives in the allocation. The chosen option is resolved so
  * searching "intelligence" rings the node it was set to.
@@ -59,6 +66,7 @@ export function searchTreeNodes(
     search: string,
     ascendancy: string | null,
     allocation: BuildAllocation | null,
+    classId: number | null = allocation?.classId ?? null,
 ): Set<number> {
     const matches = compileNodeMatcher(search);
 
@@ -67,17 +75,27 @@ export function searchTreeNodes(
     }
 
     const hits = new Set<number>();
+    // A replacing ascendancy (the Abyssal Lich) plays on another's nodes.
+    const owner = ascendancy ? ascendancyNodeOwner(data, ascendancy) : null;
+    const overrideTargets = overrideTargetIds(data);
 
     for (const [skill, node] of Object.entries(data.nodes)) {
-        if (node.ascendancyName && node.ascendancyName !== ascendancy) {
+        // An override node is never drawn itself, only lent to a base node.
+        if (overrideTargets.has(Number(skill))) {
             continue;
         }
 
+        if (node.ascendancyName && node.ascendancyName !== owner) {
+            continue;
+        }
+
+        // Match what the node shows: the class or ascendancy override, if any.
+        const shown = classOverrideNode(data, classId, node, ascendancy);
         const chosen = chosenAttributeOption(node, allocation ?? undefined);
 
         const hit =
-            (node.name !== undefined && matches(node.name)) ||
-            (node.stats?.some(matches) ?? false) ||
+            (shown.name !== undefined && matches(shown.name)) ||
+            (shown.stats?.some(matches) ?? false) ||
             (chosen !== undefined && matches(chosen.name)) ||
             (chosen?.stats?.some(matches) ?? false);
 
@@ -87,4 +105,25 @@ export function searchTreeNodes(
     }
 
     return hits;
+}
+
+/**
+ * Every node a class or ascendancy shows in a base node's place. Such a node sits
+ * off the tree and is only ever seen through its base node.
+ */
+function overrideTargetIds(data: TreeData): Set<number> {
+    const targets = new Set<number>();
+
+    for (const cls of data.classes) {
+        for (const pairs of [
+            cls.overridePairs,
+            ...cls.ascendancies.map((asc) => asc.overridePairs),
+        ]) {
+            for (const target of Object.values(pairs ?? {})) {
+                targets.add(target);
+            }
+        }
+    }
+
+    return targets;
 }
