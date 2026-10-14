@@ -136,6 +136,14 @@ export interface GemScalingLevel {
     spellCritChance: number | null;
     attackCritChance: number | null;
     stats: GemScalingStat[];
+    /** The gem's further labelled stat sets at this level (Ice Nova's "Cold-Infused"); absent in data extracted before they were exported. */
+    additionalStatSets?: GemScalingStatSet[];
+}
+
+/** One labelled extra stat set of a gem level, shown under its own heading in the tooltip. */
+export interface GemScalingStatSet {
+    label: string;
+    stats: GemScalingStat[];
 }
 
 /** One scaling stat line, already translated to text; `min`/`max` are the raw values a level-scaling slider needs. */

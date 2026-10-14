@@ -9,6 +9,7 @@ import type {
 import {
     cappedLevels,
     combineStatLines,
+    combineStatSets,
     minMax,
     splitNumberedText,
 } from './tooltipText';
@@ -531,6 +532,7 @@ export function GemTooltipBody({
 
     const statLines =
         first && last ? combineStatLines(first.stats, last.stats) : [];
+    const statSets = first && last ? combineStatSets(first, last) : [];
 
     return (
         <>
@@ -668,6 +670,29 @@ export function GemTooltipBody({
                     </div>
                 </>
             )}
+
+            {/* Each further stat set under its own label between two rules, the
+                way Path of Building's gem tooltip lays them out. */}
+            {statSets.map((set, i) => (
+                <div key={i}>
+                    <TooltipRule color={GEM_TITLE_COLOR} />
+                    <p
+                        className="text-center"
+                        style={{ ...FONTIN, color: GEM_TITLE_COLOR }}
+                    >
+                        {set.label}
+                    </p>
+                    <TooltipRule color={GEM_TITLE_COLOR} />
+                    <div
+                        className="space-y-1 text-center"
+                        style={{ color: MOD_TEXT_COLOR }}
+                    >
+                        {set.lines.map((line, j) => (
+                            <div key={j}>{renderNumberedText(line)}</div>
+                        ))}
+                    </div>
+                </div>
+            ))}
 
             {scaling && scaling.qualityStats.length > 0 && (
                 <>

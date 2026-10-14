@@ -43,6 +43,7 @@ beforeEach(function () {
             ],
             'resources/poe2/ggpk/runes.json' => [
                 'Desert Soul Core' => ['levelRequirement' => 20, 'effects' => ['Adds 4 to 6 Fire damage']],
+                'Lesser Desert Rune' => ['levelRequirement' => null, 'effects' => ['Armour: +10% to Fire Resistance'], 'bonded' => ['Armour: +20 to maximum Life']],
             ],
             'public/tree/current/data.json' => [
                 'nodes' => [
@@ -235,4 +236,9 @@ it('offers every gem before the first PoB gem list sync', function () {
     $resolver = new IconResolver(pobGemStore: app(PobGemStore::class));
 
     expect(array_column($resolver->searchReferences('gamma', ['gem']), 'id'))->toBe(['SkillGemGamma']);
+});
+
+it("lists a rune's bonded effects after its normal ones, prefixed like PoB", function () {
+    expect((new IconResolver)->runeData('Lesser Desert Rune')['effects'])
+        ->toBe(['Armour: +10% to Fire Resistance', 'Bonded: Armour: +20 to maximum Life']);
 });

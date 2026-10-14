@@ -172,6 +172,30 @@ export function combineStatLines(
     return first.map((stat, i) => combineStatText(stat, last[i]));
 }
 
+/**
+ * Combines a gem's additional stat sets across the displayed level range, each into
+ * its label and range-notation lines (see {@link combineStatLines}). Sets pair by
+ * position like the stat lines inside them; when the two levels disagree on the
+ * sets, the highest level's own sets are shown as they are.
+ */
+export function combineStatSets(
+    first: GemScalingLevel,
+    last: GemScalingLevel,
+): { label: string; lines: string[] }[] {
+    const firstSets = first.additionalStatSets ?? [];
+    const lastSets = last.additionalStatSets ?? [];
+    const paired =
+        firstSets.length === lastSets.length &&
+        firstSets.every((set, i) => set.label === lastSets[i].label);
+
+    return lastSets.map((set, i) => ({
+        label: set.label,
+        lines: paired
+            ? combineStatLines(firstSets[i].stats, set.stats)
+            : set.stats.map((stat) => stat.text),
+    }));
+}
+
 /** One coloured segment of a stat/mod line (see {@link splitNumberedText}). */
 export type NumberedSegment =
     | { kind: 'text'; text: string }

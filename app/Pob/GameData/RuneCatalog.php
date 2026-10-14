@@ -14,6 +14,12 @@ final class RuneCatalog
      */
     private ?array $runeIndex = null;
 
+    /**
+     * Bonded effects (`SoulCoreStats.BondedStats`) read as their own lines after the
+     * normal ones, prefixed the way Path of Building shows them (`Classes/ItemsTab.lua`).
+     */
+    private const string BONDED_PREFIX = 'Bonded: ';
+
     public function __construct(private readonly GameDataStore $store) {}
 
     /**
@@ -28,7 +34,8 @@ final class RuneCatalog
     }
 
     /**
-     * Granted stats for a rune (level requirement + effect lines), or null if unknown.
+     * Granted stats for a rune (level requirement + effect lines, bonded ones last), or
+     * null if unknown.
      *
      * @return array{levelRequirement: ?int, effects: list<string>}|null
      */
@@ -47,10 +54,21 @@ final class RuneCatalog
     private function runes(): array
     {
         return $this->runeIndex ??= $this->store->remembered('runes', function (): array {
-            /** @var array<string, array{levelRequirement: ?int, effects: list<string>}> $decoded */
+            /** @var array<string, array{levelRequirement: ?int, effects: list<string>, bonded?: list<string>}> $decoded */
             $decoded = $this->store->load('ggpk/runes.json');
+            $index = [];
 
-            return $decoded;
+            foreach ($decoded as $name => $rune) {
+                $index[(string) $name] = [
+                    'levelRequirement' => $rune['levelRequirement'],
+                    'effects' => [
+                        ...$rune['effects'],
+                        ...array_map(static fn (string $line): string => self::BONDED_PREFIX.$line, $rune['bonded'] ?? []),
+                    ],
+                ];
+            }
+
+            return $index;
         });
     }
 }

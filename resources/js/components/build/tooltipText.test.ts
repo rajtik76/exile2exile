@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import {
     cappedLevels,
     combineStatLines,
+    combineStatSets,
     combineStatText,
     formatStatNumber,
     minMax,
@@ -122,4 +123,39 @@ test('a line with no numbers stays one text segment', function () {
     expect(splitNumberedText('Cannot be Frozen')).toEqual([
         { kind: 'text', text: 'Cannot be Frozen' },
     ]);
+});
+
+test('combines each additional stat set across the level range under its label', function () {
+    const level = (n: number, sets: { label: string; value: number }[]) => ({
+        level: n,
+        cost: null,
+        castTime: null,
+        cooldown: null,
+        reservation: null,
+        spellCritChance: null,
+        attackCritChance: null,
+        stats: [],
+        additionalStatSets: sets.map(({ label, value }) => ({
+            label,
+            stats: [
+                { text: `Deals ${value} Cold Damage`, min: value, max: value },
+            ],
+        })),
+    });
+
+    expect(
+        combineStatSets(
+            level(1, [{ label: 'Cold-Infused', value: 15 }]),
+            level(20, [{ label: 'Cold-Infused', value: 90 }]),
+        ),
+    ).toEqual([
+        { label: 'Cold-Infused', lines: ['Deals (15—90) Cold Damage'] },
+    ]);
+
+    expect(
+        combineStatSets(
+            level(1, []),
+            level(20, [{ label: 'Cold-Infused', value: 90 }]),
+        ),
+    ).toEqual([{ label: 'Cold-Infused', lines: ['Deals 90 Cold Damage'] }]);
 });
