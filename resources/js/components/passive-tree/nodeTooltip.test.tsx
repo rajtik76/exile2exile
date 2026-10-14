@@ -123,3 +123,19 @@ test('a socketed jewel shows its name, base and mod lines', function () {
     expect(screen.getByText('Ruby Jewel')).toBeTruthy();
     expect(screen.getByText('% increased Fire Damage')).toBeTruthy();
 });
+
+test("lists a notable's anointment recipe", function () {
+    render(
+        <NodeTooltip
+            node={{ ...NODE, recipe: ['Paranoia', 'Greed', 'Isolation'] }}
+            kind="notable"
+            pointer={POINTER}
+            stage={null}
+            allocated={false}
+        />,
+    );
+
+    expect(
+        screen.getByText('Anointment: Paranoia, Greed, Isolation'),
+    ).toBeTruthy();
+});

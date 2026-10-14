@@ -177,6 +177,12 @@ export function NodeTooltip({
                             {node.flavourText}
                         </p>
                     )}
+
+                    {node.recipe && node.recipe.length > 0 && (
+                        <p className="mt-1.5 text-[#7f7f7f]">
+                            Anointment: {node.recipe.join(', ')}
+                        </p>
+                    )}
                 </div>
 
                 {jewel && (

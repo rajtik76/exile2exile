@@ -15,7 +15,8 @@ export const ASCENDANCY_POINT_LIMIT = 8;
 
 /**
  * How many ascendancy points a build spends in a given ascendancy: its allocated
- * nodes for that ascendancy, less the always-free start node. Ascendancy nodes
+ * nodes for that ascendancy, less the always-free start node, multiple-choice
+ * picks and free nodes (PoB's `CountAllocNodes`). Ascendancy nodes
  * draw from this separate pool and never count toward the basic or weapon-set
  * budgets, so they are gauged on their own.
  *
@@ -34,7 +35,14 @@ export function ascendancyPointsUsed(
     let used = 0;
 
     for (const id of allocated) {
-        if (id !== start && data.nodes[id]?.ascendancyName === owner) {
+        const node = data.nodes[id];
+
+        if (
+            id !== start &&
+            node?.ascendancyName === owner &&
+            !node.isMultipleChoiceOption &&
+            !node.isFreeAllocate
+        ) {
             used += 1;
         }
     }

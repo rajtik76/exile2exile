@@ -54,6 +54,34 @@ describe('ascendancyPointsUsed', () => {
         ).toBe(1);
     });
 
+    it('does not charge multiple-choice picks or free nodes', () => {
+        const picks = {
+            nodes: {
+                300: node(300, {
+                    ascendancyName: 'Pathfinder',
+                    isAscendancyStart: true,
+                }),
+                301: node(301, {
+                    ascendancyName: 'Pathfinder',
+                    isMultipleChoice: true,
+                }),
+                302: node(302, {
+                    ascendancyName: 'Pathfinder',
+                    isMultipleChoiceOption: true,
+                }),
+                303: node(303, {
+                    ascendancyName: 'Pathfinder',
+                    isFreeAllocate: true,
+                }),
+            },
+            classes: [],
+        } as unknown as TreeData;
+
+        expect(
+            ascendancyPointsUsed(picks, [300, 301, 302, 303], 'Pathfinder'),
+        ).toBe(1);
+    });
+
     it('counts a replacing ascendancy on the nodes it plays on', () => {
         expect(
             ascendancyPointsUsed(data, [1, 100, 101, 200, 201], 'Wayfarer'),
