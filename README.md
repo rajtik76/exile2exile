@@ -230,7 +230,8 @@ Playwright: they render pages that read the game data, and they load the compile
 frontend, so run `npm run build` after changing anything under `resources/js` or
 they measure the previous bundle. Quality checks (eslint, prettier, tsc, pint,
 rector, phpstan) plus the JS and PHP test suites run together via
-`composer review`, which is also the pre-commit hook.
+`composer review`. The git hooks split it: the static checks (`composer checks`)
+run on pre-commit, the test suites (`composer review:tests`) on pre-push.
 
 ## Development notes
 

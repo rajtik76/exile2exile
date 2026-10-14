@@ -76,7 +76,6 @@
             "npm run lint:check",
             "npm run format:check",
             "npm run types:check",
-            "npm run test:js",
             "rector process --dry-run",
             "@lint:check",
             "@types:check"
@@ -84,6 +83,7 @@
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
             "@checks",
+            "@test:js",
             "@test:exclude-contract"
         ],
         "types:check": [
@@ -126,6 +126,11 @@
         "review": [
             "Composer\\Config::disableProcessTimeout",
             "@checks",
+            "@review:tests"
+        ],
+        "review:tests": [
+            "Composer\\Config::disableProcessTimeout",
+            "@test:js",
             "@test:exclude-snapshots"
         ],
         "review:full": [

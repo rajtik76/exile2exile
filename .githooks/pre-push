@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# Shared pre-push gate: the test half of `composer review` (vitest, pest), kept
+# out of pre-commit so committing stays fast. Runs for everyone.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+#
+set -euo pipefail
+
+echo "▶ composer review:tests"
+composer review:tests
+echo "✓ composer review:tests passed"

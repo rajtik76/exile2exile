@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Shared pre-commit gate: the canonical `composer review` (pint, phpstan, rector,
-# eslint, prettier, tsc, vitest, pest), mirroring CI. Runs for everyone.
+# Shared pre-commit gate: the static half of `composer review` (pint, phpstan,
+# rector, eslint, prettier, tsc). The test suites run in pre-push. Runs for everyone.
 #
 # Owner-local checks (author identity + AI-trace scan) are NOT tracked; they live
 # in .git/hooks/pre-commit.local and are invoked below when present, so a fresh
@@ -20,6 +20,6 @@ if [ -x "$local_hook" ]; then
 fi
 
 # ── Quality gate ─────────────────────────────────────────────────────────────
-echo "▶ composer review"
-composer review
-echo "✓ composer review passed"
+echo "▶ composer checks"
+composer checks
+echo "✓ composer checks passed"
