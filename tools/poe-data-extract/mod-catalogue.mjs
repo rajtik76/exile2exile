@@ -303,16 +303,6 @@ const TRADE_VERIFIED = Object.fromEntries(
 );
 
 /**
- * Stats GGG stores per minute but describes per second (`per_minute_to_per_second*`
- * value handlers): flask charge gain, life/mana regeneration and the like. The
- * toolkit's renderer either skips those handlers (unknown `_2dp` variants leave the
- * raw per-minute roll: "Gains 15 Charges per Second") or misapplies them (the plain
- * variant divides by 100 and rounds: "1 Life Regeneration per second" for a 60-120
- * roll), so the rendered numbers are rebuilt from the raw rolls here.
- */
-const PER_MINUTE_STAT = /_(?:every|per)_minute$/;
-
-/**
  * A number token in a rendered stat line: a `(min-max)` range or a lone value.
  * Ranged is tried first so `(8-10)` and `(-5--3)` are read as one range, not two values.
  */
@@ -354,50 +344,6 @@ export function toDisplayRolls(stats, rawRolls) {
 
     // Keep each roll's stat id (the aggregation key); only min/max come from the text.
     return tokens.map((token, index) => ({ stat: rawRolls[index].stat, ...token }));
-}
-
-/**
- * Rewrite per-minute rolls in rendered stat lines to the per-second display GGG's
- * own `per_minute_to_per_second*` handlers produce ("Gains 15 …" -> "Gains 0.25 …",
- * two decimals). The replacement values come from the RAW rolls, not the rendered
- * token - the renderer may have already mangled the token (its plain `per_minute`
- * handler divides by 100 and rounds), while the raw per-minute roll is exact. A shim
- * over the toolkit renderer; drop it once the renderer applies the handlers itself.
- * Number tokens are walked in text order, aligned one-to-one with `rawRolls` (the
- * same convention as {@link toDisplayRolls}); a roll only rewrites when its line
- * carries the per-second wording, and on a token-count mismatch the lines are
- * returned untouched.
- *
- * @param {string[]} stats  the rendered ranged line(s)
- * @param {Array<{stat: string, min: number, max: number}>} rawRolls  raw ranges, in text order
- * @returns {string[]}
- */
-export function toPerSecondStats(stats, rawRolls) {
-    if (!rawRolls.some((roll) => PER_MINUTE_STAT.test(roll.stat))) {
-        return stats;
-    }
-
-    const tokenCount = stats.join(' ').match(ROLL_TOKEN)?.length ?? 0;
-
-    if (tokenCount !== rawRolls.length) {
-        return stats;
-    }
-
-    const perSecond = (value) => String(Math.round((Number(value) / 60) * 100) / 100);
-    let index = 0;
-
-    return stats.map((line) => line.replace(ROLL_TOKEN, (token) => {
-        const roll = rawRolls[index++];
-
-        if (!PER_MINUTE_STAT.test(roll.stat) || !/per second/i.test(line)) {
-            return token;
-        }
-
-        const min = perSecond(roll.min);
-        const max = perSecond(roll.max);
-
-        return min === max ? min : `(${min}-${max})`;
-    }));
 }
 
 /**
@@ -493,9 +439,7 @@ export function buildModCatalogue(modData, essenceClasses = {}) {
         }
 
         const rawRolls = (mod.rolls ?? []).map((roll) => ({ stat: roll.stat, min: roll.min, max: roll.max }));
-        // Per-minute rolls are rescaled to the per-second display first, so the
-        // re-derived display ranges below match the text (and the game tooltip).
-        const stats = toPerSecondStats(mod.stats ?? [], rawRolls);
+        const stats = mod.stats ?? [];
 
         // A mod the stat-description renderer produced no line for is unusable: the
         // picker would show an empty row and the import could never match its text.
