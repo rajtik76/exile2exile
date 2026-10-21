@@ -10,3 +10,23 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  # Base images. PHP stays on its minor line (8.4) and Node and Composer on
+  # their major lines; those moves are deliberate upgrades, not bumps.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    groups:
+      docker:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "php"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "composer"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mlocati/php-extension-installer"
+        update-types: ["version-update:semver-major"]
