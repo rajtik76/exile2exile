@@ -1,6 +1,6 @@
 # Composer dependencies. This stage runs first because the asset build needs
 # vendor/ and a bootable app (see below).
-FROM php:8.4.26-cli-alpine AS vendor
+FROM php:8.4.27-cli-alpine AS vendor
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -31,7 +31,7 @@ RUN npm ci --no-audit --no-fund && npm run build
 # Runtime. No composer and no app node_modules - but node and npm stay: the
 # GGPK extractor (tools/poe-data-extract) runs inside this container whenever
 # the StageGameData job picks up a new patch.
-FROM php:8.4.26-fpm-alpine AS run
+FROM php:8.4.27-fpm-alpine AS run
 
 RUN apk add --no-cache nginx supervisor libpq nodejs npm \
     && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS libpq-dev \
