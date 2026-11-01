@@ -19,6 +19,9 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['resources/js/vitest.setup.ts'],
+        // Node 25+ ships its own global localStorage, which shadows the jsdom
+        // one and is undefined without --localstorage-file.
+        execArgv: ['--no-experimental-webstorage'],
         include: [
             'resources/js/**/*.test.{ts,tsx}',
             // The GGPK extractor's pure transforms (no CDN or table I/O in tests).
