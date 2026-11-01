@@ -2,6 +2,10 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-11-01
+- Site analytics moved from the hand-rolled page-view counter to Umami, running on our own server. Still no cookies and no third party, and your IP address is still never stored. Umami does record a bit more than the old counter did: approximate location (country and city), browser, operating system, device type, screen size and language. The privacy policy lists all of it. Addresses are recorded without their query string, so an edit link's token never ends up in the stats, and the newsletter confirm and unsubscribe pages are not tracked at all.
+- For contributors: the tracker is served from this site's own origin (`/p/s.js`, events to `/p/api/send`) through an nginx proxy in `docker/nginx.conf`, and only renders when `UMAMI_WEBSITE_ID` is set, so local development sends nothing. The `page_views` table and the `TrackPageView` middleware are gone; `/stats` keeps only the stored record counts (webhooks, newsletter, trees, build plans).
+
 ## 2026-09-28
 - Saved trees and build guides now remember which version of the game they were made on. Path of Exile 2 leaves Early Access on 11 December, and a new version changes the passive tree, items and mods. A build from 0.5 drawn over the 1.0 tree would show nodes that moved or no longer exist, so it will not be drawn over it at all: its link keeps working and shows the build's name, class and game version, read-only, until older versions can be drawn from their own data. Everything saved so far counts as made on the current patch.
 - The data of a version that is ending is kept on the server as it was, so builds made on it can be drawn from the right data later.

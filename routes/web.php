@@ -97,8 +97,8 @@ Route::delete('build-planner/{plan:slug}', [PlannerController::class, 'destroy']
     ->whereAlphaNumeric('slug')
     ->name('planner.destroy');
 
-// First-party, cookieless analytics dashboard. No login system yet, so it sits
-// behind HTTP Basic Auth (STATS_USER / STATS_PASS) instead of the auth guard.
+// Internal record-count dashboard. No login system yet, so it sits behind
+// HTTP Basic Auth (STATS_USER / STATS_PASS) instead of the auth guard.
 Route::get('stats', [StatsController::class, 'index'])
     ->middleware('stats.auth')
     ->name('stats');

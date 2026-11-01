@@ -1,7 +1,7 @@
 import { CONTACT_EMAIL, useAppName } from '@/components/brand';
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-const UPDATED = 'July 12, 2026';
+const UPDATED = 'November 1, 2026';
 
 export default function Privacy() {
     const appName = useAppName();
@@ -61,12 +61,16 @@ export default function Privacy() {
 
             <LegalSection heading="Analytics">
                 <p>
-                    We run our own privacy-friendly analytics - no third party,
-                    no cookies. We count page views and rough visitor numbers to
-                    see what's used. We never store your IP address: it's turned
-                    into a daily, salted hash we can't reverse, so visits can't
-                    be traced back to you. We keep aggregate counts and prune
-                    old rows periodically.
+                    We run Umami, a privacy-friendly analytics tool, on our own
+                    server - no third party, no cookies. It counts page views
+                    and rough visitor numbers to see what's used, along with the
+                    page you came from, your browser, operating system, device
+                    type, screen size, language and approximate location
+                    (country and city, looked up from your IP address). Your IP
+                    address itself is never stored: it's turned into a salted
+                    hash that changes every month and can't be reversed, so
+                    visits can't be traced back to you. Query strings are
+                    dropped from the recorded addresses.
                 </p>
             </LegalSection>
 

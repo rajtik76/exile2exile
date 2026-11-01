@@ -61,6 +61,14 @@
             <x-captchaapi::widget />
         @endif
 
+        {{-- Umami tracker, proxied through this origin (docker/nginx.conf).
+             Query strings are dropped because edit links carry ?token=, and
+             pages with a token in the path never load the tracker. --}}
+        @php($umamiWebsiteId = config('analytics.umami_website_id'))
+        @if($umamiWebsiteId && ! request()->routeIs('stats', 'newsletter.confirm', 'newsletter.unsubscribe'))
+            <script defer src="/p/s.js" data-website-id="{{ $umamiWebsiteId }}" data-domains="{{ parse_url(config('app.url'), PHP_URL_HOST) }}" data-exclude-search="true"></script>
+        @endif
+
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
