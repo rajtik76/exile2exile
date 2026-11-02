@@ -714,6 +714,44 @@
     }
 }
 
+@keyframes ete-countdown-tick {
+    from {
+        opacity: 0;
+        transform: translateY(-0.18em);
+        filter: blur(3px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+        filter: none;
+    }
+}
+
+@keyframes ete-countdown-ember {
+    0%,
+    100% {
+        opacity: 0.75;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+.ete-countdown-digit {
+    animation: ete-countdown-tick 380ms ease-out both;
+}
+
+.ete-countdown-ember {
+    animation: ete-countdown-ember 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ete-countdown-digit,
+    .ete-countdown-ember {
+        animation: none;
+    }
+}
+
 /* The "waypoint" scroll-to-top dial (build planner): an ember-topaz glow breathes
    behind the socket at rest, like the standing torches on a waypoint stone, and a
    ring of light expands once when activated - see ScrollToTop.tsx. */

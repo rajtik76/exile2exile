@@ -10,6 +10,7 @@ import {
     INK_FAINT,
 } from '@/components/brand';
 import type { GemTone } from '@/components/brand';
+import ReleaseCountdown from '@/components/release-countdown';
 import planner from '@/routes/planner';
 // Bundled by Vite (hashed asset). Star-chart filigree - kept as a faint texture
 // behind the carousel so the cartography flavour of the old Atlas survives.
@@ -162,6 +163,8 @@ function Hero() {
                     you need.
                 </p>
             </header>
+
+            <ReleaseCountdown />
 
             {/* the signature: a gem inspected in its socket, auto-cycling */}
             <div
