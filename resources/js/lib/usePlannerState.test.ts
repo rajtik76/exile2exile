@@ -280,6 +280,24 @@ describe('usePlannerState', () => {
         expect(result.current.allocation?.allocated).toEqual([100, 200]);
     });
 
+    it('leaves the pickers open for a seed whose ascendancy has to be picked again', () => {
+        const { result } = renderHook(() =>
+            usePlannerState(
+                makeTreeData(),
+                makeSnapshot({
+                    className: 'Witch',
+                    ascendId: null,
+                    allocated: [100, 200],
+                }),
+                { lockSeed: false },
+            ),
+        );
+
+        expect(result.current.classId).toBe(1);
+        expect(result.current.imported).toBe(false);
+        expect(result.current.allocation?.allocated).toEqual([100, 200]);
+    });
+
     it('creates the build with a POST on first save', () => {
         const { result } = renderHook(() => usePlannerState(makeTreeData()));
 

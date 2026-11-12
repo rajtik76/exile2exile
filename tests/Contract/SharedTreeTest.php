@@ -2,6 +2,7 @@
 
 use App\Models\SharedTree;
 use App\Rules\LiveGameEra;
+use App\Services\TreeSnapshots;
 use App\Support\GameEra;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
@@ -455,9 +456,30 @@ test('an unknown from slug opens the planner empty', function () {
         );
 });
 
-test('a from slug of a tree from an older game era opens the planner empty', function () {
-    // Its nodes belong to the older era's tree, and a save from here would stamp the
-    // old allocation with the live era.
+test('a from slug of a tree from an older game era opens it for conversion on its own snapshot', function () {
+    fakeGameDataRoot();
+    $shared = makeSharedTree(['slug' => 'oldEraSeed01', 'game_patch' => olderEraPatch()]);
+    fakeTreeSnapshot('4.4.3.1');
+
+    $this->get(route('tree', ['from' => $shared->slug]))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('tree')
+            ->where('mode', 'create')
+            ->where('initialBuild.className', 'Witch')
+            ->where('conversion', [
+                'slug' => 'oldEraSeed01',
+                'gameEra' => '0.4',
+                'eraName' => null,
+                'treePatch' => '4.4.3.1',
+                'treeVersion' => app(TreeSnapshots::class)->version('4.4.3.1'),
+            ])
+        );
+});
+
+test('a from slug of a tree from an older game era with no snapshot opens the planner empty', function () {
+    // Its nodes belong to a tree that is no longer on disk, so nothing can map them.
+    fakeGameDataRoot();
     $shared = makeSharedTree(['slug' => 'oldEraSeed01', 'game_patch' => olderEraPatch()]);
 
     $this->get(route('tree', ['from' => $shared->slug]))
@@ -465,6 +487,7 @@ test('a from slug of a tree from an older game era opens the planner empty', fun
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('tree')
             ->where('initialBuild', null)
+            ->where('conversion', null)
         );
 });
 
@@ -499,7 +522,32 @@ test('a save from an editor loaded on an older game era is rejected without savi
     expect(SharedTree::count())->toBe(0);
 });
 
-test('a tree from an older game era renders the archived viewer and an archived json document', function () {
+test('a tree from an older game era is drawn read-only on the snapshot of the tree it was made on', function () {
+    fakeGameDataRoot();
+    $shared = makeSharedTree(['game_patch' => olderEraPatch()]);
+    fakeTreeSnapshot('4.4.0.2');
+
+    $this->get(route('shared.show', $shared))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('tree/shared')
+            ->where('slug', $shared->slug)
+            ->where('build.className', 'Witch')
+            ->where('archive', [
+                'gameEra' => '0.4',
+                'eraName' => null,
+                'gamePatch' => '4.4.3.1',
+                'treePatch' => '4.4.0.2',
+                'treeVersion' => app(TreeSnapshots::class)->version('4.4.0.2'),
+            ])
+            ->where('meta.title', 'Witch passive tree (PoE2 0.4)')
+            ->missing('meta.alternateJson')
+            ->missing('summary')
+        );
+});
+
+test('a tree from an older game era with no snapshot renders the archived stand-in and an archived json document', function () {
+    fakeGameDataRoot();
     $shared = makeSharedTree(['game_patch' => olderEraPatch()]);
 
     $this->get(route('shared.show', $shared))
@@ -525,6 +573,7 @@ test('a tree from an older game era renders the archived viewer and an archived 
 });
 
 test('a tree whose patch belongs to no game era shows an error page and json instead', function () {
+    fakeGameDataRoot();
     $shared = makeSharedTree(['game_patch' => '9.9.0.1']);
 
     $this->get(route('shared.show', $shared))

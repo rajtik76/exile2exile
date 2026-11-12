@@ -75,10 +75,16 @@ export interface PlannerState {
 export function usePlannerState(
     data: TreeData | null,
     initialBuild: TreeSnapshot | null = null,
-    options: { mode?: 'create' | 'edit'; slug?: string | null } = {},
+    options: {
+        mode?: 'create' | 'edit';
+        slug?: string | null;
+        /** Off when the seed's class or ascendancy has to be picked again. */
+        lockSeed?: boolean;
+    } = {},
 ): PlannerState {
     const mode = options.mode ?? 'create';
     const slug = options.slug ?? null;
+    const lockSeed = options.lockSeed ?? true;
 
     const [allocation, setAllocation] = useState<BuildAllocation | null>(null);
     const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
@@ -157,7 +163,7 @@ export function usePlannerState(
             setAllocation(seededAllocation);
             setSelectedClassId(resolvedClassId ?? null);
             setAscendancy(initialBuild.ascendId ?? null);
-            setImported(mode !== 'edit');
+            setImported(mode !== 'edit' && lockSeed);
             setFrameToken((token) => token + 1);
 
             if (mode === 'edit') {

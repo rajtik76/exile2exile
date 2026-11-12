@@ -22,6 +22,7 @@ const NODE_ATLASES = ['skills', 'frame', 'mastery-effect-active'] as const;
 
 export async function loadTreeAtlases(
     assetBase: string,
+    stamp: (url: string) => string = withAssetVersion,
 ): Promise<RenderResources> {
     const frames: RenderResources['manifest']['frames'] = {};
     const atlases: RenderResources['atlases'] = {};
@@ -29,18 +30,16 @@ export async function loadTreeAtlases(
     await Promise.all(
         NODE_ATLASES.map(async (name) => {
             const [json, image] = await Promise.all([
-                fetch(withAssetVersion(`${assetBase}/${name}.json`)).then(
-                    (response) => {
-                        if (!response.ok) {
-                            throw new Error(
-                                `HTTP ${response.status} for ${name}.json`,
-                            );
-                        }
+                fetch(stamp(`${assetBase}/${name}.json`)).then((response) => {
+                    if (!response.ok) {
+                        throw new Error(
+                            `HTTP ${response.status} for ${name}.json`,
+                        );
+                    }
 
-                        return response.json() as Promise<unknown>;
-                    },
-                ),
-                loadImage(withAssetVersion(`${assetBase}/${name}.webp`)),
+                    return response.json() as Promise<unknown>;
+                }),
+                loadImage(stamp(`${assetBase}/${name}.webp`)),
             ]);
 
             // The manifest is deploy-served data; refuse anything that is not

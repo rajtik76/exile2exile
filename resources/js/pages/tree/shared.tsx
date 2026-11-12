@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import type { BuildAllocation } from '@poe2-toolkit/tree-core';
 import { useMemo } from 'react';
 import { ENGRAVED } from '@/components/brand';
@@ -6,8 +6,18 @@ import { ClassPortrait, classPortrait } from '@/components/build/classPortrait';
 import { INPUT_FONT } from '@/components/passive-tree/chrome';
 import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
 import { resolveClassId } from '@/lib/classCatalog';
+import { TreeSourceProvider } from '@/lib/treeSource';
+import type { TreeSnapshotRef } from '@/lib/treeSource';
 import { useTreeData } from '@/lib/useTreeData';
+import { tree } from '@/routes';
 import type { TreeSnapshot } from '@/types/tree';
+
+export interface ArchivedTree extends TreeSnapshotRef {
+    gameEra: string;
+    eraName: string | null;
+    /** Can differ from `treePatch`: an era without its exact snapshot uses its newest one. */
+    gamePatch: string;
+}
 
 /**
  * The read-only viewer for a shared passive tree (/t/{slug}). It drops the
@@ -17,11 +27,31 @@ import type { TreeSnapshot } from '@/types/tree';
  * never from the public page.
  */
 export default function SharedTree({
+    archive = null,
+    ...props
+}: {
+    build: TreeSnapshot;
+    slug: string;
+    archive?: ArchivedTree | null;
+    meta?: { title: string; description: string; alternateJson?: string };
+}) {
+    return (
+        <TreeSourceProvider snapshot={archive}>
+            <SharedTreeView archive={archive} {...props} />
+        </TreeSourceProvider>
+    );
+}
+
+function SharedTreeView({
     build,
+    slug,
+    archive,
     meta,
 }: {
     build: TreeSnapshot;
-    meta?: { title: string; description: string; alternateJson: string };
+    slug: string;
+    archive: ArchivedTree | null;
+    meta?: { title: string; description: string; alternateJson?: string };
 }) {
     const { data } = useTreeData();
 
@@ -30,7 +60,7 @@ export default function SharedTree({
         [data, build.className],
     );
 
-    // The ascendancy's display name, resolved from its id against the live tree.
+    // The ascendancy's display name, resolved from its id against the drawn tree.
     const ascendancyName = useMemo(() => {
         if (!data || !build.ascendId) {
             return null;
@@ -60,7 +90,13 @@ export default function SharedTree({
 
     return (
         <>
-            <Head title={`${build.className} build`} />
+            <Head
+                title={
+                    archive
+                        ? `${build.className} build (PoE2 ${archive.gameEra})`
+                        : `${build.className} build`
+                }
+            />
 
             <div className="flex h-[calc(100dvh-69px)] w-full flex-col">
                 <div
@@ -126,7 +162,7 @@ export default function SharedTree({
                     </div>
 
                     <div className="ml-auto flex shrink-0 items-center gap-2">
-                        {meta ? (
+                        {meta?.alternateJson ? (
                             // The machine-readable build document. A plain link, not
                             // an "AI, look here" sign: an export affordance humans
                             // expect and any fetch tool reads as a normal anchor.
@@ -144,6 +180,10 @@ export default function SharedTree({
                     </div>
                 </div>
 
+                {archive ? (
+                    <ArchiveNotice archive={archive} slug={slug} />
+                ) : null}
+
                 <div className="min-h-0 flex-1">
                     <PassiveTreeView
                         editable={false}
@@ -158,5 +198,33 @@ export default function SharedTree({
                 </div>
             </div>
         </>
+    );
+}
+
+function ArchiveNotice({
+    archive,
+    slug,
+}: {
+    archive: ArchivedTree;
+    slug: string;
+}) {
+    return (
+        <div
+            className="relative z-10 flex flex-wrap items-center gap-3 border-b border-[#40331a] bg-[#120c06] px-3 py-3 sm:px-6"
+            style={INPUT_FONT}
+        >
+            <p className="min-w-0 flex-1 text-sm text-[#cdb784]">
+                Made on Path of Exile 2 version {archive.gameEra}
+                {archive.eraName ? ` (${archive.eraName})` : ''} and shown on
+                the tree of that version. It is read-only.
+            </p>
+            <Link
+                href={tree.url({ query: { from: slug } })}
+                className="shrink-0 rounded-full px-3.5 py-2 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/12 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/12 focus-visible:outline-none"
+                style={{ border: '1px solid rgba(199,154,63,0.6)' }}
+            >
+                Convert to current version
+            </Link>
+        </div>
     );
 }

@@ -99,9 +99,7 @@ class SharedTreeController extends Controller
         $sharedTree->forceFill(['last_viewed_at' => now()])->saveQuietly();
 
         if (! $sharedTree->isFromCurrentEra()) {
-            $className = $sharedTree->build->className;
-
-            return $archived->render('tree', $sharedTree->slug, "{$className} passive tree", $className, $sharedTree->game_patch);
+            return $archived->tree($sharedTree->slug, $sharedTree->build, $sharedTree->game_patch);
         }
 
         // Resolve once and cache; the JSON endpoint shares this exact entry, so a

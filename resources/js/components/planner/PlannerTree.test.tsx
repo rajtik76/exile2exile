@@ -29,6 +29,13 @@ const mocks = vi.hoisted(() => ({
 // The loaders are mocked, not `useTreeData` itself: the point is to observe whether the
 // fetches happen at all, which a mocked hook would hide.
 vi.mock('@/lib/tree-scene', () => ({
+    LIVE_TREE: { base: '/tree/current', version: null },
+    patchTree: (patch: string, version: string) => ({
+        base: `/tree/patches/${patch}`,
+        version,
+    }),
+    treeSourceKey: (source: { base: string; version: string | null }) =>
+        `${source.base}?${source.version ?? ''}`,
     treeAssetBase: '/tree/current/assets',
     treeAssetUrl: (name: string) => `/tree/current/assets/${name}.webp`,
     loadTreeData: () => mocks.loadTreeData(),

@@ -97,6 +97,22 @@ describe('loadTreeData', () => {
         expect(fetch).toHaveBeenCalledOnce();
     });
 
+    it('fetches an older patch from its own snapshot, stamped with its hash and separately memoised', async () => {
+        const payload = { nodes: { 1: {} }, groups: {}, classes: [] };
+        mockTreeFetch(payload);
+
+        const { loadTreeData, patchTree } = await import('@/lib/tree-scene');
+
+        await loadTreeData();
+        await loadTreeData(patchTree('4.4.3.1', 'abc'));
+        await loadTreeData(patchTree('4.4.3.1', 'abc'));
+
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(fetch).toHaveBeenLastCalledWith(
+            '/tree/patches/4.4.3.1/data.json?v=abc',
+        );
+    });
+
     it('rejects a payload that is not a tree extract', async () => {
         // A misrouted or truncated response: JSON, but not the tree tables.
         mockTreeFetch({ message: 'not found' });
@@ -118,5 +134,23 @@ describe('loadTreeResources', () => {
         await expect(loadTreeResources()).resolves.toBe(resources);
         await loadTreeResources();
         expect(loadTreeAtlases).toHaveBeenCalledOnce();
+    });
+
+    it('stamps the atlases of an older patch with its own hash, not the live one', async () => {
+        const { loadTreeAtlases } = await import('@/lib/tree-atlases');
+        vi.mocked(loadTreeAtlases).mockResolvedValue({
+            manifest: { frames: {} },
+            atlases: {},
+        });
+
+        const { loadTreeResources, patchTree } =
+            await import('@/lib/tree-scene');
+
+        await loadTreeResources(patchTree('4.4.3.1', 'abc'));
+
+        const [assetBase, stamp] =
+            vi.mocked(loadTreeAtlases).mock.lastCall ?? [];
+        expect(assetBase).toBe('/tree/patches/4.4.3.1/assets');
+        expect(stamp?.('/x.webp')).toBe('/x.webp?v=abc');
     });
 });

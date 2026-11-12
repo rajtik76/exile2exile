@@ -6,7 +6,9 @@ import {
     loadTreeData,
     loadTreeResources,
 } from '@/lib/tree-scene';
+import { treeSourceKey } from '@/lib/tree-scene';
 import type { PointBudget } from '@/lib/tree-scene';
+import { useTreeSource } from '@/lib/treeSource';
 
 /**
  * Load the normalised tree, shared across every place that reads or draws it. The
@@ -35,11 +37,23 @@ export function useTreeData({
     const [resources, setResources] = useState<RenderResources | null>(null);
     const [budget, setBudget] = useState<PointBudget | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const source = useTreeSource();
+    const sourceKey = treeSourceKey(source);
+    const [loadedKey, setLoadedKey] = useState(sourceKey);
+
+    // A different tree must not be drawn with what was loaded for the previous one.
+    if (loadedKey !== sourceKey) {
+        setLoadedKey(sourceKey);
+        setData(null);
+        setResources(null);
+        setBudget(null);
+        setError(null);
+    }
 
     useEffect(() => {
         let cancelled = false;
 
-        loadTreeData()
+        loadTreeData(source)
             .then((loaded) => {
                 if (!cancelled) {
                     setData(loaded);
@@ -55,7 +69,7 @@ export function useTreeData({
                 }
             });
 
-        loadPointBudget()
+        loadPointBudget(source)
             .then((loaded) => {
                 if (!cancelled) {
                     setBudget(loaded);
@@ -67,7 +81,7 @@ export function useTreeData({
             });
 
         if (wantsResources) {
-            loadTreeResources()
+            loadTreeResources(source)
                 .then((loaded) => {
                     if (!cancelled) {
                         setResources(loaded);
@@ -81,7 +95,7 @@ export function useTreeData({
         return () => {
             cancelled = true;
         };
-    }, [wantsResources]);
+    }, [source, wantsResources]);
 
     return { data, resources, budget, error };
 }

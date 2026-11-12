@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\SharedTree;
 use App\Pob\Source\BuildSourceRegistry;
 use App\Pob\Validation\BuildValidator;
+use App\Services\TreeSnapshots;
+use App\Support\GameEra;
 use App\Tree\TreeAllocation;
 use App\Tree\TreeSnapshot;
 use Illuminate\Http\JsonResponse;
@@ -20,22 +22,39 @@ class TreeController extends Controller
      * The passive-tree planner. With `?from={slug}` it opens seeded with a shared
      * build's allocation, handed in as `initialBuild` so the editable planner can
      * adopt it as a snapshot - the tree only, no gems or items, since a shared
-     * build carries no gear. An unknown slug is ignored and the planner opens empty,
-     * and so is a tree from an older game era: its nodes belong to that era's tree,
-     * and saving it here would stamp the old allocation with the live era.
+     * build carries no gear. An unknown slug is ignored and the planner opens empty.
+     * A tree from an older game era comes with `conversion`, the snapshot its nodes
+     * belong to, and the browser maps it onto the live tree before it can be saved
+     * as a new tree. Without a snapshot it cannot be mapped and opens nothing.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, TreeSnapshots $trees, GameEra $eras): Response
     {
         $from = $request->query('from');
 
         $seed = is_string($from) ? SharedTree::where('slug', $from)->first() : null;
-        $initialBuild = $seed?->isFromCurrentEra() === true ? $seed->build : null;
+        $conversion = null;
+
+        if ($seed !== null && ! $seed->isFromCurrentEra()) {
+            $era = $seed->gameEra();
+            $treePatch = $era === null ? null : $trees->forPatch($seed->game_patch);
+
+            $conversion = $treePatch === null ? null : [
+                'slug' => $seed->slug,
+                'gameEra' => $era,
+                'eraName' => $eras->nameOf($era),
+                'treePatch' => $treePatch,
+                'treeVersion' => $trees->version($treePatch),
+            ];
+        }
+
+        $initialBuild = $seed !== null && ($seed->isFromCurrentEra() || $conversion !== null) ? $seed->build : null;
 
         return Inertia::render('tree', [
             'mode' => 'create',
             'slug' => null,
             'editToken' => null,
             'initialBuild' => $initialBuild,
+            'conversion' => $conversion,
         ]);
     }
 

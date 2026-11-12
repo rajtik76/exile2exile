@@ -9,11 +9,19 @@ const loaders = {
 };
 
 vi.mock('@/lib/tree-scene', () => ({
-    loadTreeData: () => loaders.loadTreeData(),
-    loadPointBudget: () => loaders.loadPointBudget(),
-    loadTreeResources: () => loaders.loadTreeResources(),
+    LIVE_TREE: { base: '/tree/current', version: null },
+    patchTree: (patch: string, version: string) => ({
+        base: `/tree/patches/${patch}`,
+        version,
+    }),
+    treeSourceKey: (source: { base: string; version: string | null }) =>
+        `${source.base}?${source.version ?? ''}`,
+    loadTreeData: (source?: unknown) => loaders.loadTreeData(source),
+    loadPointBudget: (source?: unknown) => loaders.loadPointBudget(source),
+    loadTreeResources: (source?: unknown) => loaders.loadTreeResources(source),
 }));
 
+import { TreeSourceProvider } from '@/lib/treeSource';
 import { useTreeData } from '@/lib/useTreeData';
 
 const tree = { classes: [] } as unknown as TreeData;
@@ -78,5 +86,54 @@ describe('useTreeData', () => {
         await waitFor(() =>
             expect(result.current.error).toBe('Failed to load tree'),
         );
+    });
+
+    it('reads the tree the surrounding source selects', async () => {
+        loaders.loadTreeData.mockResolvedValue(tree);
+        loaders.loadPointBudget.mockResolvedValue({ total: 123 });
+        const snapshot = { treePatch: '4.4.3.1', treeVersion: 'abc' };
+        const expected = { base: '/tree/patches/4.4.3.1', version: 'abc' };
+
+        const { result } = renderHook(() => useTreeData(), {
+            wrapper: ({ children }) => (
+                <TreeSourceProvider snapshot={snapshot}>
+                    {children}
+                </TreeSourceProvider>
+            ),
+        });
+
+        await waitFor(() => expect(result.current.data).toBe(tree));
+        expect(loaders.loadTreeData).toHaveBeenCalledWith(expected);
+        expect(loaders.loadPointBudget).toHaveBeenCalledWith(expected);
+    });
+
+    it('drops what it loaded for one tree as soon as it is asked for another', async () => {
+        const archived = { classes: [] } as unknown as TreeData;
+        loaders.loadTreeData.mockImplementation(
+            (source: { version: string | null }) =>
+                source.version === null
+                    ? new Promise(() => {})
+                    : Promise.resolve(archived),
+        );
+        loaders.loadPointBudget.mockResolvedValue({ total: 123 });
+        let snapshot: { treePatch: string; treeVersion: string } | null = {
+            treePatch: '4.4.3.1',
+            treeVersion: 'abc',
+        };
+
+        const { result, rerender } = renderHook(() => useTreeData(), {
+            wrapper: ({ children }) => (
+                <TreeSourceProvider snapshot={snapshot}>
+                    {children}
+                </TreeSourceProvider>
+            ),
+        });
+
+        await waitFor(() => expect(result.current.data).toBe(archived));
+
+        snapshot = null;
+        rerender();
+
+        expect(result.current.data).toBeNull();
     });
 });
