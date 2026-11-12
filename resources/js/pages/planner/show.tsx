@@ -1,6 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { classPortrait } from '@/components/build/classPortrait';
+import {
+    useLiveGameVersion,
+    versionedEyebrow,
+} from '@/components/build/GameVersion';
 import FilterPanel from '@/components/planner/FilterPanel';
 import type {
     FilterCategoryPayload,
@@ -28,6 +32,8 @@ import {
     SECTION_KEYS,
 } from '@/lib/planner';
 import type { ReferenceMap } from '@/lib/planReferences';
+import { TreeSourceProvider } from '@/lib/treeSource';
+import type { TreeSnapshotRef } from '@/lib/treeSource';
 import planner from '@/routes/planner';
 import { SECTION_META } from '@/types/planner';
 import type {
@@ -45,8 +51,14 @@ import type {
  * un-editable. The tree keeps only its zoom, search and points-spent chrome so a
  * reader can explore the allocation without changing it.
  */
+export interface ArchivedPlan extends TreeSnapshotRef {
+    gameEra: string;
+    eraName: string | null;
+}
+
 export default function PlannerShow({
     slug,
+    archive = null,
     title,
     plan,
     ascendancyName,
@@ -58,6 +70,7 @@ export default function PlannerShow({
     filterCategories,
 }: {
     slug: string;
+    archive?: ArchivedPlan | null;
     title: string;
     plan: PlanData;
     /**
@@ -102,176 +115,215 @@ export default function PlannerShow({
     const portrait = build.className
         ? classPortrait(build.className, ascendancyName)
         : null;
+    const liveVersion = useLiveGameVersion();
+    const version = archive
+        ? { era: archive.gameEra, name: archive.eraName }
+        : liveVersion;
 
     return (
-        <div className="relative mx-auto max-w-5xl px-4 pt-8 pb-28">
-            <Head title={meta.title || title}>
-                {meta.description && (
-                    <meta name="description" content={meta.description} />
-                )}
-            </Head>
-
-            <ReferencesProvider map={references}>
-                <ModsProvider map={mods}>
-                    {/* Class/ascendancy centre art as a page backdrop, mirroring the
-                    editor: the round GGPK medallion faded into the page. */}
-                    {portrait && (
-                        <div
-                            aria-hidden
-                            className="pointer-events-none absolute inset-x-0 top-0 z-0 flex justify-center overflow-hidden"
-                        >
-                            <img
-                                alt=""
-                                src={portrait.src}
-                                className="w-[620px] max-w-none opacity-45 select-none"
-                                style={{
-                                    maskImage:
-                                        'radial-gradient(circle at 50% 42%, black 44%, transparent 64%)',
-                                    WebkitMaskImage:
-                                        'radial-gradient(circle at 50% 42%, black 44%, transparent 64%)',
-                                }}
-                            />
-                        </div>
+        <TreeSourceProvider snapshot={archive}>
+            <div className="relative mx-auto max-w-5xl px-4 pt-8 pb-28">
+                <Head title={meta.title || title}>
+                    {meta.description && (
+                        <meta name="description" content={meta.description} />
                     )}
+                </Head>
 
-                    <div className="planner-reading relative z-10">
-                        {/* Phase switcher pinned above the guide, mirroring the editor.
-                        On the public page it opens revealed rather than collapsed. */}
-                        {mode === 'phases' && (
-                            <PhaseTabs
-                                mode={mode}
-                                tabs={plan.tabs}
-                                activeTabId={activeTabId}
-                                defaultOpen
-                                onSelectTab={setActiveTabId}
-                            />
-                        )}
-
-                        <header className="mb-6 pt-4">
-                            <Eyebrow>Build guide</Eyebrow>
-                            {build.className && (
-                                <p className="pl-text-sm mt-1">
-                                    <span className="font-semibold text-[var(--pl-text-strong)]">
-                                        {build.className}
-                                    </span>
-                                    {ascendancyName && (
-                                        <>
-                                            <span className="px-1.5 text-[var(--pl-faint)]">
-                                                ·
-                                            </span>
-                                            <span className="text-[var(--pl-accent-lit)]">
-                                                {ascendancyName}
-                                            </span>
-                                        </>
-                                    )}
-                                </p>
-                            )}
-                            <Heading level={1} className="mt-6">
-                                {title || 'Untitled build'}
-                            </Heading>
-                        </header>
-
-                        {plan.description.trim() !== '' && (
-                            <Panel
-                                title="Build description"
-                                collapsible
-                                className="mb-4"
+                <ReferencesProvider map={references}>
+                    <ModsProvider map={mods}>
+                        {/* Class/ascendancy centre art as a page backdrop, mirroring the
+                    editor: the round GGPK medallion faded into the page. */}
+                        {portrait && (
+                            <div
+                                aria-hidden
+                                className="pointer-events-none absolute inset-x-0 top-0 z-0 flex justify-center overflow-hidden"
                             >
-                                <div className="max-w-3xl text-[var(--pl-text)]">
-                                    <RichText text={plan.description} />
-                                </div>
-                            </Panel>
-                        )}
-
-                        <FilterPanel
-                            themes={filterThemes}
-                            strictness={filterStrictness}
-                            categories={filterCategories}
-                            buildSlug={slug}
-                            phase={
-                                mode === 'phases'
-                                    ? (plan.tabs.find(
-                                          (tab) => tab.id === activeTabId,
-                                      )?.label ?? null)
-                                    : null
-                            }
-                            className="mb-4"
-                        />
-
-                        <div className="flex flex-col gap-4">
-                            {SECTION_KEYS.map((key) => (
-                                <ReadSection
-                                    key={`${sectionKey}:${key}`}
-                                    sectionKey={key}
-                                    build={build}
-                                    group={section[key]}
-                                    action={
-                                        key === 'gems' &&
-                                        (section.gems.groups?.length ?? 0) >
-                                            0 ? (
-                                            <GemsViewToggle
-                                                value={gemsView}
-                                                onChange={setGemsView}
-                                            />
-                                        ) : undefined
-                                    }
-                                    visual={
-                                        // Paper-doll and the passive tree always draw -
-                                        // an empty build reads as an unfilled slot grid /
-                                        // unallocated tree, never a hidden section. Gems
-                                        // only appear once a group exists.
-                                        key === 'tree' ? (
-                                            <PlannerTree
-                                                editable={false}
-                                                build={build}
-                                                allocation={
-                                                    section.tree.allocation ??
-                                                    emptyAllocation()
-                                                }
-                                                onFullscreenChange={
-                                                    setTreeFullscreen
-                                                }
-                                            />
-                                        ) : key === 'items' ? (
-                                            <PlannerEquipment
-                                                editable={false}
-                                                slots={
-                                                    section.items.slots ?? {}
-                                                }
-                                            />
-                                        ) : key === 'gems' &&
-                                          (section.gems.groups?.length ?? 0) >
-                                              0 ? (
-                                            <PlannerGems
-                                                editable={false}
-                                                view={gemsView}
-                                                groups={
-                                                    section.gems.groups ?? []
-                                                }
-                                            />
-                                        ) : undefined
-                                    }
+                                <img
+                                    alt=""
+                                    src={portrait.src}
+                                    className="w-[620px] max-w-none opacity-45 select-none"
+                                    style={{
+                                        maskImage:
+                                            'radial-gradient(circle at 50% 42%, black 44%, transparent 64%)',
+                                        WebkitMaskImage:
+                                            'radial-gradient(circle at 50% 42%, black 44%, transparent 64%)',
+                                    }}
                                 />
-                            ))}
-                        </div>
+                            </div>
+                        )}
 
-                        <div className="mt-12 flex flex-wrap items-center gap-4 border-t border-[var(--pl-divider)] pt-6">
-                            <p className="pl-text-sm text-[var(--pl-muted)]">
-                                Want to write your own?
-                            </p>
-                            <Link
-                                href={planner.create.url()}
-                                className="pl-text-sm inline-flex items-center rounded-[var(--pl-radius)] border border-[var(--pl-accent)] bg-[var(--pl-accent)] px-4 py-2 font-medium text-[#15120b] transition hover:brightness-110"
-                            >
-                                Start a build plan
-                            </Link>
-                        </div>
+                        <div className="planner-reading relative z-10">
+                            {/* Phase switcher pinned above the guide, mirroring the editor.
+                        On the public page it opens revealed rather than collapsed. */}
+                            {mode === 'phases' && (
+                                <PhaseTabs
+                                    mode={mode}
+                                    tabs={plan.tabs}
+                                    activeTabId={activeTabId}
+                                    defaultOpen
+                                    onSelectTab={setActiveTabId}
+                                />
+                            )}
 
-                        {!treeFullscreen && <ScrollToTop />}
-                    </div>
-                </ModsProvider>
-            </ReferencesProvider>
-        </div>
+                            <header className="mb-6 pt-4">
+                                <Eyebrow>
+                                    {versionedEyebrow('Build guide', version)}
+                                </Eyebrow>
+                                {build.className && (
+                                    <p className="pl-text-sm mt-1">
+                                        <span className="font-semibold text-[var(--pl-text-strong)]">
+                                            {build.className}
+                                        </span>
+                                        {ascendancyName && (
+                                            <>
+                                                <span className="px-1.5 text-[var(--pl-faint)]">
+                                                    ·
+                                                </span>
+                                                <span className="text-[var(--pl-accent-lit)]">
+                                                    {ascendancyName}
+                                                </span>
+                                            </>
+                                        )}
+                                    </p>
+                                )}
+                                <Heading level={1} className="mt-6">
+                                    {title || 'Untitled build'}
+                                </Heading>
+                            </header>
+
+                            {plan.description.trim() !== '' && (
+                                <Panel
+                                    title="Build description"
+                                    collapsible
+                                    className="mb-4"
+                                >
+                                    <div className="max-w-3xl text-[var(--pl-text)]">
+                                        <RichText text={plan.description} />
+                                    </div>
+                                </Panel>
+                            )}
+
+                            {archive ? (
+                                <ArchiveNotice slug={slug} />
+                            ) : (
+                                <FilterPanel
+                                    themes={filterThemes}
+                                    strictness={filterStrictness}
+                                    categories={filterCategories}
+                                    buildSlug={slug}
+                                    phase={
+                                        mode === 'phases'
+                                            ? (plan.tabs.find(
+                                                  (tab) =>
+                                                      tab.id === activeTabId,
+                                              )?.label ?? null)
+                                            : null
+                                    }
+                                    className="mb-4"
+                                />
+                            )}
+
+                            <div className="flex flex-col gap-4">
+                                {SECTION_KEYS.map((key) => (
+                                    <ReadSection
+                                        key={`${sectionKey}:${key}`}
+                                        sectionKey={key}
+                                        build={build}
+                                        group={section[key]}
+                                        action={
+                                            key === 'gems' &&
+                                            (section.gems.groups?.length ?? 0) >
+                                                0 ? (
+                                                <GemsViewToggle
+                                                    value={gemsView}
+                                                    onChange={setGemsView}
+                                                />
+                                            ) : undefined
+                                        }
+                                        visual={
+                                            // Paper-doll and the passive tree always draw -
+                                            // an empty build reads as an unfilled slot grid /
+                                            // unallocated tree, never a hidden section. Gems
+                                            // only appear once a group exists.
+                                            key === 'tree' ? (
+                                                <PlannerTree
+                                                    editable={false}
+                                                    build={build}
+                                                    allocation={
+                                                        section.tree
+                                                            .allocation ??
+                                                        emptyAllocation()
+                                                    }
+                                                    onFullscreenChange={
+                                                        setTreeFullscreen
+                                                    }
+                                                />
+                                            ) : key === 'items' ? (
+                                                <PlannerEquipment
+                                                    editable={false}
+                                                    slots={
+                                                        section.items.slots ??
+                                                        {}
+                                                    }
+                                                />
+                                            ) : key === 'gems' &&
+                                              (section.gems.groups?.length ??
+                                                  0) > 0 ? (
+                                                <PlannerGems
+                                                    editable={false}
+                                                    view={gemsView}
+                                                    groups={
+                                                        section.gems.groups ??
+                                                        []
+                                                    }
+                                                />
+                                            ) : undefined
+                                        }
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="mt-12 flex flex-wrap items-center gap-4 border-t border-[var(--pl-divider)] pt-6">
+                                <p className="pl-text-sm text-[var(--pl-muted)]">
+                                    Want to write your own?
+                                </p>
+                                <Link
+                                    href={planner.create.url()}
+                                    className="pl-text-sm inline-flex items-center rounded-[var(--pl-radius)] border border-[var(--pl-accent)] bg-[var(--pl-accent)] px-4 py-2 font-medium text-[#15120b] transition hover:brightness-110"
+                                >
+                                    Start a build plan
+                                </Link>
+                            </div>
+
+                            {!treeFullscreen && <ScrollToTop />}
+                        </div>
+                    </ModsProvider>
+                </ReferencesProvider>
+            </div>
+        </TreeSourceProvider>
+    );
+}
+
+/**
+ * Old-era guides get no loot filter: its item tiers belong to the live game.
+ */
+function ArchiveNotice({ slug }: { slug: string }) {
+    return (
+        <Panel className="mb-4">
+            <div className="flex flex-wrap items-center gap-3">
+                <p className="pl-text-sm min-w-0 flex-1 text-[var(--pl-muted)]">
+                    This guide was made on an older version of the game and is
+                    shown with the items, gems and passive tree of that version.
+                    It is read-only.
+                </p>
+                <Link
+                    href={planner.convert.url(slug)}
+                    className="pl-text-sm inline-flex shrink-0 items-center rounded-[var(--pl-radius)] border border-[var(--pl-accent)] px-4 py-2 font-medium text-[var(--pl-accent-lit)] transition hover:bg-[var(--pl-accent)] hover:text-[#15120b]"
+                >
+                    Convert to current version
+                </Link>
+            </div>
+        </Panel>
     );
 }
 

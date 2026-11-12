@@ -1350,6 +1350,7 @@ test('a save from an editor loaded on an older game era is rejected without savi
 });
 
 test('a plan from an older game era renders the archived viewer with its era and name, not the live one', function () {
+    fakeGameDataRoot();
     config()->set('poe.eras', ['4.4' => ['era' => '0.4', 'name' => 'The Last of the Druids'], '4.5' => '0.5']);
     $plan = makePlan(['game_patch' => '4.4.3.1', 'title' => 'Old Freeze Witch']);
 

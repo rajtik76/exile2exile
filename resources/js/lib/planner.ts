@@ -210,6 +210,11 @@ export function draftKeyFor(slug: string | null): string {
     return `planner-draft:${slug ?? 'new'}`;
 }
 
+/** Kept apart from the "new" draft, so converting a guide never overwrites a plan in progress. */
+export function conversionDraftKeyFor(slug: string): string {
+    return `planner-draft:convert:${slug}`;
+}
+
 function isPlanEntryShape(value: unknown): boolean {
     return (
         isRecord(value) &&

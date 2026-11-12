@@ -79,6 +79,11 @@ Route::get('build-planner/{plan:slug}', [PlannerController::class, 'show'])
 Route::get('build-planner/{plan:slug}/edit', [PlannerController::class, 'edit'])
     ->whereAlphaNumeric('slug')
     ->name('planner.edit');
+// A copy of a guide from an older game era, mapped onto the live data in the editor.
+Route::get('build-planner/{plan:slug}/convert', [PlannerController::class, 'convert'])
+    ->middleware('throttle:20,1')
+    ->whereAlphaNumeric('slug')
+    ->name('planner.convert');
 // Verify the secret edit token (submitted in the form body, never a URL) and unlock the
 // editor for this session. Throttled per IP so the token can't be brute-forced.
 Route::post('build-planner/{plan:slug}/unlock', [PlannerController::class, 'unlock'])

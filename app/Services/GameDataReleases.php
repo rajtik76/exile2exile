@@ -27,6 +27,7 @@ use Throwable;
  *                                   by patch, so its era is derived like a
  *                                   build's; one archive per era, never pruned
  *   trees/<patch>/                  see TreeSnapshots
+ *   era-icons/<patch>               link to an archive's icons, served as /icons/eras/<patch>
  *
  * The app's own public/tree/current, public/icons/poe2 and resources/poe2/ggpk
  * are static symlinks through `current`, so one rename() flips all three at
@@ -92,6 +93,40 @@ class GameDataReleases
         $versions = array_map(basename(...), glob($this->root().'/archive/*', GLOB_ONLYDIR) ?: []);
 
         return array_values(array_filter($versions, self::isValidVersion(...)));
+    }
+
+    public function eraIconsRoot(): string
+    {
+        return $this->root().'/era-icons';
+    }
+
+    public function eraIconWebBase(string $version): string
+    {
+        return "/icons/eras/{$version}";
+    }
+
+    /**
+     * Only the icons of an archive are published, never its data files, so each
+     * archive gets its own link to its icon directory.
+     */
+    public function linkEraIcons(): void
+    {
+        File::ensureDirectoryExists($this->eraIconsRoot());
+        $archived = $this->archivedVersions();
+
+        foreach (glob($this->eraIconsRoot().'/*') ?: [] as $link) {
+            if (is_link($link) && ! in_array(basename($link), $archived, true)) {
+                @unlink($link);
+            }
+        }
+
+        foreach ($archived as $version) {
+            $link = $this->eraIconsRoot()."/{$version}";
+
+            if (! is_link($link) && ! @symlink("../archive/{$version}/public/icons/poe2", $link)) {
+                throw new RuntimeException("could not publish the icons of archived release {$version}");
+            }
+        }
     }
 
     public function checksumPath(string $version): string
@@ -328,6 +363,13 @@ class GameDataReleases
             if ($version !== $current && $this->eras->forPatch($version) === $outgoingEra) {
                 File::deleteDirectory($this->archivePath($version));
             }
+        }
+
+        // Unpublished icons only leave old guides without art; the release must still go live.
+        try {
+            $this->linkEraIcons();
+        } catch (Throwable $e) {
+            Log::error("Icons of archived release {$current} were not published: {$e->getMessage()}");
         }
     }
 

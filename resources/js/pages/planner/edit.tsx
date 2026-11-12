@@ -1,16 +1,23 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import type { TreeData } from '@poe2-toolkit/tree-core';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
     ascendancyLabel,
     classPortrait,
 } from '@/components/build/classPortrait';
+import {
+    useLiveGameVersion,
+    versionedEyebrow,
+} from '@/components/build/GameVersion';
 import BuildClassGallery from '@/components/planner/BuildClassGallery';
 import Button from '@/components/planner/Button';
 import DroppedModsNotice from '@/components/planner/DroppedModsNotice';
 import MarkdownField from '@/components/planner/MarkdownField';
 import { ModsProvider } from '@/components/planner/ModsContext';
 import PhaseTabs from '@/components/planner/PhaseTabs';
+import PlanConversionReport from '@/components/planner/PlanConversionReport';
+import type { PlanConversion } from '@/components/planner/PlanConversionReport';
 import PlannerEquipment from '@/components/planner/PlannerEquipment';
 import PlannerGems, { GemsViewToggle } from '@/components/planner/PlannerGems';
 import PlannerTree from '@/components/planner/PlannerTree';
@@ -28,10 +35,12 @@ import { useLoadedGameData } from '@/lib/gameEra';
 import { loadGemsView, saveGemsView } from '@/lib/gemsView';
 import type { GemsView } from '@/lib/gemsView';
 import type { ModInfo, ModMap } from '@/lib/modLines';
+import { migratePlanTrees } from '@/lib/planMigration';
 import {
     activeSectionKey,
     clearDraft,
     clonePlanSection,
+    conversionDraftKeyFor,
     draftKeyFor,
     emptyAllocation,
     emptySection,
@@ -46,7 +55,9 @@ import {
 } from '@/lib/planner';
 import { collectTokens, refKey } from '@/lib/planReferences';
 import type { PlanReference, ReferenceMap } from '@/lib/planReferences';
+import { loadTreeData, patchTree } from '@/lib/tree-scene';
 import { reconcileNotablePriority } from '@/lib/treeNotables';
+import { useTreeData } from '@/lib/useTreeData';
 import planner from '@/routes/planner';
 import { resolve as resolveMods } from '@/routes/planner/mods';
 import { resolve as resolveReferences } from '@/routes/planner/references';
@@ -67,16 +78,93 @@ import type { TreeAllocation } from '@/types/tree';
  * redirect back here in edit mode - so the author lands holding the slug and secret
  * token, with the shareable read link shown at the top.
  */
-export default function PlannerEdit({
-    mode: pageMode,
-    slug,
-    editToken,
+export default function PlannerEditPage(props: PlannerEditProps) {
+    if (props.conversion) {
+        return <ConvertedPlan {...props} conversion={props.conversion} />;
+    }
+
+    return <PlannerEdit {...props} />;
+}
+
+// The editor only mounts once every phase's tree is mapped, so it never seeds from
+// the unconverted plan.
+function ConvertedPlan({
+    conversion,
     plan,
-    title,
-    references,
-    mods,
-    ascendancyName,
-}: {
+    ...props
+}: PlannerEditProps & { conversion: PlanConversion }) {
+    const { data: current, error: currentError } = useTreeData();
+    const [previous, setPrevious] = useState<TreeData | null>(null);
+    const [previousError, setPreviousError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        loadTreeData(patchTree(conversion.treePatch, conversion.treeVersion))
+            .then((loaded) => {
+                if (!cancelled) {
+                    setPrevious(loaded);
+                }
+            })
+            .catch((err: unknown) => {
+                if (!cancelled) {
+                    setPreviousError(
+                        err instanceof Error
+                            ? err.message
+                            : 'Failed to load tree',
+                    );
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [conversion.treePatch, conversion.treeVersion]);
+
+    const migration = useMemo(
+        () =>
+            previous && current
+                ? migratePlanTrees(previous, current, plan)
+                : null,
+        [previous, current, plan],
+    );
+
+    const error = previousError ?? currentError;
+
+    if (error !== null) {
+        return (
+            <p className="pl-text-sm mx-auto max-w-lg px-4 pt-16 text-[var(--pl-danger-lit)]">
+                The build could not be converted: {error}. Reload the page to
+                try again.
+            </p>
+        );
+    }
+
+    if (migration === null) {
+        return (
+            <div className="mx-auto max-w-5xl px-4 pt-8">
+                <div className="h-96 w-full animate-pulse rounded-[var(--pl-radius)] bg-[var(--pl-panel-2)]" />
+            </div>
+        );
+    }
+
+    return (
+        <PlannerEdit
+            {...props}
+            plan={migration.plan}
+            draftKeyOverride={conversionDraftKeyFor(conversion.slug)}
+            notice={
+                <PlanConversionReport
+                    source={conversion}
+                    gear={conversion.gear}
+                    tree={migration.report}
+                />
+            }
+        />
+    );
+}
+
+interface PlannerEditProps {
     mode: 'create' | 'edit';
     slug: string | null;
     editToken: string | null;
@@ -91,12 +179,28 @@ export default function PlannerEdit({
      * passive tree just to label the header and its backdrop art.
      */
     ascendancyName: string | null;
-}) {
+    conversion?: PlanConversion | null;
+}
+
+function PlannerEdit({
+    mode: pageMode,
+    slug,
+    editToken,
+    plan,
+    title,
+    references,
+    mods,
+    ascendancyName,
+    draftKeyOverride,
+    notice = null,
+}: PlannerEditProps & { draftKeyOverride?: string; notice?: ReactNode }) {
     // A draft autosaved before the last save survives a hard refresh; when present
     // it seeds the editor instead of the server copy, so unsaved work isn't lost.
     // The token is never taken from the draft - it always comes fresh from props.
     const { patch: gamePatch, era: gameEra } = useLoadedGameData();
-    const draftKey = draftKeyFor(pageMode === 'edit' ? slug : null);
+    const liveVersion = useLiveGameVersion();
+    const draftKey =
+        draftKeyOverride ?? draftKeyFor(pageMode === 'edit' ? slug : null);
     const [draft] = useState(() => loadDraft(draftKey, gameEra));
 
     // The reference map (icon/tooltip/flavour for each token) is display-only data,
@@ -594,7 +698,11 @@ export default function PlannerEdit({
         }
 
         clearDraft(draftKey);
-        clearDraft(draftKeyFor(null));
+
+        if (draftKeyOverride === undefined) {
+            clearDraft(draftKeyFor(null));
+        }
+
         router.visit(planner.create.url());
     }
 
@@ -668,6 +776,7 @@ export default function PlannerEdit({
                     )}
 
                     <div className="planner-reading relative z-10">
+                        {notice}
                         {!build.className ? (
                             <>
                                 {/* A fresh plan can start from a PoB import (opened as a
@@ -734,7 +843,12 @@ export default function PlannerEdit({
                                     <div className="relative">
                                         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                                             <div className="flex-1 pt-4">
-                                                <Eyebrow>Build planner</Eyebrow>
+                                                <Eyebrow>
+                                                    {versionedEyebrow(
+                                                        'Build planner',
+                                                        liveVersion,
+                                                    )}
+                                                </Eyebrow>
                                                 {/* The locked class/ascendancy - change it via New build. */}
                                                 <p className="pl-text-sm mt-1">
                                                     <span className="font-semibold text-[var(--pl-text-strong)]">

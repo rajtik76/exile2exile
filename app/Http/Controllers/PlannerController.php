@@ -15,8 +15,10 @@ use App\Http\Requests\UpdatePlanRequest;
 use App\Models\BuildPlan;
 use App\Pob\IconResolver;
 use App\Pob\ModCatalogue;
+use App\Services\ArchivedGameData;
 use App\Support\ArchivedBuild;
 use App\Support\GameEra;
+use App\Support\Planner\PlanConversion;
 use App\Support\Planner\PlanReferences;
 use App\Support\Planner\PlanSchema;
 use App\Support\Planner\PobPlanMapper;
@@ -138,25 +140,33 @@ class PlannerController extends Controller
     }
 
     /**
-     * The read-only guide, resolved by its public slug. An unknown slug 404s.
+     * The read-only guide, resolved by its public slug. An unknown slug 404s. A guide of
+     * an older era is resolved against that era's archived catalogues, never the live ones.
      */
-    public function show(BuildPlan $plan, IconResolver $icons, ModCatalogue $catalogue, NeversinkFilterRepository $filters, TreeIndex $tree, ArchivedBuild $archived): Response|HttpResponse
+    public function show(BuildPlan $plan, IconResolver $icons, ModCatalogue $catalogue, NeversinkFilterRepository $filters, TreeIndex $tree, ArchivedBuild $archived, ArchivedGameData $archives): Response|HttpResponse
     {
         // Record the visit so a future cleanup can prune guides nobody opens, without
         // touching `updated_at` or firing model events.
         $plan->forceFill(['last_viewed_at' => now()])->saveQuietly();
 
         $data = PlanSchema::normalize($plan->data, $plan->schema_version);
+        $description = Str::limit(trim((string) $data['description']), 160);
+        $archive = null;
 
-        // Its items, gems and tree belong to an older era's data: resolving them
-        // against the live catalogues would show a different game.
         if (! $plan->isFromCurrentEra()) {
-            return $archived->render('plan', $plan->slug, $plan->title, $data['build']['className'], $plan->game_patch, Str::limit(trim((string) $data['description']), 160));
+            $archive = $archives->forPatch($plan->game_patch);
+
+            if ($archive === null) {
+                return $archived->render('plan', $plan->slug, $plan->title, $data['build']['className'], $plan->game_patch, $description);
+            }
+
+            [$icons, $catalogue, $tree] = [$archive->icons, $archive->mods, $archive->tree];
         }
 
         return Inertia::render('planner/show', [
             'slug' => $plan->slug,
             'title' => $plan->title,
+            'archive' => $archive?->toArray(),
             'plan' => $data,
             'references' => (object) PlanReferences::resolveMap($data, $icons),
             'mods' => (object) PlanReferences::resolveModMap($data, $catalogue),
@@ -168,13 +178,40 @@ class PlannerController extends Controller
             'ascendancyName' => $tree->ascendancyName($data['build']['className'], $data['build']['ascendId']),
             // Loot-filter theme palettes and strictness levels for the download panel's
             // live preview + pickers.
-            'filterThemes' => NeversinkStyle::all(),
-            'filterStrictness' => NeversinkStrictness::all(),
-            'filterCategories' => $this->filterCategoriesByStrictness($filters),
+            // An old-era guide gets no loot filter: its item tiers belong to the live game.
+            'filterThemes' => $archive === null ? NeversinkStyle::all() : [],
+            'filterStrictness' => $archive === null ? NeversinkStrictness::all() : [],
+            'filterCategories' => $archive === null ? $this->filterCategoriesByStrictness($filters) : (object) [],
             'meta' => [
-                'title' => $plan->title,
-                'description' => Str::limit(trim((string) $data['description']), 160),
+                'title' => $archive === null ? $plan->title : "{$plan->title} (PoE2 {$archive->gameEra})",
+                'description' => $description,
             ],
+        ]);
+    }
+
+    /**
+     * A copy of an older-era guide mapped onto the live catalogues, opened in the editor
+     * as a new plan. The browser maps the passive trees; nothing is stored until saved.
+     */
+    public function convert(BuildPlan $plan, ArchivedGameData $archives, IconResolver $icons, ModCatalogue $catalogue, TreeIndex $tree): Response
+    {
+        $archive = $plan->isFromCurrentEra() ? null : $archives->forPatch($plan->game_patch);
+
+        abort_if($archive === null, 404);
+
+        ['data' => $data, 'report' => $report] = new PlanConversion($archive, $icons, $catalogue)
+            ->convert(PlanSchema::normalize($plan->data, $plan->schema_version));
+
+        return Inertia::render('planner/edit', [
+            'mode' => 'create',
+            'slug' => null,
+            'editToken' => null,
+            'title' => $plan->title,
+            'plan' => $data,
+            'references' => (object) PlanReferences::resolveMap($data, $icons),
+            'mods' => (object) PlanReferences::resolveModMap($data, $catalogue),
+            'ascendancyName' => $tree->ascendancyName($data['build']['className'], $data['build']['ascendId']),
+            'conversion' => [...$archive->toArray(), 'slug' => $plan->slug, 'gear' => $report],
         ]);
     }
 

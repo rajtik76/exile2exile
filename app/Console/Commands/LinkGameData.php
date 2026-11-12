@@ -8,6 +8,7 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use RuntimeException;
 
 #[Signature('poe2:link-game-data {--force : Replace an existing real directory with the symlink}')]
 #[Description('Point the app\'s game-data paths at the current release symlink')]
@@ -27,8 +28,15 @@ class LinkGameData extends Command
     {
         File::ensureDirectoryExists($trees->root());
 
+        try {
+            $releases->linkEraIcons();
+        } catch (RuntimeException $e) {
+            $this->warn($e->getMessage());
+        }
+
         $links = [
             public_path('tree/patches') => $trees->root(),
+            public_path('icons/eras') => $releases->eraIconsRoot(),
             public_path('tree/current') => $releases->root().'/current/public/tree/current',
             public_path('icons/poe2') => $releases->root().'/current/public/icons/poe2',
             resource_path('poe2/ggpk') => $releases->root().'/current/resources/poe2/ggpk',
