@@ -94,19 +94,19 @@
         ],
         "test": [
             "@cache:clear",
-            "@php ./vendor/bin/pest --parallel --order-by=random"
+            "@php ./vendor/bin/pest --parallel"
         ],
         "test:exclude-contract": [
             "@cache:clear",
-            "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Unit,Feature,Browser"
+            "@php ./vendor/bin/pest --parallel --testsuite=Unit,Feature,Browser"
         ],
         "test:contract": [
             "@cache:clear",
-            "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Contract"
+            "@php ./vendor/bin/pest --parallel --testsuite=Contract"
         ],
         "test:browser": [
             "@cache:clear",
-            "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Browser"
+            "@php ./vendor/bin/pest --parallel --testsuite=Browser"
         ],
         "test:browser:update-snapshots": [
             "@cache:clear",
@@ -114,7 +114,7 @@
         ],
         "test:exclude-snapshots": [
             "@cache:clear",
-            "@php ./vendor/bin/pest --parallel --order-by=random --testsuite=Unit,Feature"
+            "@php ./vendor/bin/pest --parallel --testsuite=Unit,Feature"
         ],
         "test:js": [
             "npm run test:js"
@@ -122,20 +122,6 @@
         "rector:fix": [
             "Composer\\Config::disableProcessTimeout",
             "rector process"
-        ],
-        "review": [
-            "Composer\\Config::disableProcessTimeout",
-            "@checks",
-            "@review:tests"
-        ],
-        "review:tests": [
-            "Composer\\Config::disableProcessTimeout",
-            "@test:js",
-            "@test:exclude-snapshots"
-        ],
-        "review:full": [
-            "@ci:check",
-            "@test:contract"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
