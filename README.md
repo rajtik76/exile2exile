@@ -229,9 +229,10 @@ app against the real GGPK extract. Browser tests drive a real browser through
 Playwright: they render pages that read the game data, and they load the compiled
 frontend, so run `npm run build` after changing anything under `resources/js` or
 they measure the previous bundle. Quality checks (eslint, prettier, tsc, pint,
-rector, phpstan) plus the JS and PHP test suites run together via
-`composer review`. The git hooks split it: the static checks (`composer checks`)
-run on pre-commit, the test suites (`composer review:tests`) on pre-push.
+rector, phpstan) plus the JS, Unit, Feature and Browser test suites run together
+via `composer ci:check`. The pre-push hook runs it; pre-commit has no gate of its
+own. The Contract suite is left out (`composer test:contract` runs it by hand, CI
+runs it against the release artifact).
 
 ## Development notes
 

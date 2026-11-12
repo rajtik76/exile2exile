@@ -20,8 +20,8 @@ use Database\Seeders\PlanSeeder;
  * immediately by design. The unit test in `PlannerTree.test.tsx` stubs the observer to
  * pin the same invariant; this is its real-browser counterpart.
  *
- * Note the browser suite runs neither in CI nor in the commit hook (see the workflows and
- * `composer review`), so this is a deliberate, locally-run gate - and it needs the real
+ * Note the browser suite does not run in CI (see the workflows); it runs in the pre-push
+ * hook via `composer ci:check`, so this is a deliberate, locally-run gate - and it needs the real
  * extracted game data, like every `visit()` of a tree page.
  */
 

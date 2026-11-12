@@ -12,9 +12,10 @@ only needed for the Contract suite and for actually browsing the app.
 ## Quality gate
 
 `composer install` configures `core.hooksPath` to the tracked `.githooks`
-directory, so every commit runs `composer review`: eslint, prettier, tsc,
-vitest, rector, pint, phpstan and the Unit + Feature suites. You can run it
-manually any time. Pull requests run the same checks in CI.
+directory, so every push runs `composer ci:check`: eslint, prettier, tsc,
+vitest, rector, pint, phpstan and the Unit, Feature + Browser suites. You can
+run it manually any time. Pull requests run the same checks in CI, except the
+Browser suite.
 
 ## Pull requests
 

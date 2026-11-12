@@ -73,5 +73,5 @@ Four suites with different contracts (see "Running tests" in the README):
 - `tests/Browser` - Pest browser tests through Playwright.
 
 JS logic in `resources/js/lib` is covered by vitest. Quality gates: pint,
-phpstan (level 7), rector, eslint, prettier and tsc, wired into the pre-commit
-hook and CI (`composer review` / `composer ci:check`).
+phpstan (level 7), rector, eslint, prettier and tsc, wired into the pre-push
+hook and CI (`composer ci:check`).
