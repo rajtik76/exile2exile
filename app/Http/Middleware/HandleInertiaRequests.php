@@ -40,6 +40,9 @@ class HandleInertiaRequests extends Middleware
     #[\Override]
     public function share(Request $request): array
     {
+        $eras = app(GameEra::class);
+        $era = $eras->current();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -55,7 +58,8 @@ class HandleInertiaRequests extends Middleware
             'dataVersion' => app(TreeDataVersion::class)->current(),
             // The game era of that data (poe.eras). Editors send it back on save, so a
             // tab opened before a swap to a new era can't stamp an old-era build as new.
-            'gameEra' => app(GameEra::class)->current(),
+            'gameEra' => $era,
+            'gameEraName' => $eras->nameOf($era),
         ];
     }
 }

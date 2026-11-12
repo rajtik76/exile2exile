@@ -34,7 +34,7 @@ test('tallies the conversion and keeps the node lists behind a toggle', () => {
     renderReport();
 
     expect(
-        screen.getByText('Converted from PoE2 0.4 (The Third Edict)'),
+        screen.getByText('Converted from PoE2 0.4 · The Third Edict'),
     ).toBeTruthy();
     expect(
         screen.getByText(

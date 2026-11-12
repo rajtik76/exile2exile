@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { gameVersionLabel } from '@/components/build/GameVersion';
 import { INPUT_FONT, PANEL_FONT } from '@/components/passive-tree/chrome';
 import type {
     ChangedNode,
@@ -27,7 +28,10 @@ export function TreeConversionReport({
         return null;
     }
 
-    const version = `${source.gameEra}${source.eraName ? ` (${source.eraName})` : ''}`;
+    const version = gameVersionLabel({
+        era: source.gameEra,
+        name: source.eraName,
+    });
     const dropped = report.removed.length + report.disconnected.length;
     const hasDetails = report.changed.length > 0 || dropped > 0;
 
@@ -43,7 +47,7 @@ export function TreeConversionReport({
                         className="text-[11px] font-semibold tracking-[0.22em] text-[#b39a64] uppercase"
                         style={PANEL_FONT}
                     >
-                        Converted from PoE2 {version}
+                        Converted from {version}
                     </p>
                     {report.classMissing ? (
                         <p className="mt-1 text-[#e0a58f]">

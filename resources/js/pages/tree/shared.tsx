@@ -3,6 +3,10 @@ import type { BuildAllocation } from '@poe2-toolkit/tree-core';
 import { useMemo } from 'react';
 import { ENGRAVED } from '@/components/brand';
 import { ClassPortrait, classPortrait } from '@/components/build/classPortrait';
+import {
+    GameVersionBadge,
+    gameVersionLabel,
+} from '@/components/build/GameVersion';
 import { INPUT_FONT } from '@/components/passive-tree/chrome';
 import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
 import { resolveClassId } from '@/lib/classCatalog';
@@ -162,6 +166,16 @@ function SharedTreeView({
                     </div>
 
                     <div className="ml-auto flex shrink-0 items-center gap-2">
+                        <GameVersionBadge
+                            version={
+                                archive
+                                    ? {
+                                          era: archive.gameEra,
+                                          name: archive.eraName,
+                                      }
+                                    : undefined
+                            }
+                        />
                         {meta?.alternateJson ? (
                             // The machine-readable build document. A plain link, not
                             // an "AI, look here" sign: an export affordance humans
@@ -214,9 +228,12 @@ function ArchiveNotice({
             style={INPUT_FONT}
         >
             <p className="min-w-0 flex-1 text-sm text-[#cdb784]">
-                Made on Path of Exile 2 version {archive.gameEra}
-                {archive.eraName ? ` (${archive.eraName})` : ''} and shown on
-                the tree of that version. It is read-only.
+                Made on{' '}
+                {gameVersionLabel({
+                    era: archive.gameEra,
+                    name: archive.eraName,
+                })}{' '}
+                and shown on the tree of that version. It is read-only.
             </p>
             <Link
                 href={tree.url({ query: { from: slug } })}

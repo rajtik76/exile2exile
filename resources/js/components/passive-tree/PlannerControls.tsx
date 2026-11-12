@@ -1,6 +1,7 @@
 import type { AscendancyDef, ClassDef } from '@poe2-toolkit/tree-core';
 import { useEffect, useRef, useState } from 'react';
 import { ClassPortrait, classPortrait } from '@/components/build/classPortrait';
+import { GameVersionBadge } from '@/components/build/GameVersion';
 import TreeSharePanel from '@/components/passive-tree/TreeSharePanel';
 import { ClearGlyph, Divider, INPUT_FONT, PANEL_FONT, PLAQUE } from './chrome';
 
@@ -87,6 +88,7 @@ export function PlannerControls({
                 onSelectAscendancy={onSelectAscendancy}
                 locked={locked}
             />
+            <GameVersionBadge />
             {mode === 'create' ? (
                 <BuildImporter
                     code={code}
