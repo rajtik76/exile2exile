@@ -7,6 +7,7 @@ namespace App\Pob;
 use App\Support\Planner\Matching\ModLineText;
 use Closure;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -70,6 +71,7 @@ final class ModCatalogue
     public function __construct(
         private readonly ?Cache $cache = null,
         private readonly string $dataVersion = 'dev',
+        private readonly ?Filesystem $disk = null,
     ) {}
 
     /**
@@ -558,7 +560,7 @@ final class ModCatalogue
     private function all(): array
     {
         return $this->mods ??= $this->remembered('mods', function (): array {
-            $disk = Storage::disk('game-data');
+            $disk = $this->disk ?? Storage::disk('game-data');
 
             if (! $disk->exists('resources/poe2/ggpk/mods.json')) {
                 return [];

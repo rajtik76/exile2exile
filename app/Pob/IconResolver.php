@@ -58,8 +58,9 @@ final readonly class IconResolver
         ?PobUniqueStore $pobUniqueStore = null,
         GemRequirements $gemRequirements = new GemRequirements,
         ?PobGemStore $pobGemStore = null,
+        ?GameDataStore $store = null,
     ) {
-        $store = new GameDataStore($cache, $dataVersion);
+        $store ??= new GameDataStore($cache, $dataVersion);
 
         $this->gems = new GemCatalog($store, $gemRequirements, $pobGemStore);
         $this->items = new ItemCatalog($store);

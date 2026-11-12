@@ -6,6 +6,7 @@ namespace App\Tree;
 
 use App\Pob\Reference\LeagueReference;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -29,6 +30,7 @@ final class CachedTreeIndex implements TreeIndex
         private readonly Cache $cache,
         private readonly string $dataVersion,
         private readonly string $treeDataPath,
+        private readonly ?Filesystem $disk = null,
     ) {}
 
     #[\Override]
@@ -169,7 +171,7 @@ final class CachedTreeIndex implements TreeIndex
      */
     private function readJson(string $path): array
     {
-        $disk = Storage::disk('game-data');
+        $disk = $this->disk ?? Storage::disk('game-data');
 
         if (! $disk->exists($path)) {
             return [];

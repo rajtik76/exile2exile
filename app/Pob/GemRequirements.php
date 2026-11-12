@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Pob;
 
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -20,7 +21,7 @@ final class GemRequirements
     /**
      * @param  array<string, array{name: string, levels: array<int, array{requiredLevel: int, str: int, dex: int, int: int}>}>|null  $data  Inject a fixed dataset (tests); null loads the vendored file lazily.
      */
-    public function __construct(private ?array $data = null) {}
+    public function __construct(private ?array $data = null, private readonly ?Filesystem $disk = null) {}
 
     /**
      * The requirement a gem imposes at a given level, or null when we have no
@@ -54,7 +55,7 @@ final class GemRequirements
             return $this->data;
         }
 
-        $disk = Storage::disk('game-data');
+        $disk = $this->disk ?? Storage::disk('game-data');
         $path = 'resources/poe2/ggpk/gem_requirements.json';
 
         if (! $disk->exists($path)) {

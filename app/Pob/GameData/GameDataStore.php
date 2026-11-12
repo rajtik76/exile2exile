@@ -6,6 +6,7 @@ namespace App\Pob\GameData;
 
 use Closure;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -40,6 +41,8 @@ final readonly class GameDataStore
     public function __construct(
         private ?Cache $cache = null,
         private string $dataVersion = 'dev',
+        private ?Filesystem $disk = null,
+        private string $iconWebBase = self::ICON_WEB_BASE,
     ) {}
 
     /**
@@ -132,8 +135,8 @@ final readonly class GameDataStore
             return null;
         }
 
-        return Storage::disk('game-data')->exists('public/icons/poe2/'.$relative)
-            ? self::ICON_WEB_BASE.'/'.$relative
+        return $this->disk()->exists('public/icons/poe2/'.$relative)
+            ? $this->iconWebBase.'/'.$relative
             : null;
     }
 
@@ -153,7 +156,7 @@ final readonly class GameDataStore
      */
     public function loadJson(string $relative): array
     {
-        $disk = Storage::disk('game-data');
+        $disk = $this->disk();
 
         if (! $disk->exists($relative)) {
             return [];
@@ -162,5 +165,10 @@ final readonly class GameDataStore
         $decoded = json_decode((string) $disk->get($relative), true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function disk(): Filesystem
+    {
+        return $this->disk ?? Storage::disk('game-data');
     }
 }
