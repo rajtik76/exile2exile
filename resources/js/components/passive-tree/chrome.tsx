@@ -1,5 +1,5 @@
 /**
- * Shared engraved-bronze chrome for the passive-tree controls. Both the
+ * Shared slate chrome for the passive-tree controls. Both the
  * on-canvas controls inside {@link PassiveTreeView} (search, zoom) and the
  * planner bar on the /tree page ({@link PlannerControls}) are built from the
  * same plaque shell and hairline seams, so they read as one set even though they
@@ -8,40 +8,38 @@
 
 /**
  * Every floating control - the search/zoom rail and the planner's sigil-bar - is
- * the same engraved bronze plaque: a single rounded shell holding pill segments
+ * the same slate panel: a rounded shell holding segments
  * split by hairlines.
  */
 export const PLAQUE =
-    'rounded-full border border-[#6e5526] bg-gradient-to-b from-[#15100a] to-[#0b0805] p-1 opacity-95 shadow-lg shadow-black/45 backdrop-blur-sm';
+    'rounded-xl border border-[#343a4a] bg-[#1b1e28]/95 p-1 shadow-lg shadow-black/45 backdrop-blur-sm';
 
 /**
- * The passive-node tooltip's title face. Set on a chrome container so every label,
- * counter and button inherits it (Tailwind's preflight gives form controls
- * `font: inherit`), making the whole control set read in the in-game tooltip face.
+ * The build planner's reading face for tree control labels and buttons.
  */
-export const PANEL_FONT = { fontFamily: "'Fontin SmallCaps', 'Cinzel', serif" };
+export const PANEL_FONT = {
+    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+};
 
 /**
- * The face for free-text fields (PoB import, node search, share URL). The SmallCaps
- * {@link PANEL_FONT} reads poorly white and small and shouldn't capitalise what the
- * user typed or pasted, so typed text falls back to plain Fontin.
+ * The existing reading face for shared game text and links.
  */
 export const INPUT_FONT = { fontFamily: "'Fontin', serif" };
 
-/** A round icon-button segment - zoom and fullscreen share it with the pickers. */
+/** An icon-button segment - zoom and fullscreen share it with the pickers. */
 export const ICON_SEGMENT =
-    'grid size-8 place-items-center rounded-full text-[#f5ecd8] transition-colors hover:bg-[#f0c869]/10 focus-visible:bg-[#f0c869]/12 focus-visible:outline-none';
+    'grid size-8 place-items-center rounded-lg text-[#e8ebf4] transition-colors hover:bg-[#8098ff]/10 focus-visible:bg-[#8098ff]/12 focus-visible:outline-none';
 
-/** Hairline between segments - a thin engraved seam dividing one kind from another. */
+/** Hairline between segments - a thin seam dividing one kind from another. */
 export function Divider({
     orientation = 'vertical',
 }: {
     orientation?: 'vertical' | 'horizontal';
 }) {
     return orientation === 'vertical' ? (
-        <span className="mx-0.5 h-5 w-px bg-[#3a2f18]" aria-hidden="true" />
+        <span className="mx-0.5 h-5 w-px bg-[#343a4a]" aria-hidden="true" />
     ) : (
-        <span className="my-0.5 h-px w-5 bg-[#3a2f18]" aria-hidden="true" />
+        <span className="my-0.5 h-px w-5 bg-[#343a4a]" aria-hidden="true" />
     );
 }
 

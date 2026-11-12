@@ -7,7 +7,7 @@ import {
     ClearGlyph,
     Divider,
     ICON_SEGMENT,
-    INPUT_FONT,
+    PANEL_FONT,
     PLAQUE,
 } from './chrome';
 import { hexColor } from './treeBudgets';
@@ -50,7 +50,7 @@ export function SearchBox({
     return (
         <div className="relative min-w-[12rem] flex-1 md:w-80 md:flex-none">
             <div
-                className={`flex h-10 items-center gap-1 pr-1 pl-3.5 transition-colors focus-within:border-[#a9842f] ${PLAQUE}`}
+                className={`flex h-10 items-center gap-1 pr-1 pl-3.5 transition-colors focus-within:border-[#8098ff] ${PLAQUE}`}
             >
                 <SearchGlyph />
                 <input
@@ -67,10 +67,8 @@ export function SearchBox({
                     placeholder="Search name or stat…"
                     aria-label="Search passive nodes by name or stat"
                     spellCheck={false}
-                    // Same split as the PoB import field: typed text in plain Fontin
-                    // at a larger size, the placeholder in the bar's SmallCaps face.
-                    style={INPUT_FONT}
-                    className="h-full min-w-0 flex-1 bg-transparent text-base font-medium tracking-wide text-[#f5ecd8] outline-none placeholder:[font-family:'Fontin_SmallCaps',_'Cinzel',_serif] placeholder:text-sm placeholder:text-[#8a7850]"
+                    style={PANEL_FONT}
+                    className="h-full min-w-0 flex-1 bg-transparent text-base font-medium tracking-wide text-[#e8ebf4] outline-none placeholder:text-sm placeholder:text-[#929caf]"
                 />
                 {value !== '' && (
                     <button
@@ -78,16 +76,16 @@ export function SearchBox({
                         onClick={() => onValue('')}
                         title="Clear search"
                         aria-label="Clear search"
-                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#8a7850] transition-colors hover:bg-[#f0c869]/10 hover:text-[#ecc878] focus-visible:text-[#ecc878] focus-visible:outline-none"
+                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none"
                     >
                         <ClearGlyph />
                     </button>
                 )}
                 <SearchHint />
                 <Divider />
-                <span className="shrink-0 px-2 text-base font-medium tracking-wide text-[#f5ecd8] tabular-nums">
+                <span className="shrink-0 px-2 text-base font-medium tracking-wide text-[#e8ebf4] tabular-nums">
                     {matchCount}
-                    <span className="text-[#ecc878]">
+                    <span className="text-[#a7b7ff]">
                         {matchCount === 1 ? ' hit' : ' hits'}
                     </span>
                 </span>
@@ -143,7 +141,7 @@ function SearchHint() {
                             event.preventDefault();
                         }}
                         aria-label="Search syntax"
-                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#8a7850] transition-colors hover:bg-[#f0c869]/10 hover:text-[#ecc878] focus-visible:text-[#ecc878] focus-visible:outline-none data-[state=delayed-open]:text-[#ecc878] data-[state=instant-open]:text-[#ecc878]"
+                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none data-[state=delayed-open]:text-[#a7b7ff] data-[state=instant-open]:text-[#a7b7ff]"
                     >
                         <HintGlyph />
                     </button>
@@ -255,7 +253,7 @@ export function BudgetBar({
         {
             value: 0,
             label: 'Basic',
-            color: '#ecc878',
+            color: '#8098ff',
             used: basic,
             limit: basicLimit,
         },
@@ -292,10 +290,10 @@ export function BudgetBar({
                 className="text-[13px] tabular-nums"
                 style={{
                     color: active
-                        ? '#0b0805'
+                        ? '#12141b'
                         : used > limit
                           ? '#e0a04f'
-                          : '#f5ecd8',
+                          : '#e8ebf4',
                 }}
             >
                 {used}/{limit}
@@ -309,7 +307,7 @@ export function BudgetBar({
             role={onMode ? 'radiogroup' : undefined}
             aria-label="Point budgets"
         >
-            <span className="pl-2 text-[11px] font-semibold tracking-[0.14em] text-[#8a7850] uppercase">
+            <span className="pl-2 text-[11px] font-semibold tracking-[0.14em] text-[#929caf] uppercase">
                 Points
             </span>
             <Divider />
@@ -317,9 +315,9 @@ export function BudgetBar({
                 {segments.map((segment) => {
                     const active = mode === segment.value;
                     const className =
-                        'flex h-7 items-center rounded-full px-2.5 text-sm font-semibold tracking-wide transition-colors';
+                        'flex h-7 items-center rounded-lg px-2.5 text-sm font-semibold tracking-wide transition-colors';
                     const style: CSSProperties = active
-                        ? { color: '#0b0805', background: segment.color }
+                        ? { color: '#12141b', background: segment.color }
                         : { color: segment.color };
 
                     return onMode ? (
@@ -359,7 +357,7 @@ export function BudgetBar({
                     <>
                         <Divider />
                         <span
-                            className="flex h-7 items-center rounded-full px-2.5 text-sm font-semibold tracking-wide"
+                            className="flex h-7 items-center rounded-lg px-2.5 text-sm font-semibold tracking-wide"
                             style={{ color: ASCENDANCY_HEX }}
                             aria-label="Ascendancy points"
                         >
@@ -390,7 +388,7 @@ export function ClearBuildButton({ onClear }: { onClear: () => void }) {
                 onClick={onClear}
                 title="Clear the whole build"
                 aria-label="Clear the whole build"
-                className="flex h-8 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold tracking-[0.14em] text-[#b39a64] uppercase transition-colors hover:bg-[#eb6060]/15 hover:text-[#eb6060] focus-visible:bg-[#eb6060]/15 focus-visible:text-[#eb6060] focus-visible:outline-none"
+                className="flex h-8 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#eb6060]/15 hover:text-[#eb6060] focus-visible:bg-[#eb6060]/15 focus-visible:text-[#eb6060] focus-visible:outline-none"
             >
                 <ClearGlyph />
                 Clear
@@ -460,7 +458,7 @@ function SearchGlyph() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="shrink-0 text-[#8a7850]"
+            className="shrink-0 text-[#929caf]"
             aria-hidden="true"
         >
             <circle cx="11" cy="11" r="7" />

@@ -796,3 +796,59 @@
         display: none;
     }
 }
+
+/* Passive-tree controls share the build planner's slate surfaces and type. */
+.tree-planner-bar .tree-version-badge {
+    order: -1;
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0;
+    border: 0 !important;
+    color: #a7b7ff;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+}
+
+.tree-planner-bar input,
+.passive-tree-toolbar input {
+    font-size: 0.875rem;
+    letter-spacing: normal;
+}
+
+.tree-save-button {
+    border-radius: 8px;
+    background: #8098ff;
+    color: #101424;
+}
+
+.tree-save-button:hover:not(:disabled),
+.tree-save-button:focus-visible:not(:disabled) {
+    background: #a7b7ff;
+    color: #101424;
+}
+
+.tree-save-button:disabled {
+    background: #30394f;
+    color: #9ba8ca;
+}
+
+@media (max-width: 639px) {
+    .tree-importer > div {
+        height: auto;
+        flex-wrap: wrap;
+        padding: 0.5rem;
+    }
+
+    .tree-importer input {
+        height: 2rem;
+        min-height: 2rem;
+        flex-basis: calc(100% - 2rem);
+    }
+
+    .tree-importer > div > span[aria-hidden='true'] {
+        display: none;
+    }
+
+    .tree-importer > div > button:not([aria-label]) {
+        flex: 1;
+    }
+}

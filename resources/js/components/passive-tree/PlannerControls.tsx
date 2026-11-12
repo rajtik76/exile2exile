@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ClassPortrait, classPortrait } from '@/components/build/classPortrait';
 import { GameVersionBadge } from '@/components/build/GameVersion';
 import TreeSharePanel from '@/components/passive-tree/TreeSharePanel';
-import { ClearGlyph, Divider, INPUT_FONT, PANEL_FONT, PLAQUE } from './chrome';
+import { ClearGlyph, Divider, PANEL_FONT, PLAQUE } from './chrome';
 
 /**
  * The planner's control bar, sitting above the tree on the /tree page: the
@@ -76,7 +76,7 @@ export function PlannerControls({
     // instead of being painted over by it.
     return (
         <div
-            className="relative z-20 flex w-full flex-wrap items-stretch gap-3 border-b border-[#40331a] bg-[#1e1409] px-3 py-3 sm:gap-4 sm:px-6 sm:py-4"
+            className="tree-planner-bar relative z-20 flex w-full flex-wrap items-stretch gap-3 border-b border-[#303544] bg-[#11131b] px-3 py-4 sm:gap-3 sm:px-6 lg:px-12"
             style={PANEL_FONT}
         >
             <PlannerPanel
@@ -88,7 +88,7 @@ export function PlannerControls({
                 onSelectAscendancy={onSelectAscendancy}
                 locked={locked}
             />
-            <GameVersionBadge />
+            <GameVersionBadge className="tree-version-badge" />
             {mode === 'create' ? (
                 <BuildImporter
                     code={code}
@@ -159,7 +159,7 @@ function EditorActions({
                     onClick={onTogglePanel}
                     aria-expanded={panelOpen}
                     title="Public link, edit link and token"
-                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#b39a64] uppercase transition-colors hover:bg-[#f0c869]/12 hover:text-[#ecc878] focus-visible:bg-[#f0c869]/12 focus-visible:text-[#ecc878] focus-visible:outline-none"
+                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#8098ff]/12 hover:text-[#a7b7ff] focus-visible:bg-[#8098ff]/12 focus-visible:text-[#a7b7ff] focus-visible:outline-none"
                 >
                     Links
                 </button>
@@ -168,7 +168,7 @@ function EditorActions({
                     type="button"
                     onClick={onSave}
                     disabled={saving || !canSave || (!dirty && !saveError)}
-                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/22 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/22 focus-visible:text-[#ffdf9a] focus-visible:outline-none disabled:text-[#5a4d30] disabled:hover:bg-transparent"
+                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#8098ff]/22 hover:text-[#d4ddff] focus-visible:bg-[#8098ff]/22 focus-visible:text-[#d4ddff] focus-visible:outline-none disabled:text-[#697183] disabled:hover:bg-transparent"
                 >
                     {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save changes'}
                 </button>
@@ -188,7 +188,7 @@ const SIGIL_BAR = `flex items-center gap-0.5 ${PLAQUE}`;
 
 /** An interactive picker segment inside the sigil-bar. */
 const SEGMENT =
-    'group flex items-center gap-2 rounded-full py-1 pr-2.5 pl-1 text-left transition-colors hover:bg-[#f0c869]/8 focus-visible:bg-[#f0c869]/10 focus-visible:outline-none';
+    'group flex items-center gap-2 rounded-full py-1 pr-2.5 pl-1 text-left transition-colors hover:bg-[#8098ff]/8 focus-visible:bg-[#8098ff]/10 focus-visible:outline-none';
 
 /** Locked segment: reads out the import's choice, no hover, can't open. */
 const SEGMENT_LOCKED =
@@ -223,9 +223,9 @@ function BuildImporter({
     saveError: string | null;
 }) {
     return (
-        <div className="relative w-full md:w-auto md:min-w-0 md:flex-1">
+        <div className="tree-importer relative w-full md:w-auto md:min-w-0 md:flex-1">
             <div
-                className={`flex h-full items-center gap-1 py-1 pr-1 pl-3.5 transition-colors focus-within:border-[#a9842f] ${PLAQUE}`}
+                className={`flex h-full items-center gap-1 py-1 pr-1 pl-3.5 transition-colors focus-within:border-[#8098ff] ${PLAQUE}`}
             >
                 <LinkGlyph />
                 <input
@@ -238,11 +238,8 @@ function BuildImporter({
                     }}
                     placeholder="Paste a Path of Building 2 code or pobb.in link…"
                     spellCheck={false}
-                    // The SmallCaps bar font reads poorly white and small, so the
-                    // typed code uses plain Fontin at a larger size; the placeholder
-                    // keeps the bar's tooltip face (overridden back via ::placeholder).
-                    style={INPUT_FONT}
-                    className="h-full min-w-0 flex-1 bg-transparent text-base font-medium tracking-wide text-[#f5ecd8] outline-none placeholder:[font-family:'Fontin_SmallCaps',_'Cinzel',_serif] placeholder:text-sm placeholder:text-[#8a7850]"
+                    style={PANEL_FONT}
+                    className="h-full min-w-0 flex-1 bg-transparent text-base font-medium tracking-wide text-[#e8ebf4] outline-none placeholder:text-sm placeholder:text-[#929caf]"
                 />
                 {code !== '' && (
                     <button
@@ -250,7 +247,7 @@ function BuildImporter({
                         onClick={() => onCode('')}
                         title="Clear input"
                         aria-label="Clear input"
-                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#8a7850] transition-colors hover:bg-[#f0c869]/10 hover:text-[#ecc878] focus-visible:text-[#ecc878] focus-visible:outline-none"
+                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none"
                     >
                         <ClearGlyph />
                     </button>
@@ -260,7 +257,7 @@ function BuildImporter({
                     type="button"
                     onClick={onLoad}
                     disabled={loading || code.trim() === ''}
-                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/22 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/22 focus-visible:text-[#ffdf9a] focus-visible:outline-none disabled:text-[#5a4d30] disabled:hover:bg-transparent"
+                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#8098ff]/22 hover:text-[#d4ddff] focus-visible:bg-[#8098ff]/22 focus-visible:text-[#d4ddff] focus-visible:outline-none disabled:text-[#697183] disabled:hover:bg-transparent"
                 >
                     {loading ? 'Reading…' : 'Load build'}
                 </button>
@@ -270,7 +267,7 @@ function BuildImporter({
                     onClick={onSave}
                     disabled={!canSave || saving}
                     title="Save this tree and get its public link and edit token"
-                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/22 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/22 focus-visible:text-[#ffdf9a] focus-visible:outline-none disabled:text-[#5a4d30] disabled:hover:bg-transparent"
+                    className="tree-save-button shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#8098ff]/22 hover:text-[#d4ddff] focus-visible:bg-[#8098ff]/22 focus-visible:text-[#d4ddff] focus-visible:outline-none disabled:text-[#697183] disabled:hover:bg-transparent"
                 >
                     {saving ? 'Saving…' : 'Save & share'}
                 </button>
@@ -364,7 +361,7 @@ function Medallion({
                 width: size,
                 height: size,
                 background:
-                    'radial-gradient(circle at 50% 30%, #2a1d0c, #0b0805 80%)',
+                    'radial-gradient(circle at 50% 30%, #2a1d0c, #12141b 80%)',
                 boxShadow: 'inset 0 0 0 1.5px rgba(199,154,63,0.55)',
             }}
         >
@@ -375,7 +372,7 @@ function Medallion({
                     size={size}
                 />
             ) : (
-                <span className="text-[11px] text-[#e6d2a0]">
+                <span className="text-[11px] text-[#dfe4ee]">
                     {className.charAt(0).toUpperCase()}
                 </span>
             )}
@@ -405,7 +402,7 @@ function ClassDropdown({
                 title="Locked by the imported build"
             >
                 <Medallion className={active?.name ?? '?'} size={26} />
-                <span className="text-sm font-semibold text-[#f5ecd8]">
+                <span className="text-sm font-semibold text-[#e8ebf4]">
                     {name}
                 </span>
                 <LockGlyph />
@@ -419,7 +416,7 @@ function ClassDropdown({
             trigger={
                 <span className={SEGMENT}>
                     <Medallion className={active?.name ?? '?'} size={26} />
-                    <span className="text-sm font-semibold text-[#f5ecd8]">
+                    <span className="text-sm font-semibold text-[#e8ebf4]">
                         {name}
                     </span>
                     <Chevron />
@@ -437,7 +434,7 @@ function ClassDropdown({
                         }}
                     >
                         <Medallion className={cls.name} size={26} />
-                        <span className="text-sm font-semibold text-[#e6d2a0]">
+                        <span className="text-sm font-semibold text-[#dfe4ee]">
                             {cls.name}
                         </span>
                     </DropdownItem>
@@ -474,7 +471,7 @@ function AscendancyDropdown({
                     ascendancy={current?.name ?? null}
                     size={24}
                 />
-                <span className="text-sm font-medium text-[#f5ecd8]">
+                <span className="text-sm font-medium text-[#e8ebf4]">
                     {current?.name ?? 'No ascendancy'}
                 </span>
                 <LockGlyph />
@@ -492,7 +489,7 @@ function AscendancyDropdown({
                         ascendancy={current?.name ?? null}
                         size={24}
                     />
-                    <span className="text-sm font-medium text-[#f5ecd8]">
+                    <span className="text-sm font-medium text-[#e8ebf4]">
                         {current?.name ?? 'No ascendancy'}
                     </span>
                     <Chevron />
@@ -508,10 +505,10 @@ function AscendancyDropdown({
                             close();
                         }}
                     >
-                        <span className="grid size-[26px] place-items-center rounded-full border border-[#5a4626] text-[#8a7850]">
+                        <span className="grid size-[26px] place-items-center rounded-full border border-[#4a5268] text-[#929caf]">
                             ✕
                         </span>
-                        <span className="text-[#b39a64]">No ascendancy</span>
+                        <span className="text-[#a7b7ff]">No ascendancy</span>
                     </DropdownItem>
                     {ascendancies.map((asc) => (
                         <DropdownItem
@@ -527,7 +524,7 @@ function AscendancyDropdown({
                                 ascendancy={asc.name}
                                 size={26}
                             />
-                            <span className="text-sm font-semibold text-[#e6d2a0]">
+                            <span className="text-sm font-semibold text-[#dfe4ee]">
                                 {asc.name}
                             </span>
                         </DropdownItem>
@@ -587,7 +584,7 @@ function Dropdown({
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-label={label}
-                className="block rounded-full focus-visible:ring-1 focus-visible:ring-[#f0c869]/45 focus-visible:outline-none"
+                className="block rounded-full focus-visible:ring-1 focus-visible:ring-[#8098ff]/45 focus-visible:outline-none"
             >
                 {trigger}
             </button>
@@ -595,7 +592,7 @@ function Dropdown({
             {open && (
                 <div
                     role="listbox"
-                    className="absolute top-full left-0 z-30 mt-1.5 max-h-72 min-w-[12rem] overflow-auto rounded-sm border border-[#6e5526] bg-[#0b0805] p-1 shadow-xl shadow-black/60"
+                    className="absolute top-full left-0 z-30 mt-1.5 max-h-72 min-w-[12rem] overflow-auto rounded-xl border border-[#343a4a] bg-[#1b1e28] p-1 shadow-xl shadow-black/60"
                 >
                     {children(() => setOpen(false))}
                 </div>
@@ -619,10 +616,10 @@ function DropdownItem({
             role="option"
             aria-selected={active}
             onClick={onClick}
-            className={`flex w-full items-center gap-2.5 rounded-[3px] px-2 py-1.5 text-left text-sm transition-colors focus-visible:outline-none ${
+            className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors focus-visible:outline-none ${
                 active
-                    ? 'bg-[#f0c869]/12 text-[#ecc878]'
-                    : 'text-[#cdb784] hover:bg-[#f0c869]/8 focus-visible:bg-[#f0c869]/8'
+                    ? 'bg-[#8098ff]/12 text-[#a7b7ff]'
+                    : 'text-[#c3cad8] hover:bg-[#8098ff]/8 focus-visible:bg-[#8098ff]/8'
             }`}
         >
             {children}
@@ -641,7 +638,7 @@ function Chevron() {
             strokeWidth="2.4"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-[#8a7850] transition-colors group-hover:text-[#d8b766]"
+            className="text-[#929caf] transition-colors group-hover:text-[#c3ceff]"
             aria-hidden="true"
         >
             <path d="M6 9l6 6 6-6" />
@@ -661,7 +658,7 @@ function LinkGlyph() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="shrink-0 text-[#8a7850]"
+            className="shrink-0 text-[#929caf]"
             aria-hidden="true"
         >
             <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
@@ -682,7 +679,7 @@ function LockGlyph() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="ml-1 text-[#4f6b63]"
+            className="ml-1 text-[#929caf]"
             aria-hidden="true"
         >
             <rect x="5" y="11" width="14" height="9" rx="1.5" />

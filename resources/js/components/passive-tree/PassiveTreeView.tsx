@@ -949,7 +949,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                           // flex-1 panel) and hands it down via `className`, in
                           // both modes - read-only never wants a fixed aspect
                           // ratio shrinking the canvas inside a taller box.
-                          'relative h-full overflow-hidden rounded-sm border border-[#1c1a22] bg-[#0a0a10]'
+                          'relative h-full overflow-hidden border border-[#2c313d] bg-[#0a0a10]'
                 }
             >
                 {/* On-canvas controls. On mobile the search box and budget bar
@@ -958,7 +958,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                     desktop everything is an inline row. Chrome flags
                     ({@link onBeforeFullscreen}) gate search and the budgets. */}
                 <div
-                    className="absolute top-4 right-2 left-2 z-10 flex flex-wrap items-center justify-end gap-2"
+                    className="passive-tree-toolbar absolute top-4 right-2 left-2 z-10 flex flex-wrap items-center justify-end gap-2 sm:right-4 sm:left-4"
                     style={PANEL_FONT}
                 >
                     {clearBar}
@@ -968,7 +968,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                             type="button"
                             onClick={() => setToolsOpen((open) => !open)}
                             aria-expanded={toolsOpen}
-                            className={`flex h-10 items-center gap-1.5 px-3 text-[11px] font-semibold tracking-[0.14em] text-[#b39a64] uppercase transition-colors hover:text-[#ecc878] sm:hidden ${PLAQUE}`}
+                            className={`flex h-10 items-center gap-1.5 px-3 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:text-[#a7b7ff] sm:hidden ${PLAQUE}`}
                         >
                             <ToolsGlyph />
                             Tools
@@ -978,7 +978,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                     {/* Folded controls: a dropdown panel on mobile (shown only when
                         toolsOpen), an inline row on desktop. */}
                     <div
-                        className={`${toolsOpen ? 'flex' : 'hidden'} absolute top-[calc(100%+0.5rem)] right-0 left-2 flex-col items-end gap-2 sm:static sm:left-auto sm:flex sm:flex-row sm:items-center`}
+                        className={`${toolsOpen ? 'flex' : 'hidden'} absolute top-[calc(100%+0.5rem)] right-0 left-2 flex-col items-end gap-2 sm:static sm:left-auto sm:flex sm:flex-1 sm:flex-row sm:items-center sm:justify-between`}
                     >
                         {chrome.showSearch && searchBox}
                         {budgetBar}
@@ -1037,7 +1037,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                     />
                 ) : (
                     <div className="grid h-full place-items-center">
-                        <p className="text-sm text-[#8a7850] italic">
+                        <p className="text-sm text-[#929caf] italic">
                             {error
                                 ? `Failed to load tree: ${error}`
                                 : 'Loading tree…'}

@@ -35,9 +35,9 @@ export default function TreeSharePanel({
     const editUrl = resolve(shared.edit.url({ sharedTree: slug }));
 
     return (
-        <div className="absolute top-full right-3 left-3 z-30 mt-2 max-h-[calc(100dvh-160px)] overflow-y-auto rounded-xl border border-[#6e5526] bg-gradient-to-b from-[#15100a] to-[#0b0805] opacity-[0.97] shadow-lg shadow-black/45 backdrop-blur-sm sm:left-auto sm:w-[36rem] sm:max-w-[calc(100%-3rem)]">
-            <div className="flex items-center justify-between gap-3 border-b border-[#3a2f18] px-4 py-2.5">
-                <span className="text-[11px] font-semibold tracking-[0.16em] text-[#b39a64] uppercase">
+        <div className="absolute top-full right-3 left-3 z-30 mt-2 max-h-[calc(100dvh-160px)] overflow-y-auto rounded-xl border border-[#343a4a] bg-[#1b1e28] opacity-[0.97] shadow-lg shadow-black/45 backdrop-blur-sm sm:left-auto sm:w-[36rem] sm:max-w-[calc(100%-3rem)]">
+            <div className="flex items-center justify-between gap-3 border-b border-[#343a4a] px-4 py-2.5">
+                <span className="text-[11px] font-semibold tracking-[0.16em] text-[#a7b7ff] uppercase">
                     Build links
                 </span>
                 <button
@@ -45,7 +45,7 @@ export default function TreeSharePanel({
                     onClick={onClose}
                     title="Close"
                     aria-label="Close build links"
-                    className="grid size-6 shrink-0 place-items-center rounded-full text-[#8a7850] transition-colors hover:bg-[#f0c869]/10 hover:text-[#ecc878] focus-visible:text-[#ecc878] focus-visible:outline-none"
+                    className="grid size-6 shrink-0 place-items-center rounded-full text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none"
                 >
                     <ClearGlyph />
                 </button>
@@ -56,7 +56,7 @@ export default function TreeSharePanel({
                     <a
                         href={publicUrl}
                         style={INPUT_FONT}
-                        className="min-w-0 flex-1 truncate text-sm text-[#f5ecd8] hover:text-[#ffdf9a]"
+                        className="min-w-0 flex-1 truncate text-sm text-[#e8ebf4] hover:text-[#d4ddff]"
                     >
                         {publicUrl}
                     </a>
@@ -66,7 +66,7 @@ export default function TreeSharePanel({
                     <a
                         href={editUrl}
                         style={INPUT_FONT}
-                        className="min-w-0 flex-1 truncate text-sm text-[#f5ecd8] hover:text-[#ffdf9a]"
+                        className="min-w-0 flex-1 truncate text-sm text-[#e8ebf4] hover:text-[#d4ddff]"
                     >
                         {editUrl}
                     </a>
@@ -79,7 +79,7 @@ export default function TreeSharePanel({
                         label="Copy edit token"
                         emphasis
                     />
-                    <p className="w-full text-xs text-[#8a7850]">
+                    <p className="w-full text-xs text-[#929caf]">
                         The only key to edit this build - save it somewhere safe
                         and keep it private.
                     </p>
@@ -133,9 +133,9 @@ function Row({
 }) {
     return (
         <div
-            className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5 ${divider ? 'border-b border-[#3a2f18]' : ''}`}
+            className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5 ${divider ? 'border-b border-[#343a4a]' : ''}`}
         >
-            <span className="w-full shrink-0 text-[10px] font-semibold tracking-[0.16em] text-[#8a7850] uppercase sm:w-16">
+            <span className="w-full shrink-0 text-[10px] font-semibold tracking-[0.16em] text-[#929caf] uppercase sm:w-16">
                 {label}
             </span>
             {children}
@@ -162,8 +162,8 @@ function PillButton({
     className?: string;
 }) {
     const palette = {
-        ghost: 'border-[#a9842f]/35 text-[#b39a64] hover:bg-[#f0c869]/12 hover:text-[#ecc878] focus-visible:bg-[#f0c869]/12',
-        accent: 'border-[#a9842f]/55 text-[#ecc878] hover:bg-[#f0c869]/22 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/22',
+        ghost: 'border-[#8098ff]/35 text-[#a7b7ff] hover:bg-[#8098ff]/12 hover:text-[#a7b7ff] focus-visible:bg-[#8098ff]/12',
+        accent: 'border-[#8098ff]/55 text-[#a7b7ff] hover:bg-[#8098ff]/22 hover:text-[#d4ddff] focus-visible:bg-[#8098ff]/22',
         danger: 'border-[#a34141]/60 text-[#e09a9a] hover:bg-[#c65454]/18 hover:text-[#f3bcbc] focus-visible:bg-[#c65454]/18',
     }[variant];
 
@@ -175,7 +175,7 @@ function PillButton({
             title={title}
             aria-label={ariaLabel}
             className={cn(
-                'shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] uppercase transition-colors focus-visible:outline-none disabled:border-[#3a2f18] disabled:text-[#5a4d30] disabled:hover:bg-transparent',
+                'shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] uppercase transition-colors focus-visible:outline-none disabled:border-[#343a4a] disabled:text-[#697183] disabled:hover:bg-transparent',
                 palette,
                 className,
             )}
@@ -270,7 +270,7 @@ function TokenValue({ token }: { token: string }) {
             onClick={() => setShown((value) => !value)}
             title={shown ? 'Hide token' : 'Reveal token'}
             style={INPUT_FONT}
-            className="min-w-0 flex-1 cursor-pointer truncate text-left text-sm text-[#f5ecd8] hover:text-[#ffdf9a]"
+            className="min-w-0 flex-1 cursor-pointer truncate text-left text-sm text-[#e8ebf4] hover:text-[#d4ddff]"
         >
             {shown ? token : '•'.repeat(24) + '  (click to reveal)'}
         </button>
@@ -316,12 +316,12 @@ function DeleteConfirm({
     return (
         <form
             onSubmit={submit}
-            className="my-1 flex flex-col gap-2 rounded-lg border border-[#a34141]/70 bg-[#15100a] p-3"
+            className="my-1 flex flex-col gap-2 rounded-lg border border-[#a34141]/70 bg-[#1b1e28] p-3"
         >
             <p className="text-sm font-semibold text-[#f3bcbc]">
                 Delete this build permanently?
             </p>
-            <p className="text-sm text-[#cdb784]">
+            <p className="text-sm text-[#c3cad8]">
                 The build and its public page disappear immediately.{' '}
                 <strong>There is no undo</strong> - nobody can bring it back,
                 not even with the token. Paste the edit token to confirm.
@@ -338,12 +338,12 @@ function DeleteConfirm({
                         }
                         placeholder="Edit token…"
                         style={INPUT_FONT}
-                        className="w-full rounded-full border border-[#6e5526] bg-[#0b0805] px-3.5 py-1.5 pr-16 text-sm text-[#f5ecd8] outline-none placeholder:text-[#8a7850] focus:border-[#a9842f]"
+                        className="w-full rounded-full border border-[#343a4a] bg-[#12141b] px-3.5 py-1.5 pr-16 text-sm text-[#e8ebf4] outline-none placeholder:text-[#929caf] focus:border-[#8098ff]"
                     />
                     <button
                         type="button"
                         onClick={() => setShown((value) => !value)}
-                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-[10px] font-semibold tracking-[0.14em] text-[#8a7850] uppercase hover:text-[#ecc878]"
+                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-[10px] font-semibold tracking-[0.14em] text-[#929caf] uppercase hover:text-[#a7b7ff]"
                     >
                         {shown ? 'Hide' : 'Show'}
                     </button>
@@ -351,7 +351,7 @@ function DeleteConfirm({
                 <button
                     type="submit"
                     disabled={form.processing || form.data.token.trim() === ''}
-                    className="shrink-0 rounded-full border border-[#a34141]/60 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#e09a9a] uppercase transition-colors hover:bg-[#c65454]/18 hover:text-[#f3bcbc] focus-visible:bg-[#c65454]/18 focus-visible:outline-none disabled:border-[#3a2f18] disabled:text-[#5a4d30] disabled:hover:bg-transparent"
+                    className="shrink-0 rounded-full border border-[#a34141]/60 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#e09a9a] uppercase transition-colors hover:bg-[#c65454]/18 hover:text-[#f3bcbc] focus-visible:bg-[#c65454]/18 focus-visible:outline-none disabled:border-[#343a4a] disabled:text-[#697183] disabled:hover:bg-transparent"
                 >
                     {form.processing ? 'Deleting…' : 'Delete for good'}
                 </button>
