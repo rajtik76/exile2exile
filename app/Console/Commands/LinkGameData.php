@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\GameDataReleases;
+use App\Services\TreeSnapshots;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -22,9 +23,12 @@ class LinkGameData extends Command
      * Paths already extracted in place (a local dev checkout) are left alone
      * unless --force is given, so this command cannot eat a real extraction.
      */
-    public function handle(GameDataReleases $releases): int
+    public function handle(GameDataReleases $releases, TreeSnapshots $trees): int
     {
+        File::ensureDirectoryExists($trees->root());
+
         $links = [
+            public_path('tree/patches') => $trees->root(),
             public_path('tree/current') => $releases->root().'/current/public/tree/current',
             public_path('icons/poe2') => $releases->root().'/current/public/icons/poe2',
             resource_path('poe2/ggpk') => $releases->root().'/current/resources/poe2/ggpk',

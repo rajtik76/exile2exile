@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\TreeSnapshots;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -105,6 +106,31 @@ function fakeGameDataRelease(string $version, ?string $patch = null): void
         'v' => substr(hash('sha256', $version), 0, 12),
         'patch' => $patch ?? $version,
     ]));
+}
+
+/**
+ * Write a published passive tree (data.json, version.json and one atlas) under `$dir`,
+ * stamped with `$patch`, the layout a release's public/tree/current carries.
+ */
+function fakePublishedTree(string $dir, string $patch, string $data = '{"nodes":{}}', string $atlas = 'atlas', ?string $hash = null): string
+{
+    File::ensureDirectoryExists($dir.'/assets');
+    File::put($dir.'/data.json', $data);
+    File::put($dir.'/assets/skills.webp', $atlas);
+    File::put($dir.'/version.json', (string) json_encode(['v' => $hash ?? substr(hash('sha256', $patch), 0, 12), 'patch' => $patch]));
+
+    return $dir;
+}
+
+/**
+ * Capture a passive tree snapshot of `$patch` in the fake releases root, so an
+ * archived tree of that patch can be drawn.
+ */
+function fakeTreeSnapshot(string $patch): void
+{
+    $source = fakePublishedTree(config()->string('poe.data.releases_root')."/sources/{$patch}", $patch);
+
+    app(TreeSnapshots::class)->capture($source);
 }
 
 /**

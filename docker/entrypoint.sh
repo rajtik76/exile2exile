@@ -15,6 +15,9 @@ php artisan view:cache
 # must never block the boot.
 php artisan poe2:warm-game-data || true
 
+# Backfills the per-patch passive trees that went live before activation captured them.
+php artisan poe2:snapshot-trees || true
+
 # Everything above runs as root, while php-fpm, the scheduler and the queue
 # worker run as www-data. The volume also still holds files written as root
 # from before the switch to this image.

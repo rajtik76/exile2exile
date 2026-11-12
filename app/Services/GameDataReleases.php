@@ -5,13 +5,11 @@ namespace App\Services;
 use App\Pob\Gems\PobGemStore;
 use App\Pob\Uniques\PobUniqueStore;
 use App\Support\GameEra;
-use FilesystemIterator;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use RuntimeException;
-use SplFileInfo;
+use Throwable;
 
 /**
  * The on-disk store of extracted game-data releases and the "current" pointer.
@@ -28,6 +26,7 @@ use SplFileInfo;
  *                                   release of the next era is activated. Named
  *                                   by patch, so its era is derived like a
  *                                   build's; one archive per era, never pruned
+ *   trees/<patch>/                  see TreeSnapshots
  *
  * The app's own public/tree/current, public/icons/poe2 and resources/poe2/ggpk
  * are static symlinks through `current`, so one rename() flips all three at
@@ -42,6 +41,8 @@ class GameDataReleases
         private readonly GameEra $eras,
         private readonly PobUniqueStore $uniques,
         private readonly PobGemStore $gemList,
+        private readonly TreeSnapshots $trees,
+        private readonly GameDataDirectories $directories,
     ) {}
 
     /**
@@ -134,6 +135,7 @@ class GameDataReleases
         }
 
         $this->freezeOutgoingEra($era);
+        $this->captureTree($version);
 
         $tmp = $this->currentLink().'.'.bin2hex(random_bytes(4));
 
@@ -304,7 +306,7 @@ class GameDataReleases
         $staging = $target.'.staging';
 
         File::deleteDirectory($staging);
-        $this->linkTree($this->releasePath($current), $staging);
+        $this->directories->mirror($this->releasePath($current), $staging);
 
         if (is_file($this->uniques->path())) {
             File::ensureDirectoryExists($staging.'/pob-uniques');
@@ -330,27 +332,15 @@ class GameDataReleases
     }
 
     /**
-     * Mirror a directory tree with hard links, falling back to a copy for a file
-     * that cannot be linked (e.g. a different filesystem).
+     * A missing snapshot only costs old trees of this patch their exact tree (they fall
+     * back to their era's newest one), so it must never keep a validated patch offline.
      */
-    private function linkTree(string $source, string $target): void
+    private function captureTree(string $version): void
     {
-        File::ensureDirectoryExists($target);
-
-        $items = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST,
-        );
-
-        /** @var SplFileInfo $item */
-        foreach ($items as $item) {
-            $destination = $target.'/'.substr($item->getPathname(), strlen($source) + 1);
-
-            if ($item->isDir()) {
-                File::ensureDirectoryExists($destination);
-            } elseif (! @link($item->getPathname(), $destination) && ! @copy($item->getPathname(), $destination)) {
-                throw new RuntimeException("could not freeze {$item->getPathname()}");
-            }
+        try {
+            $this->trees->capture($this->releasePath($version).'/public/tree/current');
+        } catch (Throwable $e) {
+            Log::error("Passive tree of release {$version} was not snapshotted: {$e->getMessage()}");
         }
     }
 
@@ -359,18 +349,8 @@ class GameDataReleases
         return $this->root().'/current';
     }
 
-    /** The `patch` from a release's own version.json stamp, or null when absent. */
     private function stampedPatch(string $releasePath): ?string
     {
-        $stamp = $releasePath.'/public/tree/current/version.json';
-
-        if (! is_file($stamp)) {
-            return null;
-        }
-
-        $decoded = json_decode((string) file_get_contents($stamp), true);
-        $patch = is_array($decoded) ? ($decoded['patch'] ?? null) : null;
-
-        return is_string($patch) && $patch !== '' ? $patch : null;
+        return $this->directories->treeStamp($releasePath.'/public/tree/current')['patch'] ?? null;
     }
 }
