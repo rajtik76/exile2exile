@@ -2,6 +2,10 @@
 
 Key changes, newest first. Built in the open; the full history lives in git.
 
+## 2026-11-12
+- The landing page countdown to the Path of Exile 2 1.0 launch (11 December) got a rework. The date is now the headline, with the numerals in the game logo's blade style, the panel is much lower, and it carries a short list of what 1.0 brings: Acts 5 and 6, the Shadow and the Duelist, the Conquerors of Rayclast league, reworked uniques and a new passive tree with rebalanced supports. The background is an original painted scene, not game art.
+- For contributors: releases are now tagged. Every section of this changelog maps to a `v0.x.0` tag, the first one covering everything up to 2026-07-10. The pre-commit hook no longer runs a quality gate; `composer ci:check` runs on pre-push instead, and the `composer review*` scripts are gone.
+
 ## 2026-11-01
 - Site analytics moved from the hand-rolled page-view counter to Umami, running on our own server. Still no cookies and no third party, and your IP address is still never stored. Umami does record a bit more than the old counter did: approximate location (country and city), browser, operating system, device type, screen size and language. The privacy policy lists all of it. Addresses are recorded without their query string, so an edit link's token never ends up in the stats, and the newsletter confirm and unsubscribe pages are not tracked at all.
 - For contributors: the tracker is served from this site's own origin (`/p/s.js`, events to `/p/api/send`) through an nginx proxy in `docker/nginx.conf`, and only renders when `UMAMI_WEBSITE_ID` is set, so local development sends nothing. The `page_views` table and the `TrackPageView` middleware are gone; `/stats` keeps only the stored record counts (webhooks, newsletter, trees, build plans).
