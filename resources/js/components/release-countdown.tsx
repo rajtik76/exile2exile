@@ -1,12 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { CSSProperties } from 'react';
-import {
-    BLOOD,
-    Corners,
-    Eyebrow,
-    GOLD_LIT,
-    INK_FAINT,
-} from '@/components/brand';
+import { Corners, Eyebrow, GOLD_LIT, INK_FAINT } from '@/components/brand';
+import countdownBg from '../../images/landing/countdown.jpg';
 
 /** 11:00 PST, matching the Early Access launch hour. GGG has only confirmed the date. */
 export const LAUNCH_AT = Date.parse('2026-12-11T19:00:00Z');
@@ -59,7 +54,7 @@ function useNow(): number | null {
 }
 
 const PANEL =
-    'relative mx-auto mt-10 max-w-3xl overflow-hidden rounded-lg border border-[#c9a24a]/25 bg-[linear-gradient(170deg,#14141c,#0a0a10_70%)] px-5 py-8 sm:px-10 sm:py-10';
+    'relative mx-auto mt-8 max-w-3xl overflow-hidden rounded-lg border border-[#c9a24a]/25 bg-[linear-gradient(170deg,#14141c,#0a0a10_70%)] px-5 py-6 sm:px-10 sm:py-7';
 
 export default function ReleaseCountdown() {
     const now = useNow();
@@ -71,6 +66,16 @@ export default function ReleaseCountdown() {
             className={PANEL}
         >
             <Corners />
+            <img
+                src={countdownBg}
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute inset-0 size-full object-cover opacity-70"
+            />
+            <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(75%_70%_at_50%_50%,rgba(10,10,16,0.55),rgba(10,10,16,0.1)_80%)]"
+            />
             <div
                 aria-hidden
                 className="pointer-events-none absolute inset-x-0 -top-24 h-56 bg-[radial-gradient(50%_60%_at_50%_100%,rgba(194,118,47,0.22),transparent_75%)]"
@@ -81,7 +86,10 @@ export default function ReleaseCountdown() {
             />
 
             <div className="relative text-center">
-                <Eyebrow>Path of Exile 2 · version 1.0</Eyebrow>
+                <Eyebrow>
+                    Path of Exile 2 · version 1.0 ·{' '}
+                    <span className="whitespace-nowrap">Free to play</span>
+                </Eyebrow>
                 {launched ? <Launched /> : <Counting now={now} />}
             </div>
         </section>
@@ -93,8 +101,14 @@ function Counting({ now }: { now: number | null }) {
 
     return (
         <>
-            <h2 className="mt-3 font-display text-2xl tracking-[0.03em] text-balance text-[#f1f3f8] sm:text-3xl">
-                The road out of Early Access
+            <h2 className="mt-2 font-display text-4xl tracking-[0.03em] text-balance sm:text-5xl">
+                <time
+                    dateTime="2026-12-11"
+                    className="whitespace-nowrap"
+                    style={{ ...DIGIT_STYLE, ...DATE_GLOW }}
+                >
+                    December <Fangs />, 2026
+                </time>
             </h2>
 
             <div
@@ -105,7 +119,7 @@ function Counting({ now }: { now: number | null }) {
                         ? `${remaining.days} days, ${remaining.hours} hours, ${remaining.minutes} minutes until launch`
                         : 'Time until launch'
                 }
-                className="mt-7 flex flex-col items-center justify-center gap-5 sm:flex-row sm:gap-7"
+                className="mt-5 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6"
             >
                 <DaysTile value={remaining?.days} />
                 <Divider />
@@ -114,18 +128,89 @@ function Counting({ now }: { now: number | null }) {
 
             <Journey progress={now === null ? 0 : journeyProgress(now)} />
 
-            <p className="mt-6 font-body text-[15px] text-balance text-[#a7acb8]">
-                <time dateTime="2026-12-11" className="whitespace-nowrap">
-                    December 11, 2026
-                </time>{' '}
-                <span className="mx-1.5 text-[#c9a24a]/60">◆</span>{' '}
-                <span className="whitespace-nowrap">Free to play</span>{' '}
-                <span className="mx-1.5 text-[#c9a24a]/60">◆</span>{' '}
-                <span className="whitespace-nowrap">
-                    <span style={{ color: BLOOD }}>The Duelist</span> arrives
-                </span>
-            </p>
+            <WhatsNew />
         </>
+    );
+}
+
+const FANG_PATH =
+    'M0 0 L100 0 Q72 16 70 96 L70 262 L50 330 L30 262 L30 96 Q28 16 0 0 Z';
+
+const FANG_FACET_PATH = 'M0 0 L50 0 L50 330 L30 262 L30 96 Q28 16 0 0 Z';
+
+const FANG_OFFSETS = [0, 124];
+
+/** The "11" drawn as two blades, echoing the numeral in the game's logo. */
+function Fangs() {
+    return (
+        <>
+            <span className="sr-only">11</span>
+            <svg
+                aria-hidden
+                viewBox="0 0 224 330"
+                className="inline-block h-[1em] w-[0.68em] overflow-visible align-[-0.3em]"
+                style={{ filter: 'drop-shadow(0 0 5px rgba(226,40,34,0.45))' }}
+            >
+                <defs>
+                    <linearGradient
+                        id="ete-fang-blood"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                    >
+                        <stop offset="0.05" stopColor="#f4473a" />
+                        <stop offset="0.55" stopColor="#c8191f" />
+                        <stop offset="1" stopColor="#7a0a10" />
+                    </linearGradient>
+                </defs>
+                {FANG_OFFSETS.map((x) => (
+                    <g key={x} transform={`translate(${x})`}>
+                        <path d={FANG_PATH} fill="url(#ete-fang-blood)" />
+                        <path d={FANG_FACET_PATH} fill="#000" opacity="0.22" />
+                        <path
+                            d="M50 24 L50 300"
+                            stroke="#ffd2c8"
+                            strokeOpacity="0.4"
+                            strokeWidth="2.5"
+                        />
+                    </g>
+                ))}
+            </svg>
+        </>
+    );
+}
+
+const HIGHLIGHTS: { lead: string; rest: string }[] = [
+    { lead: 'Acts 5 and 6', rest: 'finish the campaign' },
+    { lead: 'The Shadow', rest: 'with stealth, traps and daggers' },
+    { lead: 'The Duelist', rest: 'and the Knight ascendancy' },
+    { lead: 'Conquerors of Rayclast', rest: 'league' },
+    { lead: 'Reworked uniques', rest: 'with built-in skills' },
+    { lead: 'New passive tree', rest: 'and rebalanced supports' },
+];
+
+function WhatsNew() {
+    return (
+        <div className="mx-auto mt-6 max-w-2xl border-t border-[#c9a24a]/15 pt-4 text-left">
+            <p className={`${LABEL} text-center`} style={{ color: INK_FAINT }}>
+                What is new in 1.0
+            </p>
+            <ul className="mt-2.5 grid gap-x-8 gap-y-1.5 font-body text-[14px] text-[#a7acb8] sm:grid-cols-2">
+                {HIGHLIGHTS.map((item) => (
+                    <li key={item.lead} className="flex gap-2.5">
+                        <span
+                            aria-hidden
+                            className="mt-[0.5em] size-1.5 shrink-0 rotate-45 bg-[#c9a24a]/60"
+                        />
+                        <span>
+                            <span style={{ color: GOLD_LIT }}>{item.lead}</span>{' '}
+                            {item.rest}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        </div>
     );
 }
 
@@ -151,6 +236,10 @@ const DIGIT_STYLE: CSSProperties = {
     backgroundClip: 'text',
     color: 'transparent',
     fontVariantNumeric: 'lining-nums tabular-nums',
+};
+
+const DATE_GLOW: CSSProperties = {
+    filter: 'drop-shadow(0 2px 1px rgba(0,0,0,0.85)) drop-shadow(0 0 22px rgba(201,162,74,0.3))',
 };
 
 const DIGIT_GLOW: CSSProperties = {
@@ -189,15 +278,15 @@ function DaysTile({ value }: { value?: number }) {
     return (
         <div className="flex flex-col items-center">
             <div
-                className={`${TILE} border-[#c2762f]/45 px-5 py-4 shadow-[0_0_40px_-8px_rgba(194,118,47,0.45),inset_0_1px_0_rgba(236,212,154,0.1),inset_0_-12px_24px_rgba(0,0,0,0.5)] sm:px-6 sm:py-5`}
+                className={`${TILE} border-[#c2762f]/45 px-4 py-3 shadow-[0_0_40px_-8px_rgba(194,118,47,0.45),inset_0_1px_0_rgba(236,212,154,0.1),inset_0_-12px_24px_rgba(0,0,0,0.5)] sm:px-5 sm:py-3.5`}
             >
                 <span
                     aria-hidden
                     className="pointer-events-none absolute inset-x-6 -top-px h-px bg-gradient-to-r from-transparent via-[#ecd49a]/70 to-transparent"
                 />
-                <Digits value={value} className="text-6xl sm:text-[5.5rem]" />
+                <Digits value={value} className="text-5xl sm:text-[4rem]" />
             </div>
-            <span className={`${LABEL} mt-3`} style={{ color: GOLD_LIT }}>
+            <span className={`${LABEL} mt-2`} style={{ color: GOLD_LIT }}>
                 Days
             </span>
         </div>
@@ -214,7 +303,7 @@ function Clock({ remaining }: { remaining: Remaining | null }) {
     return (
         <div className="flex flex-col items-center">
             <div
-                className={`${TILE} items-center border-[#c9a24a]/20 px-3 py-3 shadow-[inset_0_1px_0_rgba(236,212,154,0.08),inset_0_-12px_24px_rgba(0,0,0,0.5)] sm:px-4 sm:py-3.5`}
+                className={`${TILE} items-center border-[#c9a24a]/20 px-3 py-3 shadow-[inset_0_1px_0_rgba(236,212,154,0.08),inset_0_-12px_24px_rgba(0,0,0,0.5)] sm:px-4 sm:py-3`}
             >
                 {parts.map((part, index) => (
                     <span key={part.label} className="flex items-center">
@@ -228,13 +317,13 @@ function Clock({ remaining }: { remaining: Remaining | null }) {
                         )}
                         <Digits
                             value={part.value}
-                            className="text-3xl sm:text-[2.6rem]"
+                            className="text-2xl sm:text-[2.1rem]"
                         />
                     </span>
                 ))}
             </div>
             <div
-                className="mt-3 grid w-full grid-cols-3 px-3 sm:px-4"
+                className="mt-2 grid w-full grid-cols-3 px-3 sm:px-4"
                 style={{ color: INK_FAINT }}
             >
                 {parts.map((part) => (
@@ -251,11 +340,11 @@ function Divider() {
     return (
         <span
             aria-hidden
-            className="flex shrink-0 items-center gap-1.5 sm:-mt-7 sm:flex-col"
+            className="flex shrink-0 items-center gap-1.5 sm:-mt-6 sm:flex-col"
         >
-            <span className="h-px w-10 bg-gradient-to-r from-transparent to-[#c9a24a]/50 sm:h-12 sm:w-px sm:bg-gradient-to-b" />
+            <span className="h-px w-10 bg-gradient-to-r from-transparent to-[#c9a24a]/50 sm:h-10 sm:w-px sm:bg-gradient-to-b" />
             <span className="size-1.5 rotate-45 bg-[#c9a24a]/60 shadow-[0_0_10px_rgba(201,162,74,0.6)]" />
-            <span className="h-px w-10 bg-gradient-to-l from-transparent to-[#c9a24a]/50 sm:h-12 sm:w-px sm:bg-gradient-to-t" />
+            <span className="h-px w-10 bg-gradient-to-l from-transparent to-[#c9a24a]/50 sm:h-10 sm:w-px sm:bg-gradient-to-t" />
         </span>
     );
 }
@@ -264,7 +353,7 @@ function Journey({ progress }: { progress: number }) {
     const percent = `${(progress * 100).toFixed(2)}%`;
 
     return (
-        <div className="mx-auto mt-9 max-w-xl">
+        <div className="mx-auto mt-6 max-w-xl">
             <div className="relative h-[3px] rounded-full bg-[#b6bdcb]/10">
                 <div
                     className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#85481c] via-[#c2762f] to-[#ecd49a]"

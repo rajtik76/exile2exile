@@ -68,3 +68,23 @@ test('switches to the launched state once the countdown ends', () => {
     expect(screen.queryByRole('timer')).toBeNull();
     screen.getByText('Wraeclast is open');
 });
+
+test('lists what is new in 1.0 while counting down', () => {
+    vi.setSystemTime(LAUNCH_AT - 1000);
+    render(<ReleaseCountdown />);
+
+    screen.getByText('What is new in 1.0');
+    screen.getByText('Acts 5 and 6');
+    screen.getByText('The Shadow');
+    screen.getByText('Conquerors of Rayclast');
+});
+
+test('exposes the launch date as text and machine-readable time', () => {
+    vi.setSystemTime(LAUNCH_AT - 1000);
+    const { container } = render(<ReleaseCountdown />);
+
+    const date = container.querySelector('time');
+
+    expect(date?.getAttribute('datetime')).toBe('2026-12-11');
+    expect(date?.textContent).toBe('December 11, 2026');
+});
