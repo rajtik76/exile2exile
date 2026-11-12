@@ -852,3 +852,12 @@
         flex: 1;
     }
 }
+
+.tree-shared-version {
+    height: 2.25rem;
+    border: 1px solid #343a4a !important;
+    border-radius: 8px;
+    background: #1b1e28;
+    color: #a7b7ff;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+}

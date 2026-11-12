@@ -3,6 +3,10 @@
 Key changes, newest first. Built in the open; the full history lives in git.
 
 ## 2026-11-12
+- The passive tree planner and shared tree pages now match the build planner, with slate panels, clearer controls and refreshed share links. The point counters are aligned for easier reading.
+- The JSON button on a shared tree copies its machine-readable build summary to the clipboard and briefly confirms the copy.
+
+## 2026-11-12
 - Builds from an older game version can be opened again. A shared passive tree is drawn read-only on the tree of the version it was made on, and a build guide shows the items, gems, runes, uniques and passive trees of its own version. The loot filter is not offered on an old guide, since its item tiers belong to the current game.
 - An old build can be converted to the current version, but only when you ask: a button on the old page opens a copy in the editor and the original stays as it was. Passives that no longer exist or lost their path to the class start are dropped. Items, gems, runes and modifiers the game no longer has, or that no longer roll on their base, are dropped too, and rolls outside a modifier's new range are pulled into it. A report lists everything that changed, with the phases it happened in, so you can check the build before saving it under a new link.
 - The tree planner, the shared tree page and the build planner now show which version of the game they are for.

@@ -284,10 +284,10 @@ export function BudgetBar({
         limit: number,
         active: boolean,
     ): React.JSX.Element => (
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-baseline gap-1.5">
             <span>{label}</span>
             <span
-                className="text-[13px] tabular-nums"
+                className="tabular-nums"
                 style={{
                     color: active
                         ? '#12141b'

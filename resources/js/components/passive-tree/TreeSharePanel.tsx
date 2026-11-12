@@ -1,6 +1,6 @@
 import { useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { ClearGlyph, INPUT_FONT } from '@/components/passive-tree/chrome';
+import { ClearGlyph, PANEL_FONT } from '@/components/passive-tree/chrome';
 import { cn } from '@/lib/utils';
 import shared from '@/routes/shared';
 
@@ -12,9 +12,8 @@ import shared from '@/routes/shared';
  * DELETE request body is the only place the secret ever travels - never a URL,
  * so it cannot reach logs, history or referrers.
  *
- * Same engraved-bronze chrome as the rest of the tree controls, but a card, not
- * a pill: it holds stacked ledger rows and must breathe on a phone, where the
- * rows wrap label-over-value.
+ * The panel shares the tree controls' slate styling and keeps its rows readable
+ * on phones, where the labels wrap above their values.
  */
 export default function TreeSharePanel({
     slug,
@@ -35,7 +34,10 @@ export default function TreeSharePanel({
     const editUrl = resolve(shared.edit.url({ sharedTree: slug }));
 
     return (
-        <div className="absolute top-full right-3 left-3 z-30 mt-2 max-h-[calc(100dvh-160px)] overflow-y-auto rounded-xl border border-[#343a4a] bg-[#1b1e28] opacity-[0.97] shadow-lg shadow-black/45 backdrop-blur-sm sm:left-auto sm:w-[36rem] sm:max-w-[calc(100%-3rem)]">
+        <div
+            className="absolute top-full right-3 left-3 z-30 mt-2 max-h-[calc(100dvh-160px)] overflow-y-auto rounded-xl border border-[#343a4a] bg-[#1b1e28] shadow-lg shadow-black/45 sm:left-auto sm:w-[36rem] sm:max-w-[calc(100%-3rem)]"
+            style={PANEL_FONT}
+        >
             <div className="flex items-center justify-between gap-3 border-b border-[#343a4a] px-4 py-2.5">
                 <span className="text-[11px] font-semibold tracking-[0.16em] text-[#a7b7ff] uppercase">
                     Build links
@@ -45,7 +47,7 @@ export default function TreeSharePanel({
                     onClick={onClose}
                     title="Close"
                     aria-label="Close build links"
-                    className="grid size-6 shrink-0 place-items-center rounded-full text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none"
+                    className="grid size-6 shrink-0 place-items-center rounded-lg text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none"
                 >
                     <ClearGlyph />
                 </button>
@@ -55,7 +57,7 @@ export default function TreeSharePanel({
                 <Row label="Public" divider>
                     <a
                         href={publicUrl}
-                        style={INPUT_FONT}
+                        style={PANEL_FONT}
                         className="min-w-0 flex-1 truncate text-sm text-[#e8ebf4] hover:text-[#d4ddff]"
                     >
                         {publicUrl}
@@ -65,7 +67,7 @@ export default function TreeSharePanel({
                 <Row label="Edit" divider>
                     <a
                         href={editUrl}
-                        style={INPUT_FONT}
+                        style={PANEL_FONT}
                         className="min-w-0 flex-1 truncate text-sm text-[#e8ebf4] hover:text-[#d4ddff]"
                     >
                         {editUrl}
@@ -143,7 +145,7 @@ function Row({
     );
 }
 
-/** A small gold pill action, matching the planner bar's button language. */
+/** A compact action matching the planner controls. */
 function PillButton({
     variant = 'ghost',
     disabled = false,
@@ -162,9 +164,9 @@ function PillButton({
     className?: string;
 }) {
     const palette = {
-        ghost: 'border-[#8098ff]/35 text-[#a7b7ff] hover:bg-[#8098ff]/12 hover:text-[#a7b7ff] focus-visible:bg-[#8098ff]/12',
-        accent: 'border-[#8098ff]/55 text-[#a7b7ff] hover:bg-[#8098ff]/22 hover:text-[#d4ddff] focus-visible:bg-[#8098ff]/22',
-        danger: 'border-[#a34141]/60 text-[#e09a9a] hover:bg-[#c65454]/18 hover:text-[#f3bcbc] focus-visible:bg-[#c65454]/18',
+        ghost: 'border-[#414a60] bg-[#252b39] text-[#c7d2ff] hover:bg-[#303950] focus-visible:bg-[#303950]',
+        accent: 'border-[#8098ff] bg-[#8098ff] text-[#101424] hover:bg-[#a7b7ff] focus-visible:bg-[#a7b7ff]',
+        danger: 'border-[#b45050] bg-[#48252b] text-[#ffb5ae] hover:bg-[#633039] focus-visible:bg-[#633039]',
     }[variant];
 
     return (
@@ -175,7 +177,7 @@ function PillButton({
             title={title}
             aria-label={ariaLabel}
             className={cn(
-                'shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] uppercase transition-colors focus-visible:outline-none disabled:border-[#343a4a] disabled:text-[#697183] disabled:hover:bg-transparent',
+                'h-9 shrink-0 cursor-pointer rounded-lg border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a7b7ff] disabled:cursor-not-allowed disabled:border-[#343a4a] disabled:text-[#697183] disabled:hover:bg-transparent',
                 palette,
                 className,
             )}
@@ -269,7 +271,7 @@ function TokenValue({ token }: { token: string }) {
             type="button"
             onClick={() => setShown((value) => !value)}
             title={shown ? 'Hide token' : 'Reveal token'}
-            style={INPUT_FONT}
+            style={PANEL_FONT}
             className="min-w-0 flex-1 cursor-pointer truncate text-left text-sm text-[#e8ebf4] hover:text-[#d4ddff]"
         >
             {shown ? token : '•'.repeat(24) + '  (click to reveal)'}
@@ -337,8 +339,8 @@ function DeleteConfirm({
                             form.setData('token', event.target.value)
                         }
                         placeholder="Edit token…"
-                        style={INPUT_FONT}
-                        className="w-full rounded-full border border-[#343a4a] bg-[#12141b] px-3.5 py-1.5 pr-16 text-sm text-[#e8ebf4] outline-none placeholder:text-[#929caf] focus:border-[#8098ff]"
+                        style={PANEL_FONT}
+                        className="w-full rounded-lg border border-[#343a4a] bg-[#12141b] px-3.5 py-1.5 pr-16 text-sm text-[#e8ebf4] outline-none placeholder:text-[#929caf] focus:border-[#8098ff]"
                     />
                     <button
                         type="button"
@@ -351,7 +353,7 @@ function DeleteConfirm({
                 <button
                     type="submit"
                     disabled={form.processing || form.data.token.trim() === ''}
-                    className="shrink-0 rounded-full border border-[#a34141]/60 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#e09a9a] uppercase transition-colors hover:bg-[#c65454]/18 hover:text-[#f3bcbc] focus-visible:bg-[#c65454]/18 focus-visible:outline-none disabled:border-[#343a4a] disabled:text-[#697183] disabled:hover:bg-transparent"
+                    className="h-9 shrink-0 cursor-pointer rounded-lg border border-[#b45050] bg-[#48252b] px-3.5 text-xs font-semibold text-[#ffb5ae] transition-colors hover:bg-[#633039] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb5ae] disabled:cursor-not-allowed disabled:border-[#343a4a] disabled:bg-transparent disabled:text-[#697183]"
                 >
                     {form.processing ? 'Deleting…' : 'Delete for good'}
                 </button>

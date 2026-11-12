@@ -1,13 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
 import type { BuildAllocation } from '@poe2-toolkit/tree-core';
-import { useMemo } from 'react';
-import { ENGRAVED } from '@/components/brand';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ClassPortrait, classPortrait } from '@/components/build/classPortrait';
 import {
     GameVersionBadge,
     gameVersionLabel,
 } from '@/components/build/GameVersion';
-import { INPUT_FONT } from '@/components/passive-tree/chrome';
+import { PANEL_FONT } from '@/components/passive-tree/chrome';
 import PassiveTreeView from '@/components/passive-tree/PassiveTreeView';
 import { resolveClassId } from '@/lib/classCatalog';
 import { TreeSourceProvider } from '@/lib/treeSource';
@@ -104,29 +103,17 @@ function SharedTreeView({
 
             <div className="flex h-[calc(100dvh-69px)] w-full flex-col">
                 <div
-                    className="relative z-20 flex w-full flex-wrap items-center gap-4 border-b border-[#40331a] px-3 py-4 sm:gap-5 sm:px-6 sm:py-5"
-                    style={{
-                        // Forged-bronze bar: a vertical sheen-to-shadow gradient with
-                        // a warm glow pooling behind the portrait, plus a thin gold
-                        // hairline along the top edge - reads as a struck plaque, not
-                        // a flat fill.
-                        background:
-                            'radial-gradient(120% 140% at 8% 0%, rgba(120,86,32,0.28), transparent 55%), linear-gradient(180deg, #251a0b 0%, #1a1108 55%, #0d0904 100%)',
-                        // Top gold sheen, a brighter gold hairline along the bottom
-                        // edge, and a drop shadow cast down onto the dark tree below -
-                        // lifts the plaque off the canvas instead of butting flat into it.
-                        boxShadow:
-                            'inset 0 1px 0 rgba(240,200,105,0.12), inset 0 -1px 0 rgba(201,162,74,0.55), 0 12px 24px -8px rgba(0,0,0,0.75)',
-                    }}
+                    className="relative z-20 flex w-full flex-wrap items-center gap-4 border-b border-[#303544] bg-[#11131b] px-3 py-4 sm:gap-5 sm:px-6 lg:px-12"
+                    style={PANEL_FONT}
                 >
                     <div className="flex min-w-0 items-center gap-4">
                         <span
                             className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-full sm:size-16"
                             style={{
                                 background:
-                                    'radial-gradient(circle at 50% 30%, #2a1d0c, #0b0805 80%)',
+                                    'radial-gradient(circle at 50% 30%, #343c55, #12141b 80%)',
                                 boxShadow:
-                                    'inset 0 0 0 2px rgba(199,154,63,0.7), 0 0 24px -8px rgba(240,200,105,0.45)',
+                                    'inset 0 0 0 1px rgba(128,152,255,0.4)',
                             }}
                         >
                             {classPortrait(build.className, ascendancyName) ? (
@@ -136,7 +123,7 @@ function SharedTreeView({
                                     size={64}
                                 />
                             ) : (
-                                <span className="text-xl text-[#e6d2a0]">
+                                <span className="text-xl text-[#dfe4ee]">
                                     {build.className.charAt(0).toUpperCase()}
                                 </span>
                             )}
@@ -145,19 +132,19 @@ function SharedTreeView({
                             {ascendancyName ? (
                                 <>
                                     <span
-                                        className="truncate text-2xl text-[#ffe6a8] sm:text-3xl"
-                                        style={ENGRAVED}
+                                        className="truncate text-xl font-semibold text-[#f1f4fa] sm:text-2xl"
+                                        style={PANEL_FONT}
                                     >
                                         {ascendancyName}
                                     </span>
-                                    <span className="mt-0.5 text-xs font-semibold tracking-[0.22em] text-[#b39a64] uppercase">
+                                    <span className="mt-0.5 text-xs font-semibold tracking-[0.22em] text-[#a7b7ff] uppercase">
                                         {build.className}
                                     </span>
                                 </>
                             ) : (
                                 <span
-                                    className="truncate text-2xl text-[#ffe6a8] sm:text-3xl"
-                                    style={ENGRAVED}
+                                    className="truncate text-xl font-semibold text-[#f1f4fa] sm:text-2xl"
+                                    style={PANEL_FONT}
                                 >
                                     {build.className}
                                 </span>
@@ -167,6 +154,7 @@ function SharedTreeView({
 
                     <div className="ml-auto flex shrink-0 items-center gap-2">
                         <GameVersionBadge
+                            className="tree-shared-version"
                             version={
                                 archive
                                     ? {
@@ -177,19 +165,7 @@ function SharedTreeView({
                             }
                         />
                         {meta?.alternateJson ? (
-                            // The machine-readable build document. A plain link, not
-                            // an "AI, look here" sign: an export affordance humans
-                            // expect and any fetch tool reads as a normal anchor.
-                            <a
-                                href={meta.alternateJson}
-                                className="rounded-full px-3.5 py-2 text-[11px] font-semibold tracking-[0.14em] text-[#b39a64] uppercase transition-colors hover:bg-[#f0c869]/12 hover:text-[#ecc878] focus-visible:bg-[#f0c869]/12 focus-visible:text-[#ecc878] focus-visible:outline-none"
-                                style={{
-                                    border: '1px solid rgba(169,132,47,0.35)',
-                                    ...INPUT_FONT,
-                                }}
-                            >
-                                JSON
-                            </a>
+                            <JsonCopyButton url={meta.alternateJson} />
                         ) : null}
                     </div>
                 </div>
@@ -215,6 +191,71 @@ function SharedTreeView({
     );
 }
 
+export function JsonCopyButton({ url }: { url: string }) {
+    const [feedback, setFeedback] = useState<'copied' | 'failed' | null>(null);
+    const [copying, setCopying] = useState(false);
+    const feedbackTimer = useRef<number | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (feedbackTimer.current !== null) {
+                window.clearTimeout(feedbackTimer.current);
+            }
+        };
+    }, []);
+
+    async function copyJson(): Promise<void> {
+        setCopying(true);
+
+        try {
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error('Failed to load JSON');
+            }
+
+            await navigator.clipboard.writeText(await response.text());
+            setFeedback('copied');
+        } catch {
+            setFeedback('failed');
+        } finally {
+            setCopying(false);
+
+            if (feedbackTimer.current !== null) {
+                window.clearTimeout(feedbackTimer.current);
+            }
+
+            feedbackTimer.current = window.setTimeout(
+                () => setFeedback(null),
+                3000,
+            );
+        }
+    }
+
+    return (
+        <span className="relative inline-flex">
+            <button
+                type="button"
+                onClick={copyJson}
+                disabled={copying}
+                aria-label="Copy build JSON"
+                className="h-9 cursor-pointer rounded-lg border border-[#8098ff] bg-[#8098ff] px-3.5 text-[11px] font-semibold tracking-[0.14em] text-[#101424] uppercase transition-colors hover:border-[#a7b7ff] hover:bg-[#a7b7ff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a7b7ff] disabled:cursor-wait disabled:opacity-60"
+                style={PANEL_FONT}
+            >
+                JSON
+            </button>
+            {feedback !== null && (
+                <span
+                    role="status"
+                    className="absolute top-full right-0 z-30 mt-2 w-max rounded-lg border border-[#343a4a] bg-[#1b1e28] px-3 py-2 text-xs text-[#dfe4ee] shadow-lg shadow-black/40"
+                >
+                    {feedback === 'copied' ? 'JSON copied' : 'Copy failed'}
+                </span>
+            )}
+        </span>
+    );
+}
+
 function ArchiveNotice({
     archive,
     slug,
@@ -224,10 +265,10 @@ function ArchiveNotice({
 }) {
     return (
         <div
-            className="relative z-10 flex flex-wrap items-center gap-3 border-b border-[#40331a] bg-[#120c06] px-3 py-3 sm:px-6"
-            style={INPUT_FONT}
+            className="relative z-10 flex flex-wrap items-center gap-3 border-b border-[#303544] bg-[#171a24] px-3 py-3 sm:px-6"
+            style={PANEL_FONT}
         >
-            <p className="min-w-0 flex-1 text-sm text-[#cdb784]">
+            <p className="min-w-0 flex-1 text-sm text-[#c3cad8]">
                 Made on{' '}
                 {gameVersionLabel({
                     era: archive.gameEra,
@@ -237,8 +278,7 @@ function ArchiveNotice({
             </p>
             <Link
                 href={tree.url({ query: { from: slug } })}
-                className="shrink-0 rounded-full px-3.5 py-2 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/12 hover:text-[#ffdf9a] focus-visible:bg-[#f0c869]/12 focus-visible:outline-none"
-                style={{ border: '1px solid rgba(199,154,63,0.6)' }}
+                className="shrink-0 rounded-lg border border-[#8098ff]/55 px-3.5 py-2 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#8098ff]/12 hover:text-[#d4ddff] focus-visible:bg-[#8098ff]/12 focus-visible:outline-none"
             >
                 Convert to current version
             </Link>
