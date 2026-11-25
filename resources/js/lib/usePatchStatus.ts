@@ -60,6 +60,15 @@ function ago(iso: string, now: number): string {
 }
 
 /**
+ * The patch the app's own game data is built from, or null when unknown.
+ * Request-only: it rides the initial props and changes only when a data
+ * refresh ships a new build.
+ */
+export function useDataVersion(): string | null {
+    return (usePage().props.dataVersion as string | null | undefined) ?? null;
+}
+
+/**
  * Headless patch status: reads the shared props, polls the latest-version status
  * every 60s (partial reload of just `patch`), and ticks the relative-time
  * read-out between polls. Returns the computed data only - each surface (footer,
@@ -71,6 +80,7 @@ function ago(iso: string, now: number): string {
  */
 export function usePatchStatus(): PatchStatus | null {
     const props = usePage().props;
+    const dataVersion = useDataVersion();
     const [now, setNow] = useState(() => Date.now());
 
     usePoll(60_000, { only: ['patch'] });
@@ -86,9 +96,6 @@ export function usePatchStatus(): PatchStatus | null {
     if (!patch) {
         return null;
     }
-
-    const dataVersion =
-        (props.dataVersion as string | null | undefined) ?? null;
 
     return {
         version: patch.version,

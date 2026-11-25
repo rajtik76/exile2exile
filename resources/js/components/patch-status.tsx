@@ -1,11 +1,11 @@
-import { usePatchStatus } from '@/lib/usePatchStatus';
+import { useDataVersion, usePatchStatus } from '@/lib/usePatchStatus';
 import type { PatchStatus } from '@/lib/usePatchStatus';
 
 /*
  * The live patch read-outs: what the watcher last saw on GGG's patch server and
  * the patch this site's own game data is built from. Both read the same
  * {@link usePatchStatus} hook, so the footer and the patch-webhook page always
- * agree; each renders nothing before the first patch poll.
+ * agree.
  */
 
 /** The pulsing dot: the watcher is alive and polling. */
@@ -47,35 +47,50 @@ const DATA_TITLE = "The patch the app's bundled game data is built from";
  * PoE2 version beside the release age and last-checked time, both kept fresh
  * by the hook's poll. Bottom row: the request-only patch the site's own data
  * is built from, flagged current or behind.
+ *
+ * Before the first patch poll the top row says so with a still, unlit dot and
+ * the data row stands alone, unflagged - there is no latest patch to compare
+ * it with yet.
  */
 export function PatchStatusWidget() {
     const status = usePatchStatus();
-
-    if (!status) {
-        return null;
-    }
+    const dataVersion = useDataVersion();
 
     return (
         <div className="panel w-fit font-ui text-[13px] text-slate">
-            <div className="flex items-center gap-3.5 px-3.5 py-2.5">
-                <span className="flex items-center gap-2.5">
-                    <LivePing />
-                    <span className="text-sm font-semibold text-paper tabular-nums">
-                        PoE2&nbsp;{status.version}
+            {status ? (
+                <div className="flex items-center gap-3.5 px-3.5 py-2.5">
+                    <span className="flex items-center gap-2.5">
+                        <LivePing />
+                        <span className="text-sm font-semibold text-paper tabular-nums">
+                            PoE2&nbsp;{status.version}
+                        </span>
                     </span>
-                </span>
 
-                <span className="h-8 w-px bg-line" aria-hidden="true" />
+                    <span className="h-8 w-px bg-line" aria-hidden="true" />
 
-                <div className="flex flex-col leading-[1.45] tabular-nums">
-                    <span title={new Date(status.releasedAt).toLocaleString()}>
-                        released {status.releasedAgo}
-                    </span>
-                    <span title={new Date(status.checkedAt).toLocaleString()}>
-                        checked {status.checkedAgo}
-                    </span>
+                    <div className="flex flex-col leading-[1.45] tabular-nums">
+                        <span
+                            title={new Date(status.releasedAt).toLocaleString()}
+                        >
+                            released {status.releasedAgo}
+                        </span>
+                        <span
+                            title={new Date(status.checkedAt).toLocaleString()}
+                        >
+                            checked {status.checkedAgo}
+                        </span>
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div className="flex items-center gap-2.5 px-3.5 py-2.5 text-mist">
+                    <span
+                        className="size-2 shrink-0 rounded-full bg-line-strong"
+                        aria-hidden="true"
+                    />
+                    PoE2 patch not checked yet
+                </div>
+            )}
 
             <div
                 className="flex items-center gap-2 border-t border-line px-3.5 py-2"
@@ -83,9 +98,9 @@ export function PatchStatusWidget() {
             >
                 <span className="text-mist">web data</span>
                 <span className="font-semibold text-paper tabular-nums">
-                    {status.dataVersion ?? '-'}
+                    {dataVersion ?? '-'}
                 </span>
-                <DataFreshness status={status} />
+                {status && <DataFreshness status={status} />}
             </div>
         </div>
     );
