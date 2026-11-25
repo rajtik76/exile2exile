@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Filigree } from '@/components/build/Panel';
 import {
     BulletList,
     MOD_TEXT_COLOR,
@@ -246,6 +245,45 @@ export function EmptySocketBadge() {
         <span className="pointer-events-none block aspect-square w-full">
             <SocketIcon />
         </span>
+    );
+}
+
+/** Curled quatrefoil filigree, four-fold symmetric: the mark of an empty charm slot. */
+function Filigree() {
+    const curl = 'M20 9 C 12 9 10 16 15.5 18 C 19 19.2 18 13.5 15.5 13.5';
+    const arc = 'M20 11.5 C 16.5 14.5 16.5 17 20 18.5';
+
+    return (
+        <svg
+            viewBox="0 0 40 40"
+            className="h-full w-full"
+            preserveAspectRatio="xMidYMid meet"
+            aria-hidden
+        >
+            <g
+                fill="none"
+                stroke="#364454"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+            >
+                <circle cx="20" cy="20" r="3" />
+                {[0, 90, 180, 270].map((deg) => (
+                    <path
+                        key={`c${deg}`}
+                        d={curl}
+                        transform={`rotate(${deg} 20 20)`}
+                    />
+                ))}
+                {[45, 135, 225, 315].map((deg) => (
+                    <path
+                        key={`a${deg}`}
+                        d={arc}
+                        transform={`rotate(${deg} 20 20)`}
+                        opacity="0.65"
+                    />
+                ))}
+            </g>
+        </svg>
     );
 }
 
