@@ -426,15 +426,16 @@
 }
 
 /* The cube itself is drawn in WebGL (relic-renderer.ts) on a flat canvas
-   1.8 edges wide, so its corners have room as it turns. Its rough outline is
-   drawn there too, not with a CSS filter. */
+   2.2 edges wide, so its corners and sparks have room as it turns. Its rough
+   outline is drawn there too, not with a CSS filter. The still stand-in is
+   rendered 1.8 edges wide, hence its size. */
 .landing .ember-cube {
     position: absolute;
-    top: calc(var(--s) * -0.9);
-    left: calc(var(--s) * -0.9);
-    width: calc(var(--s) * 1.8);
-    height: calc(var(--s) * 1.8);
-    background: center / contain no-repeat;
+    top: calc(var(--s) * -1.1);
+    left: calc(var(--s) * -1.1);
+    width: calc(var(--s) * 2.2);
+    height: calc(var(--s) * 2.2);
+    background: center / 81.82% no-repeat;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react';
+import { LightningSchedule } from '@/components/relic-lightning';
 import { RelicRenderer } from '@/components/relic-renderer';
 import cubeLeft from '../../images/landing/cube-left.webp';
 import cubeRight from '../../images/landing/cube-right.webp';
 import relicStill from '../../images/landing/relic-still.webp';
 
 /**
- * The molten cube in the landing relic, with its glow. It tumbles in WebGL;
- * under reduced motion it holds still, it pauses off screen, and where WebGL
+ * The molten cube in the landing relic, with its glow. It tumbles in WebGL and
+ * now and then throws a short spark; under reduced motion it holds still with
+ * no sparks, it pauses off screen, and where WebGL
  * is missing a still render of the same cube stands in. Styled by landing.css.
  */
 export default function RelicCube() {
@@ -36,6 +38,7 @@ export default function RelicCube() {
         const still = window.matchMedia(
             '(prefers-reduced-motion: reduce)',
         ).matches;
+        const lightning = new LightningSchedule();
         let visible = true;
         let frameId = 0;
         let disposed = false;
@@ -47,7 +50,7 @@ export default function RelicCube() {
 
         const frame = (milliseconds: number) => {
             if (visible) {
-                renderer.draw(milliseconds);
+                renderer.draw(milliseconds, lightning.sparksAt(milliseconds));
             }
 
             frameId = requestAnimationFrame(frame);

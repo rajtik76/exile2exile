@@ -1,6 +1,9 @@
+import { MAX_SPARKS } from '@/components/relic-lightning';
+import type { Spark } from '@/components/relic-lightning';
+
 /*
  * The relic on the landing page: a rounded molten cube ray-marched in a
- * fragment shader. A rounded box cannot be built from flat CSS faces without
+ * fragment shader, with now and then a short spark leaping off it. A rounded box cannot be built from flat CSS faces without
  * gaps at its corners, and Safari flickers on CSS 3D inside masked layers, so
  * the cube is drawn into a single flat canvas instead.
  */
@@ -16,7 +19,7 @@ void main() {
 
 /*
  * Axes are the CSS ones (x right, y down, z towards the viewer), in units of
- * the cube edge. The canvas spans 1.8 edges, the eye sits 7 edges away like
+ * the cube edge. The canvas spans 2.2 edges, the eye sits 7 edges away like
  * the CSS perspective did. The rough, slightly soft outline is drawn here at
  * full display resolution: Safari rasterises SVG filters on HTML at 1x, which
  * blurred the cube on retina screens.
@@ -31,10 +34,12 @@ uniform sampler2D textureA;
 uniform sampler2D textureB;
 uniform vec3 light;
 uniform float pixel;
+uniform vec4 sparks[2];
 
 const float HALF = 0.485;
 const float ROUND = 0.12;
 const float EYE = 7.0;
+const float SPAN = 1.1;
 
 float roundedBox(vec3 p) {
     vec3 q = abs(p) - (HALF - ROUND);
@@ -69,6 +74,71 @@ vec2 rough(vec2 p) {
     return (wobble / 1.5 - 0.5) * 0.064;
 }
 
+float segment(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+
+    return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
+}
+
+// A point on a spark's zigzag: x is its angle, y the seed of its jitter. It
+// starts inside the cube, so only the part that leaves the surface shows.
+vec2 sparkPoint(vec4 spark, float step) {
+    vec2 ahead = vec2(cos(spark.x), sin(spark.x));
+    vec2 side = vec2(-ahead.y, ahead.x);
+    float jitter = (hash(vec2(spark.y, step)) - 0.5) * 0.14 * min(step, 1.0);
+
+    return ahead * (0.3 + step * 0.125) + side * jitter;
+}
+
+// Light of one spark at a screen point: x the hot core, y the glow around it.
+vec2 sparkLight(vec2 p, vec4 spark) {
+    if (spark.w <= 0.0) {
+        return vec2(0.0);
+    }
+
+    float nearest = 1000.0;
+    float along = 0.0;
+    vec2 from = sparkPoint(spark, 0.0);
+
+    for (int i = 1; i <= 6; i++) {
+        vec2 to = sparkPoint(spark, float(i));
+        float d = segment(p, from, to);
+
+        if (d < nearest) {
+            nearest = d;
+            along = float(i) / 6.0;
+        }
+
+        from = to;
+    }
+
+    // One thinner fork off the middle of the path.
+    float turn = hash(vec2(spark.y, 9.0)) > 0.5 ? 0.6 : -0.6;
+    vec2 forkAhead = vec2(cos(spark.x + turn), sin(spark.x + turn));
+    vec2 forkSide = vec2(-forkAhead.y, forkAhead.x);
+    vec2 fork = sparkPoint(spark, 3.0);
+    from = fork;
+
+    for (int j = 1; j <= 2; j++) {
+        vec2 to = fork + forkAhead * float(j) * 0.11
+            + forkSide * (hash(vec2(spark.y, 20.0 + float(j))) - 0.5) * 0.08;
+        float d = segment(p, from, to) * 1.4;
+
+        if (d < nearest) {
+            nearest = d;
+            along = 0.5 + float(j) * 0.2;
+        }
+
+        from = to;
+    }
+
+    float taper = 1.0 - along * 0.7;
+    float core = 1.0 - smoothstep(0.0, pixel * (1.0 + 2.2 * taper), nearest);
+
+    return vec2(core, exp(-nearest / 0.035) * 0.8) * taper * spark.w;
+}
+
 vec3 lava(vec3 p, vec3 n) {
     vec3 w = pow(abs(n), vec3(6.0));
     w /= w.x + w.y + w.z;
@@ -82,11 +152,33 @@ vec3 lava(vec3 p, vec3 n) {
 }
 
 void main() {
+    vec2 screen = vec2(uv.x, -uv.y) * SPAN;
+
+    vec2 charge = sparkLight(screen, sparks[0]) + sparkLight(screen, sparks[1]);
+    float sparkAlpha = clamp(charge.x + charge.y, 0.0, 1.0);
+    vec3 sparkColour = clamp(
+        vec3(1.0, 0.73, 0.53) * charge.x + vec3(1.0, 0.42, 0.0) * charge.y,
+        0.0,
+        1.0
+    );
+
+    // The wobble keeps the scale it was tuned at, a canvas 1.8 edges wide.
+    vec2 base = screen / 0.9;
+    vec2 at = (base + rough(base)) * 0.9;
+
     vec3 eye = vec3(0.0, 0.0, EYE);
-    vec2 at = uv + rough(uv);
-    vec3 dir = normalize(vec3(at.x * 0.9, -at.y * 0.9, 0.0) - eye);
+    vec3 dir = normalize(vec3(at, 0.0) - eye);
     vec3 origin = toLocal * eye;
     vec3 ray = toLocal * dir;
+
+    // Rays that miss the cube's bounding sphere only carry the sparks.
+    float b = dot(origin, ray);
+
+    if (b * b - dot(origin, origin) + 0.81 < 0.0) {
+        gl_FragColor = vec4(sparkColour, sparkAlpha);
+
+        return;
+    }
 
     float travelled = EYE - 1.0;
     float gap = 1.0;
@@ -114,7 +206,7 @@ void main() {
     float alpha = 1.0 - smoothstep(0.0, soft, nearest);
 
     if (alpha <= 0.0) {
-        gl_FragColor = vec4(0.0);
+        gl_FragColor = vec4(sparkColour, sparkAlpha);
 
         return;
     }
@@ -136,8 +228,15 @@ void main() {
     colour += vec3(1.0, 0.8, 0.43) * smoothstep(0.0, 0.25, bevel) * 0.55;
     colour += vec3(1.0, 0.51, 0.12) * pow(1.0 - abs(dot(facing, -dir)), 3.0) * 0.35;
 
-    gl_FragColor = vec4(clamp(colour, 0.0, 1.0) * alpha, alpha);
+    // The cube sits over the sparks, which leap out from behind its edge.
+    gl_FragColor = vec4(
+        clamp(colour, 0.0, 1.0) * alpha + sparkColour * (1.0 - alpha),
+        alpha + sparkAlpha * (1.0 - alpha)
+    );
 }`;
+
+/** Width of the canvas, in cube edges. */
+const SPAN = 2.2;
 
 /** Direction the cube is lit from, in CSS axes. */
 const LIGHT = [-0.36, -0.74, 0.57];
@@ -229,6 +328,8 @@ export class RelicRenderer {
 
     private readonly pixel: WebGLUniformLocation | null;
 
+    private readonly sparks: WebGLUniformLocation | null;
+
     private readonly program: WebGLProgram;
 
     private readonly buffer: WebGLBuffer | null;
@@ -281,6 +382,7 @@ export class RelicRenderer {
         this.toScreen = gl.getUniformLocation(program, 'toScreen');
         this.toLocal = gl.getUniformLocation(program, 'toLocal');
         this.pixel = gl.getUniformLocation(program, 'pixel');
+        this.sparks = gl.getUniformLocation(program, 'sparks');
     }
 
     /** Uploads the two lava textures; resolves once both are on the GPU. */
@@ -316,8 +418,8 @@ export class RelicRenderer {
         });
     }
 
-    /** Draws the cube as it stands at the given moment. */
-    draw(milliseconds: number): void {
+    /** Draws the cube as it stands at the given moment, with any sparks. */
+    draw(milliseconds: number, sparks: Spark[] = []): void {
         const gl = this.gl;
         const pixels = Math.round(
             this.canvas.clientWidth * Math.min(2, window.devicePixelRatio || 1),
@@ -329,8 +431,13 @@ export class RelicRenderer {
             gl.viewport(0, 0, pixels, pixels);
         }
 
-        // The canvas spans 1.8 cube edges.
-        gl.uniform1f(this.pixel, 1.8 / this.canvas.width);
+        gl.uniform1f(this.pixel, SPAN / this.canvas.width);
+
+        const packed = new Float32Array(MAX_SPARKS * 4);
+        sparks.slice(0, MAX_SPARKS).forEach((spark, index) => {
+            packed.set([spark.angle, spark.seed, 0, spark.strength], index * 4);
+        });
+        gl.uniform4fv(this.sparks, packed);
 
         const orientation = orientationAt(milliseconds);
 
