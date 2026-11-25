@@ -53,19 +53,11 @@
             <link rel="alternate" type="application/json" href="{{ $meta['alternateJson'] }}" title="Machine-readable build data">
         @endisset
 
-        {{-- Loads the captchaapi.eu proof-of-work widget for the newsletter
-             form's useCaptcha() (see resources/js/pages/newsletter.tsx). Scoped
-             to that page so no other page pays for the script. Renders nothing
-             when CAPTCHAAPI_ENABLED=false. --}}
-        @if(($page['component'] ?? null) === 'newsletter')
-            <x-captchaapi::widget />
-        @endif
-
         {{-- Umami tracker, proxied through this origin (docker/nginx.conf).
              Query strings are dropped because edit links carry ?token=, and
              pages with a token in the path never load the tracker. --}}
         @php($umamiWebsiteId = config('analytics.umami_website_id'))
-        @if($umamiWebsiteId && ! request()->routeIs('stats', 'newsletter.confirm', 'newsletter.unsubscribe'))
+        @if($umamiWebsiteId && ! request()->routeIs('stats'))
             <script defer src="/p/s.js" data-website-id="{{ $umamiWebsiteId }}" data-domains="{{ parse_url(config('app.url'), PHP_URL_HOST) }}" data-exclude-search="true"></script>
         @endif
 

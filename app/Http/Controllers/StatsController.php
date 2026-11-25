@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\BuildPlan;
-use App\Models\NewsletterSubscriber;
 use App\Models\PatchSubscriber;
 use App\Models\SharedTree;
 use Inertia\Inertia;
@@ -21,8 +20,6 @@ class StatsController extends Controller
             'totals' => [
                 'webhooksTotal' => PatchSubscriber::query()->count(),
                 'webhooksVerified' => PatchSubscriber::query()->verified()->count(),
-                'newsletterTotal' => NewsletterSubscriber::query()->count(),
-                'newsletterConfirmed' => NewsletterSubscriber::query()->confirmed()->count(),
                 'treesStored' => SharedTree::query()->count(),
                 'plansStored' => BuildPlan::query()->count(),
             ],

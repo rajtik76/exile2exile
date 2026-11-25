@@ -1,7 +1,5 @@
 <?php
 
-use App\Models\NewsletterSubscriber;
-
 beforeEach(function () {
     config([
         'app.url' => 'https://poe.example.com',
@@ -31,11 +29,3 @@ test('the stats dashboard does not load the tracker', function () {
         ->assertOk()
         ->assertDontSee('/p/s.js', false);
 });
-
-test('newsletter pages with a token in the path do not load the tracker', function (string $urlMethod) {
-    $subscriber = NewsletterSubscriber::factory()->create();
-
-    $this->get($subscriber->{$urlMethod}())
-        ->assertOk()
-        ->assertDontSee('/p/s.js', false);
-})->with(['confirmUrl', 'unsubscribeUrl']);

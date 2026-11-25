@@ -522,11 +522,6 @@ function Footer({ landing }: { landing: boolean }) {
                                 </FooterLink>
                             </li>
                             <li>
-                                <FooterLink href="/newsletter" spa>
-                                    Newsletter
-                                </FooterLink>
-                            </li>
-                            <li>
                                 <FooterLink href="/credits" spa>
                                     Credits and licenses
                                 </FooterLink>
