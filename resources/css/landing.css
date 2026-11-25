@@ -1,0 +1,1073 @@
+/*
+ * Landing page ("Reliquary"). Everything is scoped under .landing so nothing
+ * leaks into other pages once the chunk has loaded. The masthead and footer
+ * belong to the shared layout; --head-h mirrors the masthead height there.
+ */
+
+.landing {
+    --head-h: clamp(56px, 4.7vw, 82px);
+    --paper: #f3eadc;
+    --slate: #b4c3d4;
+    color: var(--paper);
+    font-family: 'Fontin', Georgia, serif;
+    line-height: normal;
+}
+
+.landing a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.landing a:focus-visible {
+    outline: 3px solid #ff9a4d;
+    outline-offset: -4px;
+}
+
+.landing .first {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100svh - var(--head-h));
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.landing .hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    flex: 1;
+    min-height: clamp(440px, 44vw, 850px);
+    background:
+        linear-gradient(112deg, #04080acf, #091019b8 45%, #111a22),
+        url('../images/landing/dark-tile.webp');
+}
+
+.landing .scene {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.landing .relic,
+.landing .foreground {
+    position: absolute;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+
+.landing .relic {
+    inset: 0 0 0 35.42%;
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, black 12%);
+}
+
+.landing .foreground {
+    inset: 69% 0 0;
+    background-image: url('../images/landing/foreground.webp');
+    mask-image:
+        linear-gradient(transparent, black 24%),
+        linear-gradient(to right, black 35%, transparent 58%);
+    mask-composite: intersect;
+}
+
+.landing .plate {
+    position: absolute;
+    inset: 0;
+    container-type: size;
+}
+
+.landing .layer {
+    position: absolute;
+    inset: 0;
+    background: center / 100% 100% no-repeat;
+}
+
+.landing .intro {
+    width: fit-content;
+    padding: clamp(46px, 5.3vw, 110px) 4.15% clamp(62px, 9.5vw, 175px);
+}
+
+.landing h1 {
+    width: max-content;
+    margin: 0;
+    font-family: 'Fontin', Georgia, serif;
+    font-size: clamp(78px, 9.3vw, 176px);
+    font-weight: 400;
+    line-height: 0.93;
+    letter-spacing: -0.015em;
+    word-spacing: -0.14em;
+    color: #eee5d9;
+    background: linear-gradient(
+        157deg,
+        #fff8f0 1%,
+        #d2c8bc 45%,
+        #fff8ee 58%,
+        #b3a496 94%
+    );
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 2px #0009);
+}
+
+.landing .tagline {
+    margin: 0.55em 0 1.05em;
+    font-size: clamp(22px, 2.45vw, 46px);
+    line-height: 1.2;
+    word-spacing: -0.08em;
+    color: var(--slate);
+    text-shadow: 0 2px 4px #000;
+}
+
+/* The copper plate: a painted frame sliced with border-image over a riveted
+   fill. The frame slice has its dark backdrop baked into the corners, so the
+   button is cut to the plate's own outline. */
+.landing .cta {
+    position: relative;
+    isolation: isolate;
+    display: inline-grid;
+    place-items: center;
+    min-width: clamp(220px, 22.25vw, 395px);
+    min-height: clamp(60px, 5.3vw, 87px);
+    padding: 0.3em 0.85em;
+    font-size: clamp(25px, 2.55vw, 47px);
+    font-weight: 400;
+    text-shadow: 0 2px 3px #371204;
+    clip-path: polygon(
+        16px 3px,
+        calc(100% - 16px) 3px,
+        calc(100% - 3px) 16px,
+        calc(100% - 3px) calc(100% - 16px),
+        calc(100% - 16px) calc(100% - 3px),
+        16px calc(100% - 3px),
+        3px calc(100% - 16px),
+        3px 16px
+    );
+}
+
+.landing .cta::before,
+.landing .cta::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+}
+
+.landing .cta::before {
+    inset: 8px;
+    background:
+        linear-gradient(180deg, #ff6a0036, #49130070),
+        url('../images/landing/cta-fill.webp') 0 0 / 29px 33px;
+}
+
+.landing .cta::after {
+    inset: 0;
+    border: 20px solid transparent;
+    border-image: url('../images/landing/cta-frame.webp') 40 stretch;
+}
+
+.landing .cta:hover {
+    filter: brightness(1.18);
+}
+
+/* ------------------------------------------------------------- tools shelf */
+
+.landing .shelf {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: clamp(18px, 1.65vw, 28px) 2% clamp(25px, 2.05vw, 36px);
+    background:
+        linear-gradient(90deg, #080c1280, #080c12c9),
+        url('../images/landing/shelf-tile.webp') 0 0 / 172px 20px;
+}
+
+.landing .shelf::before,
+.landing .shelf::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.landing .shelf::before {
+    top: 0;
+    height: 15px;
+    background: url('../images/landing/shelf-top.webp') repeat-x center / auto
+        100%;
+}
+
+.landing .shelf::after {
+    bottom: 0;
+    height: 19px;
+    background: url('../images/landing/shelf-bottom.webp') repeat-x center /
+        auto 100%;
+}
+
+.landing .jewel {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: clamp(43px, 4.4vw, 74px);
+    aspect-ratio: 136 / 102;
+    background: center / 100% 100% no-repeat;
+    transform: translate(-50%, -39%);
+    pointer-events: none;
+}
+
+.landing .tool {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 0.75vw, 18px);
+    min-width: 0;
+    padding: 0.5vw;
+    text-shadow: 0 2px 2px #000;
+}
+
+.landing .tool + .tool {
+    border-left: 1px solid #665e56;
+    box-shadow: inset 1px 0 #161a1e;
+}
+
+.landing .tool:hover,
+.landing .tool:focus-visible {
+    background: linear-gradient(90deg, transparent, #c17a3f24, transparent);
+}
+
+.landing .tool :is(.painted, .tool-icon) {
+    flex: none;
+    width: clamp(61px, 6.3vw, 110px);
+    height: clamp(78px, 7.6vw, 138px);
+}
+
+/* The painted icon is a crop with its stone backdrop baked in; fade the crop
+   edge into the shelf. */
+.landing .tool .painted {
+    background: center / contain no-repeat;
+    mask-image: radial-gradient(
+        ellipse 50% 50% at center,
+        black 58%,
+        transparent 100%
+    );
+}
+
+.landing .tool-icon {
+    filter: drop-shadow(0 2px 3px #000);
+}
+
+.landing .tool strong,
+.landing .tool small {
+    display: block;
+}
+
+.landing .tool strong {
+    font-size: clamp(20px, 2.25vw, 42px);
+    font-weight: 500;
+    line-height: 1.15;
+}
+
+.landing .tool small {
+    margin-top: 0.22em;
+    font-size: clamp(15px, 1.47vw, 27px);
+    line-height: 1.2;
+    color: var(--slate);
+}
+
+@media (min-aspect-ratio: 2/1) and (min-width: 1000px) {
+    .landing .hero {
+        flex: 0 0 auto;
+    }
+}
+
+@media (max-width: 960px) {
+    .landing .shelf {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2px;
+    }
+
+    .landing .tool {
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 8px 4%;
+    }
+
+    .landing .tool:nth-of-type(3) {
+        border-left: none;
+        box-shadow: none;
+    }
+
+    .landing .tool:nth-of-type(n + 3) {
+        border-top: 1px solid #665e565c;
+    }
+}
+
+@media (max-width: 820px) {
+    .landing .hero {
+        min-height: 0;
+    }
+
+    .landing .scene {
+        height: min(105vw, 490px);
+    }
+
+    .landing .relic {
+        inset: 0;
+        background-position: 54% 46%;
+        background-size: cover;
+        mask-image: linear-gradient(black 68%, transparent 100%);
+    }
+
+    .landing .foreground {
+        display: none;
+    }
+
+    .landing .intro {
+        width: 100%;
+        padding: min(86vw, 400px) 6% 34px;
+    }
+
+    .landing h1 {
+        width: auto;
+        font-size: clamp(45px, 12.6vw, 73px);
+        line-height: 1;
+    }
+
+    .landing h1 br {
+        display: none;
+    }
+
+    .landing .tagline {
+        margin: 0.35em 0 0.85em;
+        font-size: clamp(18px, 5vw, 26px);
+    }
+
+    .landing .cta {
+        min-width: 190px;
+        min-height: 53px;
+        font-size: 24px;
+    }
+
+    .landing .tool {
+        gap: 5px;
+        padding: 10px 4px;
+    }
+
+    .landing .tool :is(.painted, .tool-icon) {
+        width: clamp(28px, 8.6vw, 51px);
+        height: 55px;
+    }
+
+    .landing .tool strong {
+        font-size: clamp(17px, 4.4vw, 23px);
+    }
+
+    .landing .tool small {
+        font-size: clamp(13px, 3.3vw, 16px);
+    }
+
+    .landing .plate {
+        inset: auto;
+        top: 0;
+        left: 50%;
+        width: auto;
+        min-width: 100%;
+        height: 100%;
+        aspect-ratio: 992 / 741;
+        transform: translateX(-51%);
+    }
+}
+
+@media (forced-colors: active) {
+    .landing h1 {
+        -webkit-text-fill-color: CanvasText;
+    }
+
+    .landing .cta {
+        border: 1px solid ButtonText;
+    }
+}
+
+/* ------------------------------------------------------------- live relic */
+
+.landing .ember {
+    --s: min(14.2cqw, 19cqh);
+    position: absolute;
+    top: 40.6%;
+    left: 53.1%;
+    width: 0;
+    height: 0;
+}
+
+.landing .ember-halo {
+    position: absolute;
+    top: calc(var(--s) * -2.3);
+    left: calc(var(--s) * -2.3);
+    width: calc(var(--s) * 4.6);
+    height: calc(var(--s) * 4.6);
+    background: radial-gradient(
+        circle,
+        rgba(255, 160, 60, 0.55) 0%,
+        rgba(255, 110, 20, 0.22) 30%,
+        transparent 64%
+    );
+    mix-blend-mode: screen;
+    animation: landing-ember-breathe 5.5s ease-in-out infinite alternate;
+}
+
+@keyframes landing-ember-breathe {
+    from {
+        opacity: 0.72;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* The cube itself is drawn in WebGL (relic-renderer.ts) on a flat canvas
+   1.8 edges wide, so its corners have room as it turns. Its rough outline is
+   drawn there too, not with a CSS filter. */
+.landing .ember-cube {
+    position: absolute;
+    top: calc(var(--s) * -0.9);
+    left: calc(var(--s) * -0.9);
+    width: calc(var(--s) * 1.8);
+    height: calc(var(--s) * 1.8);
+    background: center / contain no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .landing .ember-halo {
+        animation: none;
+    }
+}
+
+/* The 11th drawn as two fangs, in the ember of the cube. */
+.landing .fangs {
+    display: inline-block;
+    width: 0.68em;
+    height: 1em;
+    margin: 0 0.05em 0 0.13em;
+    overflow: visible;
+    vertical-align: -0.28em;
+    filter: drop-shadow(0 0 0.12em #ff6a0099);
+}
+
+/* ------------------------------------------ launch countdown, hero form */
+
+.landing .eta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75em;
+    margin-bottom: clamp(14px, 1.6vw, 30px);
+    font-size: clamp(15px, 1.15vw, 20px);
+    line-height: 1.25;
+    color: var(--slate);
+    text-shadow: 0 2px 4px #000;
+}
+
+.landing .eta .tablet > span {
+    font-size: clamp(21px, 1.9vw, 34px);
+}
+
+.landing .eta-days {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    font-family: 'Fontin SmallCaps', 'Fontin', serif;
+    letter-spacing: 0.06em;
+    color: var(--paper);
+}
+
+.landing .eta-days .tablet > span {
+    box-shadow:
+        inset 0 3px 10px #000,
+        inset 0 -14px 18px -10px #ff6a0066,
+        inset 0 -1px 0 #ff9a4d66;
+}
+
+.landing .eta-clock {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32em;
+}
+
+.landing .eta-clock b {
+    width: 5px;
+    height: 5px;
+    background: #665e56;
+    transform: rotate(45deg);
+}
+
+.landing .eta-note {
+    text-align: left;
+    white-space: nowrap;
+}
+
+.landing .eta:hover .eta-note {
+    color: #ffba86;
+}
+
+/* ------------------------------------------------------- launch countdown */
+
+.landing .launch {
+    position: relative;
+    padding: clamp(40px, 4.6vw, 84px) 4.15% clamp(36px, 4vw, 72px);
+    background:
+        linear-gradient(180deg, #05080ce6, #080e14f2),
+        url('../images/landing/dark-tile.webp');
+}
+
+.landing .launch-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 28px 48px;
+}
+
+.landing .launch-label {
+    margin: 0;
+    font-family: 'Fontin SmallCaps', 'Fontin', serif;
+    font-size: clamp(16px, 1.25vw, 21px);
+    letter-spacing: 0.06em;
+    color: #b1a497;
+}
+
+.landing .launch h2 {
+    margin: 0.12em 0 0;
+    font-size: clamp(38px, 4.6vw, 80px);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.012em;
+    word-spacing: -0.12em;
+    color: #eee5d9;
+    background: linear-gradient(
+        157deg,
+        #fff8f0 1%,
+        #d2c8bc 45%,
+        #fff8ee 58%,
+        #b3a496 94%
+    );
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 2px #0009);
+}
+
+.landing .clock {
+    display: flex;
+    align-items: flex-end;
+    gap: clamp(8px, 1vw, 18px);
+}
+
+.landing .unit {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+}
+
+/* A recessed stone tablet in a thin metal frame. */
+.landing .tablet {
+    padding: 1px;
+    background: linear-gradient(
+        160deg,
+        #998371,
+        #463e37 34%,
+        #b1a497 55%,
+        #574e4a 78%,
+        #998371
+    );
+}
+
+.landing .tablet > span {
+    display: flex;
+    padding: 0.16em 0.2em 0.1em;
+    font-size: clamp(30px, 3.3vw, 58px);
+    line-height: 1;
+    background: linear-gradient(180deg, #030507, #0c131b);
+    box-shadow:
+        inset 0 3px 12px #000,
+        inset 0 -1px 0 #ffffff0d;
+}
+
+.landing .tablet i {
+    width: 0.54em;
+    font-style: normal;
+    text-align: center;
+    color: #eee5d9;
+    background: linear-gradient(180deg, #fff8f0 8%, #d2c8bc 58%, #9c8f82);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.landing .unit b {
+    font-family: 'Fontin SmallCaps', 'Fontin', serif;
+    font-size: clamp(14px, 1.05vw, 18px);
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: #b4c3d4;
+}
+
+/* Days is the one that matters: larger, and lit from below like the pit. */
+.landing .unit.days .tablet > span {
+    font-size: clamp(46px, 5.4vw, 96px);
+    box-shadow:
+        inset 0 3px 12px #000,
+        inset 0 -26px 34px -18px #ff6a0066,
+        inset 0 -1px 0 #ff9a4d66;
+}
+
+.landing .unit.days b {
+    color: #f3eadc;
+}
+
+.landing .clock .sep {
+    align-self: flex-end;
+    width: 7px;
+    height: 7px;
+    margin-bottom: clamp(44px, 4.2vw, 74px);
+    background: #665e56;
+    transform: rotate(45deg);
+}
+
+.landing .journey {
+    margin-top: clamp(30px, 3.2vw, 54px);
+}
+
+.landing .journey-track {
+    position: relative;
+    height: 2px;
+    background: #263240;
+}
+
+.landing .journey-track::before,
+.landing .journey-track::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    background: #665e56;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.landing .journey-track::before {
+    left: 0;
+}
+
+.landing .journey-track::after {
+    left: 100%;
+    background: #b1a497;
+}
+
+.landing .journey-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--at, 0%);
+    background: linear-gradient(90deg, #b34a00, #ff6a00 70%, #ffba86);
+    box-shadow: 0 0 12px #ff6a00a0;
+}
+
+.landing .journey-fill::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 11px;
+    height: 11px;
+    background: #ff9a4d;
+    box-shadow: 0 0 14px #ff6a00;
+    transform: translate(50%, -50%) rotate(45deg);
+}
+
+.landing .journey-ends {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    font-size: clamp(15px, 1.1vw, 18px);
+    color: #8494a6;
+}
+
+.landing .news-label {
+    margin: clamp(28px, 3vw, 48px) 0 0;
+    font-family: 'Fontin SmallCaps', 'Fontin', serif;
+    font-size: clamp(15px, 1.1vw, 19px);
+    letter-spacing: 0.06em;
+    color: #b1a497;
+}
+
+.landing .news {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 40px;
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: clamp(16px, 1.2vw, 20px);
+    line-height: 1.4;
+    color: #b4c3d4;
+}
+
+.landing .news li {
+    position: relative;
+    padding-left: 22px;
+}
+
+.landing .news li::before {
+    content: '';
+    position: absolute;
+    top: 0.5em;
+    left: 2px;
+    width: 7px;
+    height: 7px;
+    background: #998371;
+    transform: rotate(45deg);
+}
+
+.landing .news b {
+    font-weight: 400;
+    color: #f3eadc;
+}
+
+.landing .opened {
+    max-width: 30em;
+    margin: 0;
+    font-size: clamp(18px, 1.35vw, 22px);
+    line-height: 1.6;
+    color: #d2c8bc;
+}
+
+@media (max-width: 820px) {
+    .landing .launch-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .landing .news {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 520px) {
+    .landing .launch-top {
+        align-items: center;
+        text-align: center;
+    }
+
+    .landing .news {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------------------------------------------------------- below the fold */
+
+.landing .rule {
+    height: 2px;
+    margin-inline: 1.5%;
+    background: var(--rule-pewter);
+}
+
+.landing .about {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    align-items: center;
+    gap: clamp(28px, 4vw, 72px);
+    overflow: hidden;
+    padding: clamp(56px, 7vw, 120px) 4.15%;
+    background:
+        linear-gradient(180deg, #080c12e6, #080e14f2),
+        url('../images/landing/dark-tile.webp');
+    scroll-margin-top: var(--head-h);
+}
+
+.landing .about h2 {
+    margin: 0;
+    font-size: clamp(34px, 3.6vw, 58px);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    word-spacing: -0.1em;
+    color: #eee5d9;
+}
+
+.landing .about p {
+    max-width: 34em;
+    margin: 1.1em 0 0;
+    font-size: clamp(18px, 1.35vw, 22px);
+    line-height: 1.6;
+    color: #d2c8bc;
+}
+
+.landing .about blockquote {
+    max-width: 32em;
+    margin: 1.4em 0 0;
+    padding-left: 1.2em;
+    border-left: 2px solid #ff6a00;
+    font-size: clamp(19px, 1.45vw, 24px);
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--paper);
+}
+
+.landing .about .signoff {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    margin-top: 1.5em;
+    font-size: clamp(22px, 1.9vw, 31px);
+    color: var(--paper);
+}
+
+.landing .about .signoff::before {
+    content: '';
+    flex: none;
+    width: 0.42em;
+    height: 0.42em;
+    background: #ff6a00;
+    box-shadow: 0 0 14px #ff6a00b0;
+    transform: rotate(45deg);
+}
+
+.landing .about {
+    min-height: clamp(480px, 40vw, 820px);
+}
+
+.landing .about > div {
+    text-shadow: 0 2px 6px #000;
+}
+
+/* The candlelit book is the backdrop of the whole section: it sits in the
+   right part, and fades into the dark towards the copy and at the top and
+   bottom, so the section meets the rules above and below without an edge. */
+.landing .about::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 0 30%;
+    z-index: -1;
+    background: url('../images/landing/about.webp') 62% center / cover no-repeat;
+    mask-image:
+        linear-gradient(90deg, transparent, #0005 30%, black 62%),
+        linear-gradient(180deg, transparent, black 16%, black 84%, transparent);
+    mask-composite: intersect;
+}
+
+@media (max-width: 820px) {
+    .landing .about {
+        grid-template-columns: 1fr;
+        min-height: 0;
+        padding-top: calc(min(64vw, 420px) - 24px);
+    }
+
+    /* Phone: the picture sits above the copy and fades into it. */
+    .landing .about::before {
+        inset: 0 0 auto;
+        height: min(64vw, 420px);
+        mask-image:
+            linear-gradient(180deg, black 55%, transparent),
+            linear-gradient(
+                90deg,
+                transparent,
+                black 12%,
+                black 88%,
+                transparent
+            );
+    }
+}
+
+/* Desktop: the painting keeps its proportions at every window shape. It may
+   lose up to 12% off the bottom (the pit), never the cage. On windows wider
+   than the painting it docks right and fades out on its left edge. */
+@media (min-width: 821px) {
+    .landing .first,
+    .landing .launch,
+    .landing .about {
+        max-width: 2240px;
+        margin-inline: auto;
+    }
+
+    .landing .rule {
+        margin-inline: max(1.5%, calc((100% - 2172px) / 2));
+    }
+
+    /* The hero fills what the masthead and the tools shelf leave of the first
+       screen, but never grows taller than 76% of the width: past that the
+       cage, which scales with the height, would reach left into the copy. With
+       the height set here the next section follows the shelf directly, so a
+       capped hero leaves no empty band below it. */
+    .landing .first {
+        --shelf-h: calc(
+            clamp(18px, 1.65vw, 28px) + clamp(25px, 2.05vw, 36px) +
+                clamp(78px, 7.6vw, 138px) + 1vw
+        );
+        min-height: 0;
+    }
+
+    /* Floor: the copy grows with the width (title, tagline, button), so the
+       hero must too, or a wide but short window pushes the button under the
+       shelf. 39.5vw is the copy's own height plus a little air; on such a
+       window the first screen simply scrolls. */
+    .landing .hero {
+        flex: none;
+        height: clamp(
+            clamp(440px, 39.5vw, 730px),
+            calc(100svh - var(--head-h) - var(--shelf-h)),
+            76vw
+        );
+        min-height: 0;
+    }
+
+    .landing .intro {
+        padding-top: clamp(24px, 2.6vw, 56px);
+    }
+
+    .landing .scene {
+        container-type: size;
+    }
+
+    /* Both pieces of the painting share one coordinate system: a virtual
+       canvas 1536 units wide whose right 992 are the plate and whose bottom
+       strip is the foreground. They scale and move as one, so they can never
+       drift apart.
+       --ph / --pw  plate size: covers the hero height, loses at most 12% of
+                    its bottom
+       --px         plate left edge. Three regimes, the smallest wins:
+                    wide window  - canvas centred
+                    usual window - plate centred in the right 64.58%
+                    narrow, tall - cage's right tip held just inside the window
+       --mx / --mw  canvas left edge and width, for the foreground
+       --fe / --fs  where the scene has fully faded in, always before the cage */
+    .landing .relic,
+    .landing .foreground {
+        --ph: min(max(100cqh, 64.58cqw * 741 / 992), 100cqh / 0.88);
+        --pw: calc(var(--ph) * 992 / 741);
+        --mw: calc(var(--pw) * 1536 / 992);
+        --px: min(
+            50cqw - var(--pw) * 0.2258,
+            67.71cqw - var(--pw) * 0.5,
+            98.5cqw - var(--pw) * 0.82
+        );
+        --mx: calc(var(--px) - var(--pw) * 544 / 992);
+        --edge: clamp(0px, var(--mx) * 0.6, 140px);
+        --fe: min(43.2cqw, var(--px) + var(--pw) * 0.23 - 1.5cqw);
+        --fs: calc(var(--fe) - 7.75cqw);
+    }
+
+    /* The scene runs under the copy and only fades out, so narrowing the
+       window cannot crop the cage. The fade is for the copy, so it only
+       applies beside it; lower down, by the censer, the scene is shown in full
+       so it meets the foreground without a dark gap. Two masks, added. */
+    .landing .relic {
+        inset: 0;
+        mask-image:
+            linear-gradient(90deg, transparent var(--fs), black var(--fe)),
+            linear-gradient(
+                180deg,
+                transparent calc(var(--ph) * 0.6),
+                black calc(var(--ph) * 0.72)
+            );
+        mask-composite: add;
+    }
+
+    .landing .plate {
+        inset: auto;
+        top: 0;
+        left: var(--px);
+        width: var(--pw);
+        height: var(--ph);
+        mask-image: linear-gradient(
+            90deg,
+            transparent,
+            black 12%,
+            black calc(100% - var(--edge)),
+            transparent
+        );
+    }
+
+    .landing .foreground {
+        inset: auto;
+        top: calc(var(--ph) * 510 / 741);
+        left: var(--mx);
+        width: var(--mw);
+        height: calc(var(--ph) * 230 / 741);
+        /* Fades out over exactly the band where the plate fades in (its first
+           12%), so the two always add up to a full picture. */
+        mask-image:
+            linear-gradient(transparent, black 24%),
+            linear-gradient(to right, black 35.42%, transparent 43.17%),
+            linear-gradient(to right, transparent, black var(--edge));
+        mask-composite: intersect;
+    }
+
+    /* The jewel is a crop with its backdrop baked in: keep the jewel, drop
+       the backdrop. */
+    .landing .jewel {
+        clip-path: polygon(
+            50% 18%,
+            80% 60%,
+            100% 60%,
+            100% 100%,
+            0 100%,
+            0 60%,
+            20% 60%
+        );
+    }
+}
+
+@media (min-width: 821px) and (max-width: 960px) {
+    .landing .first {
+        --shelf-h: 234px;
+    }
+}
+
+@media (min-width: 2241px) {
+    .landing .first,
+    .landing .launch,
+    .landing .about {
+        mask-image: linear-gradient(
+            90deg,
+            transparent,
+            black 2.5%,
+            black 97.5%,
+            transparent
+        );
+    }
+}
+
+/* Phone: the scene takes whatever height is left, the copy sits centred right
+   above the shelf. */
+@media (max-width: 820px) {
+    .landing .hero {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        min-height: calc(min(86vw, 400px) + 290px);
+    }
+
+    .landing .scene {
+        height: calc(100% - 212px);
+        container-type: size;
+    }
+
+    .landing .eta {
+        gap: 0.55em;
+        margin-bottom: 10px;
+        font-size: 14px;
+    }
+
+    /* Cover the scene box without stretching: the painting keeps its
+       proportions here too. */
+    .landing .plate {
+        width: max(100cqw, 100cqh * 992 / 741);
+        min-width: 0;
+        height: max(100cqh, 100cqw * 741 / 992);
+        aspect-ratio: auto;
+    }
+
+    .landing .intro {
+        padding: 0 6% 30px;
+        text-align: center;
+    }
+}

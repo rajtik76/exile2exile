@@ -66,14 +66,14 @@ test('switches to the launched state once the countdown ends', () => {
     });
 
     expect(screen.queryByRole('timer')).toBeNull();
-    screen.getByText('Wraeclast is open');
+    screen.getByText(/^Wraeclast is open\./);
 });
 
 test('lists what is new in 1.0 while counting down', () => {
     vi.setSystemTime(LAUNCH_AT - 1000);
     render(<ReleaseCountdown />);
 
-    screen.getByText('What is new in 1.0');
+    screen.getByText('New in 1.0');
     screen.getByText('Acts 5 and 6');
     screen.getByText('The Shadow');
     screen.getByText('Conquerors of Rayclast');

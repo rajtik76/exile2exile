@@ -1,8 +1,10 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Logo, PAGE_BG, PrimaryCta } from '@/components/brand';
 import { usePatchStatus } from '@/lib/usePatchStatus';
+import { home } from '@/routes';
 import makerWordmark from '../../images/brand/rajtmajer-wordmark.svg';
+import darkTile from '../../images/landing/dark-tile.webp';
 
 /**
  * Shared chrome for every public page: a dark masthead over a pewter rule and a
@@ -14,17 +16,33 @@ export default function PublicLayout({
 }: {
     children: React.ReactNode;
 }) {
+    const landing = useIsLanding();
+
     return (
         <div
             className="flex min-h-screen flex-col overflow-x-clip font-body text-paper"
             style={{ background: PAGE_BG }}
         >
-            <TopBar />
+            <TopBar landing={landing} />
             <main className="flex-1">{children}</main>
-            <Footer />
+            <Footer landing={landing} />
         </div>
     );
 }
+
+/**
+ * True on the landing page. The landing frames the masthead and footer like
+ * its own sections: the painted texture behind the masthead and a 2240px cap
+ * that fades out at both edges on wider windows. Every other page keeps them
+ * plain and full width (the tree planner uses the whole window).
+ */
+function useIsLanding(): boolean {
+    return usePage().url.split(/[?#]/)[0] === home.url();
+}
+
+/** On the landing, cap a full-width band at 2240px and fade its edges beyond. */
+const LANDING_CAP =
+    'min-[821px]:mx-auto min-[821px]:w-full min-[821px]:max-w-[2240px] min-[2241px]:[mask-image:linear-gradient(90deg,transparent,black_2.5%,black_97.5%,transparent)]';
 
 /**
  * Patch read-out in a small rounded panel. Top row: the pulsing heartbeat and
@@ -280,7 +298,7 @@ function PewterRule({ className = '' }: { className?: string }) {
     return <div aria-hidden className={`h-0.5 rule-pewter ${className}`} />;
 }
 
-function TopBar() {
+function TopBar({ landing }: { landing: boolean }) {
     const [menuOpen, setMenuOpen] = useState(false);
 
     // Close the mobile menu whenever a navigation starts (link followed, CTA fired).
@@ -289,7 +307,14 @@ function TopBar() {
     const cta = <PrimaryCta href="/build-planner">Build planner</PrimaryCta>;
 
     return (
-        <header className="relative z-10 bg-[linear-gradient(90deg,#060a0f,#0d1722)] font-display text-paper">
+        <header
+            className={`relative z-10 font-display text-paper ${landing ? LANDING_CAP : ''}`}
+            style={{
+                background: landing
+                    ? `linear-gradient(90deg, #060a0fbd, #0d1722c4), url('${darkTile}')`
+                    : 'linear-gradient(90deg, #060a0f, #0d1722)',
+            }}
+        >
             <div className="flex min-h-[clamp(56px,4.7vw,82px)] items-center gap-4 px-[min(3.4%,76px)] max-[820px]:px-[6%]">
                 <Link
                     href="/"
@@ -311,9 +336,12 @@ function TopBar() {
                         </Fragment>
                     ))}
                     <GitHubMenu />
-                    <span className="hidden pl-[0.4em] lg:inline-flex">
-                        {cta}
-                    </span>
+                    {/* the landing has its own copper button in the hero */}
+                    {!landing && (
+                        <span className="hidden pl-[0.4em] lg:inline-flex">
+                            {cta}
+                        </span>
+                    )}
                 </nav>
 
                 {/* mobile: hamburger toggle only */}
@@ -422,11 +450,13 @@ function FooterColumn({
     );
 }
 
-function Footer() {
+function Footer({ landing }: { landing: boolean }) {
     return (
         <>
             <PewterRule className="relative z-10 mx-[max(1.5%,calc((100%_-_2172px)/2))]" />
-            <footer className="relative z-10 bg-void font-body text-base leading-normal text-slate">
+            <footer
+                className={`relative z-10 bg-void font-body text-base leading-normal text-slate ${landing ? LANDING_CAP : ''}`}
+            >
                 <div className="mx-auto max-w-[2240px] px-[min(4.15%,93px)] pt-[clamp(36px,4vw,64px)] pb-[34px]">
                     <div className="grid grid-cols-2 gap-x-12 gap-y-8 min-[821px]:grid-cols-[1.4fr_repeat(3,1fr)]">
                         <div className="col-span-2 min-[821px]:col-span-1">

@@ -1,484 +1,297 @@
 import { Head, Link } from '@inertiajs/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
-import {
-    BLOOD,
-    Eyebrow,
-    Gem,
-    GEM_TONES,
-    GOLD_LIT,
-    INK_FAINT,
-} from '@/components/brand';
-import type { GemTone } from '@/components/brand';
-import ReleaseCountdown from '@/components/release-countdown';
+import ReleaseCountdown, {
+    HeroCountdown,
+} from '@/components/release-countdown';
+import RelicCube from '@/components/relic-cube';
 import planner from '@/routes/planner';
-// Bundled by Vite (hashed asset). Star-chart filigree - kept as a faint texture
-// behind the carousel so the cartography flavour of the old Atlas survives.
-import atlasBg from '../../images/landing/atlas.jpg';
+import '../../css/landing.css';
+import grille from '../../images/landing/grille.webp';
+import treeIcon from '../../images/landing/icon-tree.webp';
+import jewel from '../../images/landing/jewel.webp';
+import scene from '../../images/landing/scene.webp';
 
 /**
- * The landing is a signpost, not a sales page. The kit's tools are skill gems,
- * so the hero inspects them one at a time in a socket - a self-advancing gem
- * carousel whose navigation dots ARE the gems, each in its own colour. A
- * short inscription underneath says what this is and why it exists. From one
- * exile to another.
+ * The landing ("Reliquary"): a painted relic chamber with a live ember cube
+ * behind its grille, the tools shelf, the launch countdown and a short note
+ * on why this exists. Layout and art live in landing.css.
  */
 export default function Welcome() {
     return (
         <>
-            <Head title="Exile to Exile - free Path of Exile 2 tools">
+            <Head title="Free Path of Exile 2 tools">
                 <meta
                     name="description"
                     content="A free, fan-made set of Path of Exile 2 tools, one player to another: plan a passive tree, write a phased build guide, turn it into a loot filter, or get pinged when a new patch ships. No ads, no accounts."
                 />
             </Head>
 
-            <Hero />
+            <div className="landing">
+                <SvgDefs />
+                <div className="first">
+                    <Hero />
+                    <ToolsShelf />
+                </div>
+                <ReleaseCountdown />
+                <div className="rule" aria-hidden />
+                <About />
+            </div>
         </>
     );
 }
 
-type Tool = {
-    tone: GemTone;
-    name: string;
-    kind: string;
-    body: string;
-    cta: string;
-    /** Live destination. Omitted on tools that aren't ready to open yet. */
-    href?: string;
-    /** Optional status pill beside the kind, e.g. a work-in-progress note. */
-    tag?: string;
-    /** Not finished - shows a muted "coming soon" marker instead of a live CTA. */
-    comingSoon?: boolean;
-};
-
-const TOOLS: Tool[] = [
-    {
-        tone: 'emerald',
-        name: 'Tree planner',
-        kind: 'Passive tree',
-        body: 'Plan a full passive tree in the browser. Imports straight from a Path of Building code.',
-        cta: 'Plan a tree',
-        href: '/tree',
-    },
-    {
-        tone: 'amethyst',
-        name: 'Build planner',
-        kind: 'Guide builder',
-        tag: 'New',
-        body: 'Lay a whole build out as a phased guide - passive tree, gear, gems and notes - then share a read-only link.',
-        cta: 'Plan a build',
-        href: planner.create.url(),
-    },
-    {
-        tone: 'prismatic',
-        name: 'Build filter',
-        kind: 'Build-based loot filter',
-        tag: 'New',
-        body: 'Turn your build into an in-game loot filter - highlight the bases and mods it actually wants, hide the rest.',
-        cta: 'Build a filter',
-        href: planner.create.url(),
-    },
-    {
-        tone: 'sapphire',
-        name: 'Patch alerts',
-        kind: 'New-patch webhook',
-        body: "Get pinged the moment a new patch ships, straight off GGG's servers.",
-        cta: 'Wire a webhook',
-        href: '/patch-webhook',
-    },
-];
-
-/** How long each gem dwells before the carousel advances on its own. */
-const DWELL_MS = 7000;
-
-/** Live matchMedia flag for `prefers-reduced-motion`, SSR-safe. */
-function usePrefersReducedMotion(): boolean {
-    const query = '(prefers-reduced-motion: reduce)';
-    const [reduced, setReduced] = useState(
-        () => typeof window !== 'undefined' && window.matchMedia(query).matches,
+/** Shared SVG paint: the metal of the shelf icons. */
+function SvgDefs() {
+    return (
+        <svg
+            width="0"
+            height="0"
+            aria-hidden
+            focusable="false"
+            className="absolute"
+        >
+            <defs>
+                <linearGradient id="landing-steel" x2="95%" y2="30%">
+                    <stop stopColor="#655749" />
+                    <stop offset=".23" stopColor="#eee2cf" />
+                    <stop offset=".39" stopColor="#aa9b89" />
+                    <stop offset=".57" stopColor="#5a5550" />
+                    <stop offset=".8" stopColor="#c5b6a0" />
+                    <stop offset="1" stopColor="#78695b" />
+                </linearGradient>
+                <linearGradient id="landing-brass" x2="100%" y2="55%">
+                    <stop stopColor="#76604b" />
+                    <stop offset=".4" stopColor="#e2c8a9" />
+                    <stop offset=".6" stopColor="#7a6350" />
+                    <stop offset="1" stopColor="#ba9876" />
+                </linearGradient>
+            </defs>
+        </svg>
     );
-
-    useEffect(() => {
-        const media = window.matchMedia(query);
-        const onChange = () => setReduced(media.matches);
-        media.addEventListener('change', onChange);
-
-        return () => media.removeEventListener('change', onChange);
-    }, []);
-
-    return reduced;
 }
 
 function Hero() {
-    const [index, setIndex] = useState(0);
-    const [paused, setPaused] = useState(false);
-    const reduced = usePrefersReducedMotion();
-    const touchStart = useRef<number | null>(null);
-    const count = TOOLS.length;
-
-    const goTo = useCallback((target: number) => {
-        setIndex(((target % TOOLS.length) + TOOLS.length) % TOOLS.length);
-    }, []);
-    const next = useCallback(() => goTo(index + 1), [goTo, index]);
-    const prev = useCallback(() => goTo(index - 1), [goTo, index]);
-
-    // Auto-advance while unpaused. Keying the effect on `index` restarts the
-    // dwell after any change - manual or automatic - so it never cuts a gem
-    // short. Reduced motion opts out entirely.
-    useEffect(() => {
-        if (paused || reduced) {
-            return;
-        }
-
-        const id = window.setTimeout(
-            () => setIndex((current) => (current + 1) % TOOLS.length),
-            DWELL_MS,
-        );
-
-        return () => window.clearTimeout(id);
-    }, [index, paused, reduced]);
-
-    const onKeyDown = (event: React.KeyboardEvent) => {
-        if (event.key === 'ArrowRight') {
-            next();
-        } else if (event.key === 'ArrowLeft') {
-            prev();
-        }
-    };
-
-    const active = TOOLS[index];
-
     return (
-        <section className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
-            {/* thesis: what this is, in one breath */}
-            <header className="mx-auto max-w-2xl text-center">
-                <Eyebrow>Path of Exile 2 · fan-made toolkit</Eyebrow>
-                <h1 className="mt-4 font-display text-5xl leading-[1.05] tracking-[0.02em] text-[#f1f3f8] sm:text-6xl">
-                    Exile to Exile
-                </h1>
-                <p className="mx-auto mt-5 max-w-xl font-body text-[17px] leading-relaxed text-[#a7acb8]">
-                    A handful of tools I made for Path of Exile&nbsp;2 and put
-                    online for anyone to use. Each one is a gem - pick the one
-                    you need.
-                </p>
-            </header>
-
-            <ReleaseCountdown />
-
-            {/* the signature: a gem inspected in its socket, auto-cycling */}
-            <div
-                role="group"
-                aria-roledescription="carousel"
-                aria-label="Tools"
-                tabIndex={0}
-                onKeyDown={onKeyDown}
-                onMouseEnter={() => setPaused(true)}
-                onMouseLeave={() => setPaused(false)}
-                onFocus={() => setPaused(true)}
-                onBlur={() => setPaused(false)}
-                onTouchStart={(event) => {
-                    touchStart.current = event.touches[0].clientX;
-                }}
-                onTouchEnd={(event) => {
-                    if (touchStart.current === null) {
-                        return;
-                    }
-
-                    const delta =
-                        event.changedTouches[0].clientX - touchStart.current;
-
-                    if (delta > 48) {
-                        prev();
-                    } else if (delta < -48) {
-                        next();
-                    }
-
-                    touchStart.current = null;
-                }}
-                className="relative mt-12 overflow-hidden rounded-lg border border-[#b6bdcb]/12 bg-[linear-gradient(160deg,#101019,#0a0a10)] outline-none focus-visible:ring-2 focus-visible:ring-[#c9a24a]/50"
-            >
-                {/* faint star-chart texture + centre vignette */}
-                <img
-                    src={atlasBg}
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 size-full object-cover opacity-40"
-                />
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_45%,rgba(8,8,11,0.9)_0%,transparent_70%)]"
-                />
-                {/* faint wash toward the active gem's tone, crossfading on change,
-                    centred on the gem (upper-centre on mobile, left on desktop) */}
-                <div
-                    key={index}
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_60%_at_50%_28%,var(--tint),transparent_70%)] lg:bg-[radial-gradient(45%_75%_at_25%_50%,var(--tint),transparent_72%)]"
-                    style={
-                        {
-                            '--tint': GEM_TONES[active.tone].glow,
-                            opacity: 0.55,
-                            animation: reduced
-                                ? undefined
-                                : 'ete-carousel-tint 700ms ease-out both',
-                        } as CSSProperties
-                    }
-                />
-
-                <div className="relative grid items-center gap-8 p-8 sm:p-12 lg:grid-cols-[minmax(0,300px)_1fr] lg:gap-14">
-                    <GemSocket
-                        tone={active.tone}
-                        index={index}
-                        paused={paused}
-                        reduced={reduced}
-                    />
-
-                    {/* tool details - fade up on each swap unless reduced */}
-                    <div
-                        key={index}
-                        className="text-center lg:text-left"
-                        style={
-                            reduced
-                                ? undefined
-                                : {
-                                      animation:
-                                          'ete-carousel-fade 420ms ease-out both',
-                                  }
-                        }
-                    >
-                        <div className="flex flex-wrap items-center justify-center gap-2.5 lg:justify-start">
-                            <span className="font-ui text-[13px] font-semibold tracking-[0.14em] text-[#c9a24a] uppercase">
-                                {active.kind}
-                            </span>
-                            {active.tag && (
-                                <span className="rounded-full border border-[#c9a24a]/40 bg-[#c9a24a]/10 px-2 py-0.5 font-ui text-[10px] tracking-[0.08em] text-[#ecd49a]">
-                                    {active.tag}
-                                </span>
-                            )}
-                        </div>
-                        <h2 className="mt-2 font-display text-4xl tracking-[0.02em] text-[#f1f3f8] sm:text-5xl">
-                            {active.name}
-                        </h2>
-                        <p className="mx-auto mt-4 max-w-md font-body text-[16px] leading-relaxed text-[#a7acb8] lg:mx-0">
-                            {active.body}
-                        </p>
-                        <ToolCta tool={active} />
+        <section className="hero" aria-labelledby="page-title">
+            <div className="scene" aria-hidden>
+                <div className="relic">
+                    <div className="plate">
+                        <Layer image={scene} />
+                        <RelicCube />
+                        <Layer image={grille} />
                     </div>
                 </div>
-
-                {/* controls: arrows flank the gems that double as nav */}
-                <div className="relative flex items-center justify-center gap-4 border-t border-[#b6bdcb]/10 bg-[#0a0a10]/70 px-6 py-4">
-                    <Arrow direction="prev" onClick={prev} />
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        {TOOLS.map((tool, dot) => (
-                            <GemDot
-                                key={tool.name}
-                                tool={tool}
-                                active={dot === index}
-                                onClick={() => goTo(dot)}
-                            />
-                        ))}
-                    </div>
-                    <Arrow direction="next" onClick={next} />
-                    <span className="sr-only" aria-live="polite">
-                        {active.name}, {index + 1} of {count}
-                    </span>
-                </div>
+                <div className="foreground" />
             </div>
 
-            <Inscription />
+            <div className="intro">
+                <HeroCountdown />
+                <h1 id="page-title">
+                    Exile to <br />
+                    Exile
+                </h1>
+                <p className="tagline">Free tools for Path of Exile 2.</p>
+                <Link className="cta" href={planner.create.url()}>
+                    Plan a build
+                </Link>
+            </div>
         </section>
     );
 }
 
-/** The active gem seated in an ornate socket, ringed by an autoplay progress arc. */
-function GemSocket({
-    tone,
-    index,
-    paused,
-    reduced,
+/**
+ * A painted layer of the scene. Drawn as a background rather than an <img> so
+ * reader views do not pick the decoration up as article pictures.
+ */
+function Layer({
+    image,
+    className = 'layer',
 }: {
-    tone: GemTone;
-    index: number;
-    paused: boolean;
-    reduced: boolean;
+    image: string;
+    className?: string;
 }) {
-    const glow = GEM_TONES[tone].glow;
-    // Circumference of the r=70 progress ring, so the stroke sweep starts full
-    // and empties to nothing across one dwell.
-    const radius = 70;
-    const circumference = 2 * Math.PI * radius;
-
-    return (
-        <div className="relative mx-auto size-[168px] shrink-0">
-            {/* progress ring - restarts every dwell via the index key, hidden
-                under reduced motion */}
-            {!reduced && (
-                <svg
-                    key={index}
-                    aria-hidden
-                    viewBox="0 0 168 168"
-                    className="absolute inset-0 size-full -rotate-90"
-                >
-                    <circle
-                        cx="84"
-                        cy="84"
-                        r={radius}
-                        fill="none"
-                        stroke="#c9a24a"
-                        strokeOpacity="0.85"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        style={
-                            {
-                                '--ring-len': `${circumference}px`,
-                                animation: `ete-carousel-ring ${DWELL_MS}ms linear both`,
-                                animationPlayState: paused
-                                    ? 'paused'
-                                    : 'running',
-                            } as CSSProperties
-                        }
-                    />
-                </svg>
-            )}
-
-            {/* socket rim */}
-            <div className="absolute inset-[14px] rounded-full border border-[#c9a24a]/30" />
-
-            {/* the gem, glowing in its tone */}
-            <div
-                className="absolute inset-[26px] flex items-center justify-center rounded-full border border-[#c9a24a]/45 bg-[radial-gradient(60%_60%_at_40%_30%,#23232f,#0c0c12)] shadow-[0_0_0_6px_#08080b,0_0_40px_-4px_var(--glow)]"
-                style={{ '--glow': glow } as CSSProperties}
-            >
-                <Gem key={tone} tone={tone} className="size-16" />
-            </div>
-        </div>
-    );
-}
-
-/** The tool's call-to-action - an ember link into the tool itself. */
-function ToolCta({ tool }: { tool: Tool }) {
-    // Not shipped yet: a muted, non-interactive marker in place of a live CTA.
-    if (tool.comingSoon || !tool.href) {
-        return (
-            <span className="mt-6 inline-flex items-center gap-2 rounded-sm border border-[#787d8a]/35 px-6 py-2.5 font-ui text-[13px] font-semibold tracking-[0.1em] text-[#787d8a] uppercase">
-                Coming soon
-            </span>
-        );
-    }
-
-    const className =
-        'mt-6 inline-flex items-center gap-2 rounded-sm border border-[#c2762f]/70 bg-gradient-to-b from-[#8a4a1f] to-[#5e2f12] px-6 py-2.5 font-ui text-[13px] font-semibold tracking-[0.1em] text-[#fbe7c4] uppercase shadow-lg transition hover:border-[#ecd49a]/70 hover:brightness-110';
-
-    return (
-        <Link href={tool.href} className={className}>
-            {tool.cta} →
-        </Link>
-    );
-}
-
-/** One of the gems, doubling as a carousel dot. Lit when its tool is active. */
-function GemDot({
-    tool,
-    active,
-    onClick,
-}: {
-    tool: Tool;
-    active: boolean;
-    onClick: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-label={tool.name}
-            aria-current={active ? 'true' : undefined}
-            className={`flex size-9 items-center justify-center rounded-full border transition ${
-                active
-                    ? 'border-[#c9a24a]/70 bg-[#c9a24a]/10'
-                    : 'border-transparent opacity-45 hover:opacity-80'
-            }`}
-        >
-            <Gem
-                tone={tool.tone}
-                className={active ? 'size-5' : 'size-[18px]'}
-            />
-        </button>
-    );
-}
-
-/** A quiet chevron control on either side of the gem row. */
-function Arrow({
-    direction,
-    onClick,
-}: {
-    direction: 'prev' | 'next';
-    onClick: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-label={direction === 'prev' ? 'Previous tool' : 'Next tool'}
-            className="flex size-9 items-center justify-center rounded-full text-[#787d8a] transition hover:text-[#ecd49a]"
-        >
-            <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden>
-                <path
-                    d={direction === 'prev' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-            </svg>
-        </button>
-    );
-}
-
-/** The inscription: what this is, why it exists, and a plain-spoken WIP note. */
-function Inscription() {
     return (
         <div
-            id="why"
-            className="mx-auto mt-14 max-w-2xl scroll-mt-24 rounded-md border border-[#c9a24a]/25 bg-gradient-to-br from-[#14141c]/95 to-[#0c0c12]/95 p-7 backdrop-blur-sm"
+            className={className}
+            style={{ backgroundImage: `url('${image}')` }}
+        />
+    );
+}
+
+function ToolsShelf() {
+    return (
+        <nav
+            className="shelf"
+            id="tools"
+            aria-label="Path of Exile 2 tools"
+            tabIndex={-1}
         >
-            <Eyebrow>What is this</Eyebrow>
-            <p className="mt-3 font-body text-[16px] leading-relaxed text-[#d6dae2]">
-                A growing kit of Path of Exile&nbsp;2 tools, built one at a
-                time: plan a passive tree, lay a whole build out as a phased
-                guide, turn that build into an in-game loot filter, or get
-                pinged the moment a new patch ships. Every tool reads straight
-                from the official game files.
-            </p>
-            {/* the personal note, set apart as a pulled quote */}
-            <blockquote className="relative mt-6 border-l-2 border-[#c9a24a]/45 pl-6">
-                <span
-                    aria-hidden
-                    className="absolute -top-3 left-3 font-display text-5xl leading-none text-[#c9a24a]/35 select-none"
-                >
-                    &ldquo;
-                </span>
-                <p className="font-body text-[16px] leading-relaxed text-[#e4e8ef] italic">
+            <Layer image={jewel} className="jewel" />
+            <Link className="tool" href="/tree">
+                <Layer image={treeIcon} className="painted" />
+                <ToolText name="Tree planner" kind="Map your passives" />
+            </Link>
+            <Link className="tool" href={planner.create.url()}>
+                <SwordsIcon />
+                <ToolText name="Build planner" kind="Plan gear and gems" />
+            </Link>
+            <Link className="tool" href={planner.create.url()}>
+                <FunnelIcon />
+                <ToolText name="Build filter" kind="Create a loot filter" />
+            </Link>
+            <Link className="tool" href="/patch-webhook">
+                <BellIcon />
+                <ToolText name="Patch alerts" kind="Connect a webhook" />
+            </Link>
+        </nav>
+    );
+}
+
+function ToolText({ name, kind }: { name: string; kind: string }) {
+    return (
+        <span>
+            <strong>{name}</strong>
+            <small>{kind}</small>
+        </span>
+    );
+}
+
+function Sword({ angle }: { angle: number }) {
+    return (
+        <g transform={`rotate(${angle} 45 48)`}>
+            <path
+                d="M37 67 40 60 41 13 45 4 49 14 49 60 53 67 46 65Z"
+                fill="url(#landing-steel)"
+                stroke="#473c32"
+            />
+            <path d="M45 8 45 60" fill="none" stroke="#fff5df" />
+            <path
+                d="M31 63Q45 57 59 63L61 68Q47 64 45 69Q43 65 29 68Z"
+                fill="url(#landing-brass)"
+                stroke="#897662"
+            />
+            <path d="M42 68H48L47 82H43Z" fill="#624535" stroke="#ceb998" />
+            <path d="m43 70 4 2m-4 2 4 2m-4 2 3 2" stroke="#c3a78a" />
+            <path d="m45 82 5 4-5 5-5-5Z" fill="url(#landing-brass)" />
+        </g>
+    );
+}
+
+function SwordsIcon() {
+    return (
+        <svg
+            aria-hidden
+            focusable="false"
+            viewBox="0 0 90 96"
+            className="tool-icon"
+        >
+            <Sword angle={-42} />
+            <Sword angle={42} />
+        </svg>
+    );
+}
+
+function FunnelIcon() {
+    return (
+        <svg
+            aria-hidden
+            focusable="false"
+            viewBox="0 0 90 96"
+            className="tool-icon"
+        >
+            <path
+                d="M11 27Q44 13 80 27L55 52Q49 59 49 63V77L39 84V63Q39 59 35 54Z"
+                fill="url(#landing-steel)"
+                stroke="#ead9bd"
+                strokeWidth="2"
+            />
+            <path
+                d="m15 31 27 8 1 36-4 8V62Q36 53 15 31Z"
+                fill="#312e30"
+                opacity=".8"
+            />
+            <ellipse
+                cx="45"
+                cy="27"
+                rx="35"
+                ry="9"
+                fill="#231f20"
+                stroke="#e9dcc4"
+                strokeWidth="2.5"
+            />
+            <path d="M16 28q29-13 59 0" fill="none" stroke="#9e8d74" />
+            <path
+                d="m34 15 3-5 3 5-3 3Zm17-6 3-5 3 5-3 4Zm-5 12 3-4 3 4-3 4Z"
+                fill="#ffb57d"
+            />
+        </svg>
+    );
+}
+
+function BellIcon() {
+    return (
+        <svg
+            aria-hidden
+            focusable="false"
+            viewBox="0 0 90 96"
+            className="tool-icon"
+        >
+            <path
+                d="M40 17C35 4 54 3 51 18"
+                fill="none"
+                stroke="#d8c6a9"
+                strokeWidth="3"
+            />
+            <path
+                d="M19 62C27 56 24 46 27 34Q30 19 43 17Q61 15 65 36C67 49 66 56 74 64L77 69Q47 80 14 69Z"
+                fill="url(#landing-steel)"
+                stroke="#edddc5"
+                strokeWidth="2"
+            />
+            <path
+                d="M31 54Q31 26 41 23"
+                fill="none"
+                stroke="#e8dccb"
+                strokeWidth="2"
+            />
+            <path
+                d="M58 31Q63 43 61 54"
+                fill="none"
+                stroke="#594d40"
+                strokeWidth="2"
+            />
+            <path
+                d="M15 68Q45 59 76 68Q47 79 15 70Z"
+                fill="#302b28"
+                stroke="#ccb99a"
+            />
+            <path
+                d="M39 72Q39 83 46 84Q53 84 54 72"
+                fill="url(#landing-brass)"
+                stroke="#c7b291"
+            />
+        </svg>
+    );
+}
+
+/** Why this exists, in the author's own words, over the candlelit book. */
+function About() {
+    return (
+        <section className="about" id="why" aria-labelledby="about-title">
+            <div>
+                <h2 id="about-title">A few tools, made by a player</h2>
+                <p>
+                    Plan a passive tree, lay a whole build out as a phased
+                    guide, turn that build into an in-game loot filter, or get
+                    pinged the moment a new patch ships. Every tool reads
+                    straight from the official game files.
+                </p>
+                <blockquote>
                     No ads, no accounts, nothing to buy, and the whole thing is
                     open source. It started as a passive-tree planner I wanted
                     for myself, and grew from there.
-                    <span
-                        aria-hidden
-                        className="relative inline-block w-0 select-none"
-                    >
-                        <span className="absolute bottom-[-0.15em] left-1 font-display text-5xl leading-none text-[#c9a24a]/35">
-                            &bdquo;
-                        </span>
-                    </span>
-                </p>
-            </blockquote>
-            {/* sign-off, echoing the wordmark: lead gold, "to" muted, close blood red */}
-            <p className="mt-6 font-display text-2xl tracking-[0.02em] sm:text-[26px]">
-                <span style={{ color: GOLD_LIT }}>From one exile</span>{' '}
-                <span style={{ color: INK_FAINT }}>to</span>{' '}
-                <span style={{ color: BLOOD }}>another.</span>
-            </p>
-        </div>
+                </blockquote>
+                <p className="signoff">From one exile to another.</p>
+            </div>
+        </section>
     );
 }
