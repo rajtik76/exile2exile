@@ -95,7 +95,11 @@ export default [
             '@stylistic': stylistic,
         },
         rules: {
-            '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+            '@stylistic/brace-style': [
+                'error',
+                '1tbs',
+                { allowSingleLine: false },
+            ],
             '@stylistic/padding-line-between-statements': [
                 'error',
                 ...paddingAroundControl,
@@ -111,6 +115,8 @@ export default [
             // Self-contained GGPK extraction tool with its own Node scripts.
             'tools/**',
             'bootstrap/ssr',
+            // Untracked local notes and one-off scripts.
+            'docs-internal',
             'tailwind.config.js',
             'vite.config.ts',
             'resources/js/actions/**',
@@ -126,7 +132,11 @@ export default [
         },
         rules: {
             curly: ['error', 'all'],
-            '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+            '@stylistic/brace-style': [
+                'error',
+                '1tbs',
+                { allowSingleLine: false },
+            ],
         },
     },
     {
