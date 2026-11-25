@@ -8,6 +8,11 @@
 #
 set -euo pipefail
 
+# Own Playwright state file, so a hook run can't delete the one a manual test run reads.
+PEST_BROWSER_STATE_FILE="$(mktemp -d)/playwright-server.json"
+export PEST_BROWSER_STATE_FILE
+trap 'rm -rf "$(dirname "$PEST_BROWSER_STATE_FILE")"' EXIT
+
 echo "▶ run checks and tests"
 composer ci:check
 echo "✓ checks and tests passed"
