@@ -199,19 +199,22 @@
 
 .landing .shelf::after {
     bottom: 0;
-    height: 19px;
+    height: 15px;
     background: url('../images/landing/shelf-bottom.webp') repeat-x center /
         auto 100%;
 }
 
-.landing .jewel {
+.landing .collar {
     position: absolute;
-    top: 0;
+    /* Centred on the 15px top rail. */
+    top: 7.5px;
     left: 50%;
-    width: clamp(43px, 4.4vw, 74px);
-    aspect-ratio: 136 / 102;
+    z-index: 1;
+    height: 22px;
+    aspect-ratio: 320 / 88;
     background: center / 100% 100% no-repeat;
-    transform: translate(-50%, -39%);
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 2px 3px #000);
     pointer-events: none;
 }
 
@@ -1000,20 +1003,6 @@
             linear-gradient(to right, black 35.42%, transparent 43.17%),
             linear-gradient(to right, transparent, black var(--edge));
         mask-composite: intersect;
-    }
-
-    /* The jewel is a crop with its backdrop baked in: keep the jewel, drop
-       the backdrop. */
-    .landing .jewel {
-        clip-path: polygon(
-            50% 18%,
-            80% 60%,
-            100% 60%,
-            100% 100%,
-            0 100%,
-            0 60%,
-            20% 60%
-        );
     }
 }
 

@@ -7,7 +7,7 @@ import planner from '@/routes/planner';
 import '../../css/landing.css';
 import grille from '../../images/landing/grille.webp';
 import treeIcon from '../../images/landing/icon-tree.webp';
-import jewel from '../../images/landing/jewel.webp';
+import railCollar from '../../images/landing/rail-collar.webp';
 import scene from '../../images/landing/scene.webp';
 
 /**
@@ -125,7 +125,7 @@ function ToolsShelf() {
             aria-label="Path of Exile 2 tools"
             tabIndex={-1}
         >
-            <Layer image={jewel} className="jewel" />
+            <Layer image={railCollar} className="collar" />
             <Link className="tool" href="/tree">
                 <Layer image={treeIcon} className="painted" />
                 <ToolText name="Tree planner" kind="Map your passives" />
