@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ClassPortrait } from '@/components/build/classPortrait';
 import { MEDALLION } from '@/components/passive-tree/chrome';
 import { Eyebrow, Heading } from '@/components/planner/ui/Text';
@@ -13,8 +12,15 @@ import type { PlanBuild } from '@/types/planner';
  * than as an always-editable control - the planner edit page is its only host.
  */
 export default function BuildClassGallery({
+    openClass,
+    onOpenClassChange,
     onPick,
 }: {
+    /** Which class's ascendancy row is open. Picking a class only reveals its
+     *  ascendancies - the build isn't chosen until an ascendancy (or "skip") is picked.
+     *  Owned by the host, which backs the page with that class's portrait. */
+    openClass: string | null;
+    onOpenClassChange: (className: string | null) => void;
     onPick: (build: PlanBuild) => void;
 }) {
     const { data } = useTreeData();
@@ -24,9 +30,6 @@ export default function BuildClassGallery({
         ? data.classes.filter((cls) => cls.ascendancies.length > 0)
         : [];
 
-    // Which class's ascendancy row is open. Picking a class only reveals its
-    // ascendancies - the build isn't chosen until an ascendancy (or "skip") is picked.
-    const [openClass, setOpenClass] = useState<string | null>(null);
     const selected = classes.find((cls) => cls.name === openClass) ?? null;
 
     return (
@@ -56,8 +59,10 @@ export default function BuildClassGallery({
                                 sublabel="Class"
                                 active={cls.name === openClass}
                                 onClick={() =>
-                                    setOpenClass((current) =>
-                                        current === cls.name ? null : cls.name,
+                                    onOpenClassChange(
+                                        openClass === cls.name
+                                            ? null
+                                            : cls.name,
                                     )
                                 }
                             />

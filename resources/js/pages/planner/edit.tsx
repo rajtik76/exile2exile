@@ -344,6 +344,9 @@ function PlannerEdit({
     // waypoint for the duration, since there's nothing to scroll to while the
     // tree fills the screen (see `PlannerTree`'s `onFullscreenChange`).
     const [treeFullscreen, setTreeFullscreen] = useState(false);
+    // The class opened in the gallery (before an ascendancy is picked), so its base
+    // portrait can back the page while the author browses.
+    const [galleryClass, setGalleryClass] = useState<string | null>(null);
 
     // Read here so the gems panel header's toggle and the gems body below it share one
     // source of truth.
@@ -503,7 +506,9 @@ function PlannerEdit({
     );
     const portrait = build.className
         ? classPortrait(build.className, selectedAscName)
-        : null;
+        : galleryClass
+          ? classPortrait(galleryClass)
+          : null;
 
     /** Persist an updated section set under the active key, preserving every other
      *  branch's reference (structural sharing) so unrelated components don't re-render. */
@@ -776,7 +781,7 @@ function PlannerEdit({
                             <img
                                 alt=""
                                 src={portrait.src}
-                                className="w-[620px] max-w-none opacity-45 select-none"
+                                className={`w-[620px] max-w-none select-none ${build.className ? 'opacity-45' : 'opacity-20'}`}
                                 style={{
                                     maskImage:
                                         'radial-gradient(circle at 50% 42%, black 44%, transparent 64%)',
@@ -803,7 +808,11 @@ function PlannerEdit({
                                         </Button>
                                     </div>
                                 )}
-                                <BuildClassGallery onPick={pickBuild} />
+                                <BuildClassGallery
+                                    openClass={galleryClass}
+                                    onOpenClassChange={setGalleryClass}
+                                    onPick={pickBuild}
+                                />
                                 {showImport && (
                                     <Modal
                                         onClose={() => setShowImport(false)}
