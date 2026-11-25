@@ -47,9 +47,10 @@ export default function Credits() {
                     Omnibus-Type. All fonts are self-hosted.
                 </p>
                 <p>
-                    The landing page artwork (the relic chamber, the tools
-                    shelf, its icons and the candlelit book) is original work
-                    made for {appName}. It is not Grinding Gear Games art.
+                    The artwork on this site (the relic chamber, the tools
+                    shelf, its icons, the candlelit book, the scriptorium and
+                    the broken bridge) is original work made for {appName}. It
+                    is not Grinding Gear Games art.
                 </p>
             </LegalSection>
 

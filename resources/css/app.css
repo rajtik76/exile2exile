@@ -707,6 +707,61 @@
     }
 }
 
+/* Painted scene of the error page, set through --error-art: a wide band under
+   the masthead that fades into the page below it, where the text stands. It
+   never stretches past 2240px; beyond that both ends dissolve into the page. */
+.error-art {
+    width: 100%;
+    max-width: 2240px;
+    height: min(56svh, 52vw);
+    min-height: 240px;
+    margin-inline: auto;
+    background-image:
+        linear-gradient(to top, var(--color-ink) 2%, transparent 48%),
+        var(--error-art);
+    background-position:
+        center,
+        center 42%;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+@media (max-width: 820px) {
+    .error-art {
+        height: 46svh;
+        background-position:
+            center,
+            26% center;
+    }
+}
+
+@media (min-width: 2241px) {
+    .error-art {
+        mask-image: linear-gradient(
+            90deg,
+            transparent,
+            black 6%,
+            black 94%,
+            transparent
+        );
+    }
+}
+
+/* The status code as carved stone: the display face with the landing's stone
+   gradient and a drop shadow. */
+.error-code {
+    background-image: linear-gradient(
+        157deg,
+        #fff8f0 1%,
+        #d2c8bc 45%,
+        #fff8ee 58%,
+        #b3a496 94%
+    );
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 2px 2px #0009);
+}
+
 @utility rule-pewter {
     background: var(--rule-pewter);
 }

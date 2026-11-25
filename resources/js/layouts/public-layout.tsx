@@ -53,6 +53,7 @@ function useHasOwnMainAction(): boolean {
         'planner/edit',
         'planner/show',
         'planner/unlock',
+        'error',
     ].includes(component);
 }
 
