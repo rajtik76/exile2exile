@@ -1,13 +1,11 @@
 import { CONTACT_EMAIL, useAppName } from '@/components/brand';
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-const UPDATED = 'June 19, 2026';
-
 export default function Terms() {
     const appName = useAppName();
 
     return (
-        <LegalPage backdrop title="Terms of Service" updated={UPDATED}>
+        <LegalPage backdrop title="Terms of Service" dated>
             <LegalSection heading="The short version">
                 <p>
                     {appName} is a free, fan-made tool offered as-is. Use it,

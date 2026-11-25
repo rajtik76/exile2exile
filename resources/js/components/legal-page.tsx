@@ -8,18 +8,18 @@ import scriptorium from '../../images/legal/scriptorium.webp';
  * Fontin title, pewter flourish, and prose rhythm. `backdrop` lays a dark
  * painted scriptorium behind the text, kept still while the page scrolls on
  * desktop and fading out before the footer. `eyebrow` defaults to "Legal";
- * `updated` is optional (dev docs carry no revision date).
+ * `dated` shows today's date as the last update (dev docs carry none).
  */
 export function LegalPage({
     title,
     eyebrow = 'Legal',
-    updated,
+    dated = false,
     backdrop = false,
     children,
 }: {
     title: string;
     eyebrow?: string;
-    updated?: string;
+    dated?: boolean;
     backdrop?: boolean;
     children: React.ReactNode;
 }) {
@@ -48,9 +48,9 @@ export function LegalPage({
                     >
                         {title}
                     </h1>
-                    {updated && (
+                    {dated && (
                         <p className="mt-3 font-ui text-[13px] font-medium text-mist">
-                            Last updated {updated}
+                            Last updated {today()}
                         </p>
                     )}
                     <Flourish className="mx-auto my-9 h-3 w-52 opacity-80" />
@@ -60,6 +60,19 @@ export function LegalPage({
             </section>
         </div>
     );
+}
+
+/**
+ * Today's date, e.g. "November 25, 2026". Formatted in UTC so the server
+ * render and the browser agree.
+ */
+function today(): string {
+    return new Date().toLocaleDateString('en-US', {
+        timeZone: 'UTC',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+    });
 }
 
 /** One titled section of a legal document. */

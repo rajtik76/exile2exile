@@ -1,13 +1,11 @@
 import { CONTACT_EMAIL, useAppName } from '@/components/brand';
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-const UPDATED = 'November 25, 2026';
-
 export default function Privacy() {
     const appName = useAppName();
 
     return (
-        <LegalPage backdrop title="Privacy Policy" updated={UPDATED}>
+        <LegalPage backdrop title="Privacy Policy" dated>
             <LegalSection heading="The short version">
                 <p>
                     {appName} is a free, fan-made tool. We collect as little as

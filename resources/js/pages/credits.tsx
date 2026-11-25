@@ -1,13 +1,11 @@
 import { useAppName } from '@/components/brand';
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-const UPDATED = 'November 25, 2026';
-
 export default function Credits() {
     const appName = useAppName();
 
     return (
-        <LegalPage backdrop title="Credits & Licenses" updated={UPDATED}>
+        <LegalPage backdrop title="Credits & Licenses" dated>
             <LegalSection heading="Thanks">
                 <p>
                     {appName} stands on the work of the Path of Exile community.
