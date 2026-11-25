@@ -247,7 +247,7 @@
 /* The painted icon is a crop with its stone backdrop baked in; fade the crop
    edge into the shelf. */
 .landing .tool .painted {
-    background: center / contain no-repeat;
+    position: relative;
     mask-image: radial-gradient(
         ellipse 50% 50% at center,
         black 58%,
@@ -255,8 +255,49 @@
     );
 }
 
+.landing .tool .painted .layer {
+    background-size: contain;
+}
+
 .landing .tool-icon {
     filter: drop-shadow(0 2px 3px #000);
+}
+
+/* Each icon carries a lit twin that takes over on hover and focus. */
+.landing .tool :is(.rest, .lit) {
+    transition: opacity 0.35s ease;
+}
+
+.landing .tool .lit,
+.landing .tool:is(:hover, :focus-visible) .rest {
+    opacity: 0;
+}
+
+.landing .tool:is(:hover, :focus-visible) .lit {
+    opacity: 1;
+}
+
+.landing .tool-icon .orbs {
+    filter: drop-shadow(0 0 2px #3fb2ff);
+}
+
+.landing .tool-icon .sparkle {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: sparkle 1.8s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: scale(0.6) rotate(0deg);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.1) rotate(45deg);
+    }
 }
 
 .landing .tool strong,
@@ -442,8 +483,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .landing .ember-halo {
+    .landing .ember-halo,
+    .landing .tool-icon .sparkle {
         animation: none;
+    }
+
+    .landing .tool-icon .glint {
+        display: none;
     }
 }
 
