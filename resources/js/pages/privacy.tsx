@@ -7,7 +7,7 @@ export default function Privacy() {
     const appName = useAppName();
 
     return (
-        <LegalPage title="Privacy Policy" updated={UPDATED}>
+        <LegalPage backdrop title="Privacy Policy" updated={UPDATED}>
             <LegalSection heading="The short version">
                 <p>
                     {appName} is a free, fan-made tool. We collect as little as
@@ -19,33 +19,29 @@ export default function Privacy() {
 
             <LegalSection heading="What we collect">
                 <p>
-                    <strong className="text-[#d6dae2]">
-                        Builds you import.
-                    </strong>{' '}
-                    When you paste a Path of Building code or a build link, we
-                    process it to generate the comparison. You don't need an
-                    account to do this.
+                    <strong>Builds you import.</strong> When you paste a Path of
+                    Building code or a build link, we process it to generate the
+                    comparison. You don't need an account to do this.
                 </p>
                 <p>
-                    <strong className="text-[#d6dae2]">Account details.</strong>{' '}
-                    If you choose to create an account, we store your email
-                    address and a hashed password. That's it.
+                    <strong>Account details.</strong> If you choose to create an
+                    account, we store your email address and a hashed password.
+                    That's it.
                 </p>
                 <p>
-                    <strong className="text-[#d6dae2]">Basic logs.</strong> Our
-                    server keeps standard request logs (such as your IP address
-                    and browser) to keep the site secure and prevent abuse.
+                    <strong>Basic logs.</strong> Our server keeps standard
+                    request logs (such as your IP address and browser) to keep
+                    the site secure and prevent abuse.
                 </p>
                 <p>
-                    <strong className="text-[#d6dae2]">Newsletter.</strong> If
-                    you subscribe to our newsletter, we store your email
-                    address, and only after you confirm the subscription via the
-                    link we email you (double opt-in). We use it solely to send
-                    the newsletter - never for anything else, and we never share
-                    it. Every email contains an unsubscribe link; unsubscribing
-                    deletes your address immediately. Emails are delivered
-                    through Resend, our email provider, which processes your
-                    address on our behalf.
+                    <strong>Newsletter.</strong> If you subscribe to our
+                    newsletter, we store your email address, and only after you
+                    confirm the subscription via the link we email you (double
+                    opt-in). We use it solely to send the newsletter - never for
+                    anything else, and we never share it. Every email contains
+                    an unsubscribe link; unsubscribing deletes your address
+                    immediately. Emails are delivered through Resend, our email
+                    provider, which processes your address on our behalf.
                 </p>
             </LegalSection>
 
@@ -110,10 +106,7 @@ export default function Privacy() {
             <LegalSection heading="Contact">
                 <p>
                     Questions about your privacy? Email us at{' '}
-                    <a
-                        href={`mailto:${CONTACT_EMAIL}`}
-                        className="text-[#d6dae2] underline decoration-dotted underline-offset-2 transition hover:text-[#ecd49a]"
-                    >
+                    <a href={`mailto:${CONTACT_EMAIL}`} className="link">
                         {CONTACT_EMAIL}
                     </a>
                     .

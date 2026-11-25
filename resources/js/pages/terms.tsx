@@ -7,7 +7,7 @@ export default function Terms() {
     const appName = useAppName();
 
     return (
-        <LegalPage title="Terms of Service" updated={UPDATED}>
+        <LegalPage backdrop title="Terms of Service" updated={UPDATED}>
             <LegalSection heading="The short version">
                 <p>
                     {appName} is a free, fan-made tool offered as-is. Use it,
@@ -68,10 +68,7 @@ export default function Terms() {
             <LegalSection heading="Contact">
                 <p>
                     Questions? Email us at{' '}
-                    <a
-                        href={`mailto:${CONTACT_EMAIL}`}
-                        className="text-[#d6dae2] underline decoration-dotted underline-offset-2 transition hover:text-[#ecd49a]"
-                    >
+                    <a href={`mailto:${CONTACT_EMAIL}`} className="link">
                         {CONTACT_EMAIL}
                     </a>
                     .

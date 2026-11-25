@@ -3,14 +3,11 @@ import { LegalPage, LegalSection } from '@/components/legal-page';
 
 const UPDATED = 'November 25, 2026';
 
-const LINK =
-    'text-[#c9a24a] underline decoration-[#c9a24a]/40 underline-offset-2 hover:text-[#ecd49a]';
-
 export default function Credits() {
     const appName = useAppName();
 
     return (
-        <LegalPage title="Credits & Licenses" updated={UPDATED}>
+        <LegalPage backdrop title="Credits & Licenses" updated={UPDATED}>
             <LegalSection heading="Thanks">
                 <p>
                     {appName} stands on the work of the Path of Exile community.
@@ -27,7 +24,7 @@ export default function Credits() {
                         href="https://github.com/rajtik76/exile2exile"
                         target="_blank"
                         rel="noreferrer"
-                        className={LINK}
+                        className="link"
                     >
                         github.com/rajtik76/exile2exile
                     </a>
@@ -37,7 +34,7 @@ export default function Credits() {
                         href="https://github.com/rajtik76/poe2-toolkit"
                         target="_blank"
                         rel="noreferrer"
-                        className={LINK}
+                        className="link"
                     >
                         github.com/rajtik76/poe2-toolkit
                     </a>
@@ -93,7 +90,7 @@ export default function Credits() {
                         href="https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2"
                         target="_blank"
                         rel="noreferrer"
-                        className={LINK}
+                        className="link"
                     >
                         Path of Building
                     </a>
@@ -111,7 +108,7 @@ export default function Credits() {
                         href="https://github.com/rajtik76/exile2exile/blob/main/resources/pob-uniques/LICENSE"
                         target="_blank"
                         rel="noreferrer"
-                        className={LINK}
+                        className="link"
                     >
                         resources/pob-uniques/LICENSE
                     </a>
@@ -138,7 +135,7 @@ export default function Credits() {
                         href="https://poe2scout.com"
                         target="_blank"
                         rel="noreferrer"
-                        className={LINK}
+                        className="link"
                     >
                         poe2scout.com
                     </a>
@@ -155,7 +152,7 @@ export default function Credits() {
                         href="https://github.com/NeverSinkDev/NeverSink-Filter-for-PoE2"
                         target="_blank"
                         rel="noreferrer"
-                        className={LINK}
+                        className="link"
                     >
                         NeverSink's Indepth Loot Filter for Path of Exile 2
                     </a>
@@ -174,7 +171,7 @@ export default function Credits() {
                         href="https://github.com/NeverSinkDev/NeverSink-Filter-for-PoE2/blob/master/LICENSE"
                         target="_blank"
                         rel="noreferrer"
-                        className={LINK}
+                        className="link"
                     >
                         the NeverSink repository
                     </a>

@@ -460,6 +460,70 @@
     }
 }
 
+/* Inline text link: ember text over a muted underline that lights on hover. */
+@layer components {
+    .link {
+        color: var(--color-ember-300);
+        text-decoration: underline;
+        text-decoration-color: var(--color-ember-700);
+        text-underline-offset: 3px;
+        transition: text-decoration-color 120ms;
+    }
+
+    .link:hover {
+        text-decoration-color: var(--color-ember-300);
+    }
+
+    .link:focus-visible {
+        outline: 2px solid var(--color-ember-400);
+        outline-offset: 2px;
+    }
+}
+
+/* Painted scriptorium behind the legal pages, set by LegalPage through
+   --legal-art. A darker band keeps the text column calm. Phones show it one
+   screen tall at the top, fading into the page; wider screens hold it still
+   behind the scrolling text and fade it out before the footer. */
+.legal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+        linear-gradient(to bottom, transparent 55svh, var(--color-ink) 100svh),
+        linear-gradient(
+            90deg,
+            transparent 12%,
+            #080e1499 34%,
+            #080e1499 66%,
+            transparent 88%
+        ),
+        var(--legal-art);
+    background-position: center top;
+    background-repeat: no-repeat;
+    background-size:
+        100% 100%,
+        100% 100%,
+        auto 100svh;
+}
+
+@media (min-width: 768px) {
+    .legal-backdrop {
+        background-image:
+            linear-gradient(
+                90deg,
+                transparent 12%,
+                #080e1499 34%,
+                #080e1499 66%,
+                transparent 88%
+            ),
+            var(--legal-art);
+        background-attachment: fixed;
+        background-position: center;
+        background-size: cover;
+        mask-image: linear-gradient(black calc(100% - 240px), transparent);
+    }
+}
+
 @utility rule-pewter {
     background: var(--rule-pewter);
 }
