@@ -17,27 +17,34 @@ export default function PublicLayout({
     children: React.ReactNode;
 }) {
     const landing = useIsLanding();
+    const capped = !useIsFullWindow();
 
     return (
         <div
             className="flex min-h-screen flex-col overflow-x-clip font-body text-paper"
             style={{ background: PAGE_BG }}
         >
-            <TopBar landing={landing} />
+            <TopBar landing={landing} capped={capped} />
             <main className="flex-1">{children}</main>
-            <Footer landing={landing} />
+            <Footer capped={capped} />
         </div>
     );
 }
 
 /**
- * True on the landing page. The landing frames the masthead and footer like
- * its own sections: the painted texture behind the masthead and a 2240px cap
- * that fades out at both edges on wider windows. Every other page keeps them
- * plain and full width (the tree planner uses the whole window).
+ * True on the landing page: the only one with the painted texture behind the
+ * masthead and its own copper button in the hero.
  */
 function useIsLanding(): boolean {
     return usePage().url.split(/[?#]/)[0] === home.url();
+}
+
+/**
+ * True on pages whose content spans the whole window (the passive tree canvas).
+ * Every other page caps the masthead and footer like the landing does.
+ */
+function useIsFullWindow(): boolean {
+    return ['tree', 'tree/shared'].includes(usePage().component);
 }
 
 /**
@@ -57,8 +64,8 @@ function useHasOwnMainAction(): boolean {
     ].includes(component);
 }
 
-/** On the landing, cap a full-width band at 2240px and fade its edges beyond. */
-const LANDING_CAP =
+/** Cap a full-width band at 2240px and fade its edges beyond. */
+const WIDTH_CAP =
     'min-[821px]:mx-auto min-[821px]:w-full min-[821px]:max-w-[2240px] min-[2241px]:[mask-image:linear-gradient(90deg,transparent,black_2.5%,black_97.5%,transparent)]';
 
 /** The tool/section links shared by the desktop nav and the mobile menu. */
@@ -244,7 +251,7 @@ function PewterRule({ className = '' }: { className?: string }) {
     return <div aria-hidden className={`h-0.5 rule-pewter ${className}`} />;
 }
 
-function TopBar({ landing }: { landing: boolean }) {
+function TopBar({ landing, capped }: { landing: boolean; capped: boolean }) {
     const [menuOpen, setMenuOpen] = useState(false);
 
     // Close the mobile menu whenever a navigation starts (link followed, CTA fired).
@@ -262,7 +269,7 @@ function TopBar({ landing }: { landing: boolean }) {
 
     return (
         <header
-            className={`relative z-10 font-display text-paper ${landing ? LANDING_CAP : ''}`}
+            className={`relative z-10 font-display text-paper ${capped ? WIDTH_CAP : ''}`}
             style={{
                 background: landing
                     ? `linear-gradient(90deg, #060a0fbd, #0d1722c4), url('${darkTile}')`
@@ -404,12 +411,12 @@ function FooterColumn({
     );
 }
 
-function Footer({ landing }: { landing: boolean }) {
+function Footer({ capped }: { capped: boolean }) {
     return (
         <>
             <PewterRule className="relative z-10 mx-[max(1.5%,calc((100%_-_2172px)/2))]" />
             <footer
-                className={`relative z-10 bg-void font-body text-base leading-normal text-slate ${landing ? LANDING_CAP : ''}`}
+                className={`relative z-10 bg-void font-body text-base leading-normal text-slate ${capped ? WIDTH_CAP : ''}`}
             >
                 <div className="mx-auto max-w-[2240px] px-[min(4.15%,93px)] pt-[clamp(36px,4vw,64px)] pb-[34px]">
                     <div className="grid grid-cols-2 gap-x-12 gap-y-8 min-[821px]:grid-cols-[1.4fr_repeat(3,1fr)]">
