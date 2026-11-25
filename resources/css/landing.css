@@ -605,6 +605,20 @@
     -webkit-text-fill-color: transparent;
 }
 
+.landing .tablet-fangs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.08em;
+    height: 1em;
+}
+
+.landing .tablet-fangs .fangs {
+    height: 0.82em;
+    width: 0.56em;
+    margin: 0;
+}
+
 .landing .unit b {
     font-family: 'Fontin SmallCaps', 'Fontin', serif;
     font-size: clamp(14px, 1.05vw, 18px);

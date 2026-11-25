@@ -199,7 +199,7 @@ function Unit({
     );
 }
 
-/** A recessed stone tablet holding two digits, dashes until the clock runs. */
+/** A recessed stone tablet holding two digits, dashes until the clock runs; 11 shows as the fangs. */
 function Tablet({ value }: { value?: number }) {
     const digits =
         value === undefined
@@ -209,9 +209,15 @@ function Tablet({ value }: { value?: number }) {
     return (
         <span className="tablet">
             <span>
-                {digits.map((digit, position) => (
-                    <i key={position}>{digit}</i>
-                ))}
+                {value === 11 ? (
+                    <span className="tablet-fangs">
+                        <Fangs />
+                    </span>
+                ) : (
+                    digits.map((digit, position) => (
+                        <i key={position}>{digit}</i>
+                    ))
+                )}
             </span>
         </span>
     );
