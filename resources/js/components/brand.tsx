@@ -251,7 +251,7 @@ export function Emblem({ className = '' }: { className?: string }) {
 
 /* ------------------------------------------------------------------ wordmark */
 
-/** The short mark: "E2E" set in Fontin. */
+/** The short mark: "E2E" set in Fontin, the "2" in ember and tilted. */
 export function Logo({
     className = '',
     style,
@@ -264,7 +264,11 @@ export function Logo({
             className={className}
             style={{ ...DISPLAY, letterSpacing: '0.01em', ...style }}
         >
-            E2E
+            E
+            <span className="-mr-[0.06em] inline-block rotate-20 text-ember-500">
+                2
+            </span>
+            E
         </span>
     );
 }
