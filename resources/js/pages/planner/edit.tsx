@@ -30,10 +30,9 @@ import { TextInput } from '@/components/planner/ui/Field';
 import { Modal } from '@/components/planner/ui/Overlay';
 import { Panel } from '@/components/planner/ui/Panel';
 import { Eyebrow } from '@/components/planner/ui/Text';
+import { useGemsView } from '@/hooks/use-gems-view';
 import { xsrfToken } from '@/lib/csrf';
 import { useLoadedGameData } from '@/lib/gameEra';
-import { loadGemsView, saveGemsView } from '@/lib/gemsView';
-import type { GemsView } from '@/lib/gemsView';
 import type { ModInfo, ModMap } from '@/lib/modLines';
 import { migratePlanTrees } from '@/lib/planMigration';
 import {
@@ -53,6 +52,7 @@ import {
     sectionFor,
     SECTION_KEYS,
 } from '@/lib/planner';
+import type { PlanDraft } from '@/lib/planner';
 import { collectTokens, refKey } from '@/lib/planReferences';
 import type { PlanReference, ReferenceMap } from '@/lib/planReferences';
 import { loadTreeData, patchTree } from '@/lib/tree-scene';
@@ -182,6 +182,34 @@ interface PlannerEditProps {
     conversion?: PlanConversion | null;
 }
 
+interface PlanContent {
+    title: string;
+    description: string;
+    mode: PlanMode;
+    build: PlanBuild;
+    tabs: PlanTab[];
+    sections: Record<string, PlanSection>;
+}
+
+/** The editable plan content: the draft's fields where present, the server copy otherwise. */
+function planContentFrom(
+    draft: PlanDraft | null,
+    plan: PlanData,
+    title: string,
+): PlanContent {
+    return {
+        title: draft?.title ?? title,
+        description: draft?.description ?? plan.description,
+        mode: (draft?.mode ?? plan.mode) as PlanMode,
+        build: (draft?.build ?? plan.build) as PlanBuild,
+        tabs: (draft?.tabs ?? plan.tabs) as PlanTab[],
+        sections: (draft?.sections ?? plan.sections) as Record<
+            string,
+            PlanSection
+        >,
+    };
+}
+
 function PlannerEdit({
     mode: pageMode,
     slug,
@@ -194,14 +222,10 @@ function PlannerEdit({
     draftKeyOverride,
     notice = null,
 }: PlannerEditProps & { draftKeyOverride?: string; notice?: ReactNode }) {
-    // A draft autosaved before the last save survives a hard refresh; when present
-    // it seeds the editor instead of the server copy, so unsaved work isn't lost.
-    // The token is never taken from the draft - it always comes fresh from props.
     const { patch: gamePatch, era: gameEra } = useLoadedGameData();
     const liveVersion = useLiveGameVersion();
     const draftKey =
         draftKeyOverride ?? draftKeyFor(pageMode === 'edit' ? slug : null);
-    const [draft] = useState(() => loadDraft(draftKey, gameEra));
 
     // The reference map (icon/tooltip/flavour for each token) is display-only data,
     // never persisted: only the token id lives in the text. Seeded from the server's
@@ -245,36 +269,48 @@ function PlannerEdit({
         Record<'title' | 'tabs' | 'description' | 'gamePatch', string>
     >;
 
-    interface PlanContent {
-        title: string;
-        description: string;
-        mode: PlanMode;
-        build: PlanBuild;
-        tabs: PlanTab[];
-        sections: Record<string, PlanSection>;
-    }
-
-    const [data, setPlanData] = useState<PlanContent>(() => ({
-        title: draft?.title ?? title,
-        description: draft?.description ?? plan.description,
-        mode: (draft?.mode ?? plan.mode) as PlanMode,
-        build: (draft?.build ?? plan.build) as PlanBuild,
-        tabs: (draft?.tabs ?? plan.tabs) as PlanTab[],
-        sections: (draft?.sections ?? plan.sections) as Record<
-            string,
-            PlanSection
-        >,
-    }));
+    // The first render always matches the server copy: a draft lives in localStorage,
+    // which the server render cannot see, so seeding from it here would break hydration.
+    const [data, setPlanData] = useState<PlanContent>(() =>
+        planContentFrom(null, plan, title),
+    );
 
     const [activeTabId, setActiveTabId] = useState<string>(
-        draft?.activeTabId ?? plan.tabs[0]?.id ?? 'act-1',
+        plan.tabs[0]?.id ?? 'act-1',
     );
+
+    // An import replaces the whole build in this session and stores GGG's internal
+    // ascendancy id, so the `ascendancyName` prop (resolved for the *saved* plan) no
+    // longer describes it - the import response brings its own resolved name along. It
+    // rides in the draft too, so a refresh before the first save does not lose the label
+    // (nothing on the client can turn `Mercenary2` back into `Witchhunter`).
+    const [resolvedAscName, setResolvedAscName] = useState<string | null>(null);
+
+    // A draft autosaved before the last save survives a hard refresh; when present it
+    // replaces the server copy once mounted, so unsaved work isn't lost. The token is
+    // never taken from the draft - it always comes fresh from props.
+    useEffect(() => {
+        const saved = loadDraft(draftKey, gameEra);
+
+        if (saved === null) {
+            return;
+        }
+
+        // Reading localStorage after hydration is the point here, not a render-time
+        // decision, so the rule's usual objection doesn't apply.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setPlanData(planContentFrom(saved, plan, title));
+        setActiveTabId(saved.activeTabId ?? plan.tabs[0]?.id ?? 'act-1');
+        setResolvedAscName(saved.ascendancyName ?? null);
+        // Mount only: later prop updates are handled by the slug re-seed below.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Create and edit both render this same 'planner/edit' component, so an Inertia
     // visit between them (e.g. a fresh plan created by PoB import redirecting into the
     // editor) reuses this mounted instance and only swaps props - it never remounts, so
-    // the useState initializers above keep the previous page's state (a blank build,
-    // hence the class gallery). Re-seed the whole editor from the new props whenever the
+    // the state seeded on mount keeps the previous page's plan (a blank build, hence
+    // the class gallery). Re-seed the whole editor from the new props whenever the
     // plan identity (its slug) changes, honouring any draft saved for that slug.
     const loadedSlug = useRef(slug);
     useEffect(() => {
@@ -288,17 +324,7 @@ function PlannerEdit({
             gameEra,
         );
 
-        setPlanData({
-            title: fresh?.title ?? title,
-            description: fresh?.description ?? plan.description,
-            mode: (fresh?.mode ?? plan.mode) as PlanMode,
-            build: (fresh?.build ?? plan.build) as PlanBuild,
-            tabs: (fresh?.tabs ?? plan.tabs) as PlanTab[],
-            sections: (fresh?.sections ?? plan.sections) as Record<
-                string,
-                PlanSection
-            >,
-        });
+        setPlanData(planContentFrom(fresh, plan, title));
         setActiveTabId(fresh?.activeTabId ?? plan.tabs[0]?.id ?? 'act-1');
         setRefMap({ ...references });
         setModMap({ ...mods });
@@ -314,28 +340,14 @@ function PlannerEdit({
     const [droppedMods, setDroppedMods] = useState<Record<string, string[]>>(
         {},
     );
-    // An import replaces the whole build in this session and stores GGG's internal
-    // ascendancy id, so the `ascendancyName` prop (resolved for the *saved* plan) no
-    // longer describes it - the import response brings its own resolved name along. It
-    // rides in the draft too, so a refresh before the first save does not lose the label
-    // (nothing on the client can turn `Mercenary2` back into `Witchhunter`).
-    const [resolvedAscName, setResolvedAscName] = useState<string | null>(
-        draft?.ascendancyName ?? null,
-    );
-
     // Whether the passive tree is currently fullscreen - hides the ScrollToTop
     // waypoint for the duration, since there's nothing to scroll to while the
     // tree fills the screen (see `PlannerTree`'s `onFullscreenChange`).
     const [treeFullscreen, setTreeFullscreen] = useState(false);
 
-    // The gems layout (icon grid vs named list) is a display preference, remembered in
-    // localStorage rather than the plan, and lives here so the panel header's toggle and
-    // the gems body below it share one source of truth.
-    const [gemsView, setGemsViewState] = useState<GemsView>(loadGemsView);
-    const setGemsView = useCallback((view: GemsView): void => {
-        setGemsViewState(view);
-        saveGemsView(view);
-    }, []);
+    // Read here so the gems panel header's toggle and the gems body below it share one
+    // source of truth.
+    const [gemsView, setGemsView] = useGemsView();
 
     // Mirror every edit into the draft so a refresh can restore it. Only the text
     // (tokens included) is stored - never resolved reference data. Debounced: a draft

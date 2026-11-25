@@ -22,8 +22,7 @@ import ScrollToTop from '@/components/planner/ScrollToTop';
 import TreeNotablePriority from '@/components/planner/TreeNotablePriority';
 import { Panel } from '@/components/planner/ui/Panel';
 import { Eyebrow, Heading } from '@/components/planner/ui/Text';
-import { loadGemsView, saveGemsView } from '@/lib/gemsView';
-import type { GemsView } from '@/lib/gemsView';
+import { useGemsView } from '@/hooks/use-gems-view';
 import type { ModMap } from '@/lib/modLines';
 import {
     activeSectionKey,
@@ -98,11 +97,7 @@ export default function PlannerShow({
 
     // Gems layout (icon grid vs named list) - a display preference remembered in
     // localStorage, toggled from the gems panel header even in the read-only viewer.
-    const [gemsView, setGemsViewState] = useState<GemsView>(loadGemsView);
-    const setGemsView = (view: GemsView): void => {
-        setGemsViewState(view);
-        saveGemsView(view);
-    };
+    const [gemsView, setGemsView] = useGemsView();
 
     const mode = plan.mode as PlanMode;
     const sectionKey = activeSectionKey(mode, activeTabId);

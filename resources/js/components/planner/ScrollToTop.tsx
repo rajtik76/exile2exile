@@ -6,6 +6,7 @@ import {
     ICON_STROKE,
     PLAQUE,
 } from '@/components/passive-tree/chrome';
+import { useHydrated } from '@/hooks/use-hydrated';
 
 /** How far down the page the reader must scroll before the button appears. */
 const SHOW_AFTER_PX = 480;
@@ -19,6 +20,7 @@ const SHOW_AFTER_PX = 480;
  * otherwise sit above it despite a higher z-index of its own).
  */
 export default function ScrollToTop() {
+    const hydrated = useHydrated();
     const [visible, setVisible] = useState(false);
 
     useEffect(() => {
@@ -38,7 +40,7 @@ export default function ScrollToTop() {
         window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
     }
 
-    if (typeof document === 'undefined') {
+    if (!hydrated) {
         return null;
     }
 
