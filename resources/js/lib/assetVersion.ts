@@ -16,13 +16,24 @@ function readAssetVersion(): string {
     return meta?.getAttribute('content') ?? '';
 }
 
-const ASSET_VERSION = readAssetVersion();
+let assetVersion = readAssetVersion();
+
+/**
+ * Hand over the stamp where there is no document to read it from: the server
+ * render gets it from the page props, so it builds the same URLs the browser
+ * will and hydration finds nothing to repair. A stamp already read wins.
+ */
+export function primeAssetVersion(version: unknown): void {
+    if (assetVersion === '' && typeof version === 'string') {
+        assetVersion = version;
+    }
+}
 
 /** Append `?v=<stamp>` to a tree asset URL, preserving any existing query. */
 export function withAssetVersion(url: string): string {
-    if (!ASSET_VERSION) {
+    if (!assetVersion) {
         return url;
     }
 
-    return `${url}${url.includes('?') ? '&' : '?'}v=${ASSET_VERSION}`;
+    return `${url}${url.includes('?') ? '&' : '?'}v=${assetVersion}`;
 }

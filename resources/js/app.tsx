@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 import PublicLayout from '@/layouts/public-layout';
+import { primeAssetVersion } from '@/lib/assetVersion';
 
 // App name is server-rendered into a <meta> from config('app.name'), so the
 // title shares one APP_NAME source - no build-time copy. SSR-guarded (no DOM in
@@ -38,7 +39,9 @@ createInertiaApp({
     layout: (name) =>
         name === 'test/class-portraits' ? undefined : PublicLayout,
     strictMode: true,
-    withApp(app) {
+    withApp(app, { page }) {
+        primeAssetVersion(page.props.treeAssetVersion);
+
         return (
             <TooltipProvider delayDuration={0}>
                 {app}

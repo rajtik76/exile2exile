@@ -60,6 +60,10 @@ class HandleInertiaRequests extends Middleware
             // tab opened before a swap to a new era can't stamp an old-era build as new.
             'gameEra' => $era,
             'gameEraName' => $eras->nameOf($era),
+            // The same cache-busting stamp the root view prints as a <meta> tag. The
+            // server render has no document to read that tag from, so it takes the
+            // stamp from here and builds the URLs the browser will.
+            'treeAssetVersion' => view()->shared('treeAssetVersion', ''),
         ];
     }
 }

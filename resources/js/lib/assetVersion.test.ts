@@ -35,3 +35,26 @@ test('appends the stamp with the right separator for each url shape', async () =
         '/tree/skills.webp?lod=2&v=abc123',
     );
 });
+
+test('takes a handed-over stamp when there is no version meta', async () => {
+    const { primeAssetVersion, withAssetVersion } =
+        await import('@/lib/assetVersion');
+
+    primeAssetVersion('abc123');
+
+    expect(withAssetVersion('/tree/skills.webp')).toBe(
+        '/tree/skills.webp?v=abc123',
+    );
+});
+
+test('keeps the stamp read from the meta over a handed-over one', async () => {
+    seedVersion('abc123');
+    const { primeAssetVersion, withAssetVersion } =
+        await import('@/lib/assetVersion');
+
+    primeAssetVersion('other');
+
+    expect(withAssetVersion('/tree/skills.webp')).toBe(
+        '/tree/skills.webp?v=abc123',
+    );
+});
