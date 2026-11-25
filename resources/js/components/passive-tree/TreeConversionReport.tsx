@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { gameVersionLabel } from '@/components/build/GameVersion';
-import { INPUT_FONT, PANEL_FONT } from '@/components/passive-tree/chrome';
+import {
+    BAR_GUTTER,
+    ClearGlyph,
+    ICON_SEGMENT,
+    LABEL,
+} from '@/components/passive-tree/chrome';
 import type {
     ChangedNode,
     DroppedNode,
@@ -37,20 +42,14 @@ export function TreeConversionReport({
 
     return (
         <div
-            className="relative z-10 border-b border-[#40331a] bg-[#120c06] px-3 py-3 sm:px-6"
-            style={INPUT_FONT}
+            className={`notice relative z-10 border-t-0 border-r-0 py-3 font-ui ${BAR_GUTTER}`}
             role="status"
         >
             <div className="flex flex-wrap items-start gap-3">
-                <div className="min-w-0 flex-1 text-sm text-[#cdb784]">
-                    <p
-                        className="text-[11px] font-semibold tracking-[0.22em] text-[#b39a64] uppercase"
-                        style={PANEL_FONT}
-                    >
-                        Converted from {version}
-                    </p>
+                <div className="min-w-0 flex-1 text-sm">
+                    <p className={LABEL}>Converted from {version}</p>
                     {report.classMissing ? (
-                        <p className="mt-1 text-[#e0a58f]">
+                        <p className="mt-1 text-blood-lit">
                             The {className} class is not in the current tree, so
                             none of its passives could be carried over.
                         </p>
@@ -65,7 +64,7 @@ export function TreeConversionReport({
                                 : ''}
                         </p>
                     )}
-                    <p className="mt-1 text-[#8a7850]">
+                    <p className="mt-1 text-mist">
                         This is a new copy; the original stays as it was. Check
                         the tree and save it to get a new link.
                     </p>
@@ -77,8 +76,7 @@ export function TreeConversionReport({
                             type="button"
                             onClick={() => setOpen((value) => !value)}
                             aria-expanded={open}
-                            className="rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#ecc878] uppercase transition-colors hover:bg-[#f0c869]/12 focus-visible:bg-[#f0c869]/12 focus-visible:outline-none"
-                            style={{ border: '1px solid rgba(199,154,63,0.6)' }}
+                            className="btn btn-sm btn-iron"
                         >
                             {open ? 'Hide details' : 'Details'}
                         </button>
@@ -87,9 +85,9 @@ export function TreeConversionReport({
                         type="button"
                         onClick={() => setDismissed(true)}
                         aria-label="Dismiss the conversion report"
-                        className="grid size-8 place-items-center rounded-full text-[#b39a64] transition-colors hover:bg-[#f0c869]/12 hover:text-[#ecc878] focus-visible:bg-[#f0c869]/12 focus-visible:outline-none"
+                        className={ICON_SEGMENT}
                     >
-                        ×
+                        <ClearGlyph />
                     </button>
                 </div>
             </div>
@@ -114,16 +112,14 @@ export function TreeConversionReport({
 function ChangedList({ nodes }: { nodes: ChangedNode[] }) {
     return (
         <section>
-            <h3 className="text-xs font-semibold tracking-[0.14em] text-[#b39a64] uppercase">
-                Changed ({nodes.length})
-            </h3>
+            <h3 className={LABEL}>Changed ({nodes.length})</h3>
             <ul className="mt-1.5 space-y-2">
                 {nodes.map((node) => (
                     <li key={node.id}>
-                        <p className="text-[#ffe6a8]">
+                        <p className="text-paper">
                             {node.name}
                             {node.previousName !== node.name ? (
-                                <span className="text-[#8a7850]">
+                                <span className="text-mist">
                                     {' '}
                                     (was {node.previousName})
                                 </span>
@@ -131,12 +127,9 @@ function ChangedList({ nodes }: { nodes: ChangedNode[] }) {
                         </p>
                         <StatLines
                             lines={node.before}
-                            className="text-[#8a7850] line-through"
+                            className="text-mist line-through"
                         />
-                        <StatLines
-                            lines={node.after}
-                            className="text-[#cdb784]"
-                        />
+                        <StatLines lines={node.after} className="text-bone" />
                     </li>
                 ))}
             </ul>
@@ -152,7 +145,7 @@ function StatLines({
     className: string;
 }) {
     return lines.map((line, index) => (
-        <p key={index} className={`text-xs ${className}`}>
+        <p key={index} className={`text-[13px] ${className}`}>
             {line}
         </p>
     ));
@@ -167,10 +160,10 @@ function DroppedList({
 }) {
     return (
         <section>
-            <h3 className="text-xs font-semibold tracking-[0.14em] text-[#b39a64] uppercase">
+            <h3 className={LABEL}>
                 {title} ({nodes.length})
             </h3>
-            <ul className="mt-1.5 space-y-0.5 text-[#cdb784]">
+            <ul className="mt-1.5 space-y-0.5 text-bone">
                 {nodes.map((node) => (
                     <li key={node.id}>{node.name}</li>
                 ))}

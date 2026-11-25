@@ -268,7 +268,7 @@ export function NodeTooltip({
                             <button
                                 type="button"
                                 onClick={pick.onClear}
-                                className="mt-0.5 w-full rounded-[3px] border border-[#46454d] px-2.5 py-1 text-center text-xs font-semibold tracking-[0.16em] text-[#a7acb8] uppercase transition-all hover:bg-[#a7acb8] hover:text-[#0a0a0a]"
+                                className="mt-0.5 w-full rounded-[2px] border border-pewter-700 px-2.5 py-1 text-center font-ui text-[13px] font-semibold text-slate transition-colors duration-[120ms] hover:border-ember-400 hover:text-ember-300"
                             >
                                 Clear path
                             </button>
@@ -276,7 +276,7 @@ export function NodeTooltip({
                     </div>
                 ) : (
                     allocated && (
-                        <div className="mt-1.5 text-xs tracking-[0.16em] text-[#6f9f8f] uppercase">
+                        <div className="mt-1.5 font-label text-[15px] tracking-[0.06em] text-verdigris">
                             Allocated
                         </div>
                     )

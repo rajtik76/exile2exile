@@ -30,7 +30,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer';
 import { centreSprites } from '@/lib/classCatalog';
 import { useTreeData } from '@/lib/useTreeData';
-import { PANEL_FONT, PLAQUE } from './chrome';
+import { FOCUS_RING, PLAQUE } from './chrome';
 import { searchTreeNodes } from './nodeSearch';
 import { NodeTooltip } from './nodeTooltip';
 import { notifyPointLimit } from './pointLimitToast';
@@ -57,12 +57,12 @@ const EMPTY_WEAPON_SETS: Record<number, WeaponSet> = {};
 const TREE_VERSION = '0_5';
 
 /**
- * Gold search-highlight rings with a stronger pulse than the renderer default -
+ * Ember search-highlight rings with a stronger pulse than the renderer default -
  * a wider, faster, higher-contrast throb so name-search hits pop on the busy tree.
  */
 const SEARCH_HIGHLIGHT_STYLE: HighlightStyle = {
-    glowColor: 0xc9a24a,
-    coreColor: 0xffe9a8,
+    glowColor: 0xff6a00,
+    coreColor: 0xffba86,
     glowWidth: 8,
     coreWidth: 3,
     radius: 2,
@@ -949,7 +949,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                           // flex-1 panel) and hands it down via `className`, in
                           // both modes - read-only never wants a fixed aspect
                           // ratio shrinking the canvas inside a taller box.
-                          'relative h-full overflow-hidden border border-[#2c313d] bg-[#0a0a10]'
+                          'relative h-full overflow-hidden border border-line bg-void'
                 }
             >
                 {/* On-canvas controls. On mobile the search box and budget bar
@@ -957,10 +957,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                     and the zoom rail stay out so they're always one tap away. On
                     desktop everything is an inline row. Chrome flags
                     ({@link onBeforeFullscreen}) gate search and the budgets. */}
-                <div
-                    className="passive-tree-toolbar absolute top-4 right-2 left-2 z-10 flex flex-wrap items-center justify-end gap-2 sm:right-4 sm:left-4"
-                    style={PANEL_FONT}
-                >
+                <div className="absolute top-4 right-2 left-2 z-10 flex flex-wrap items-center justify-end gap-2 font-ui sm:right-4 sm:left-4">
                     {clearBar}
 
                     {hasFoldedTools && (
@@ -968,7 +965,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                             type="button"
                             onClick={() => setToolsOpen((open) => !open)}
                             aria-expanded={toolsOpen}
-                            className={`flex h-10 items-center gap-1.5 px-3 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:text-[#a7b7ff] sm:hidden ${PLAQUE}`}
+                            className={`flex h-10 items-center gap-1.5 px-3 text-[13px] font-semibold text-slate transition-colors duration-[120ms] hover:text-paper aria-expanded:border-ember-400 aria-expanded:text-paper sm:hidden ${PLAQUE} ${FOCUS_RING}`}
                         >
                             <ToolsGlyph />
                             Tools
@@ -1037,7 +1034,7 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                     />
                 ) : (
                     <div className="grid h-full place-items-center">
-                        <p className="text-sm text-[#929caf] italic">
+                        <p className="font-ui text-sm text-mist">
                             {error
                                 ? `Failed to load tree: ${error}`
                                 : 'Loading tree…'}

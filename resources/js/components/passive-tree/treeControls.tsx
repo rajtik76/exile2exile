@@ -1,13 +1,26 @@
 import type { AllocMode, WeaponSet } from '@poe2-toolkit/tree-core';
 import { DEFAULT_TREE_COLORS } from '@poe2-toolkit/tree-react';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import {
+    CircleHelp,
+    Maximize,
+    Minimize,
+    Minus,
+    Plus,
+    Search,
+    SlidersHorizontal,
+} from 'lucide-react';
 import { useState } from 'react';
-import type { CSSProperties } from 'react';
+import { COLOR } from '@/components/brand';
 import {
     ClearGlyph,
     Divider,
+    FIELD_ICON_BUTTON,
+    FIELD_INPUT,
+    FOCUS_RING,
     ICON_SEGMENT,
-    PANEL_FONT,
+    ICON_STROKE,
+    LABEL,
     PLAQUE,
 } from './chrome';
 import { hexColor } from './treeBudgets';
@@ -15,8 +28,8 @@ import { hexColor } from './treeBudgets';
 /**
  * Weapon-set accent colours, derived from the renderer's default set tints (set
  * I red, set II green, the in-game colours) so the counters and paint toggle
- * always read as the same sets drawn on the tree. The basic tree keeps the gold
- * chrome.
+ * always read as the same sets drawn on the tree. The basic tree reads in the
+ * plain text colour.
  */
 export const WEAPON_SET_HEX: Record<WeaponSet, string> = {
     1: hexColor(DEFAULT_TREE_COLORS.weaponSet[1]),
@@ -24,13 +37,13 @@ export const WEAPON_SET_HEX: Record<WeaponSet, string> = {
 };
 
 /**
- * Gauge tint for the ascendancy budget - a violet, distinct from the gold basic
- * gauge and the weapon-set red/green, so the four budgets read as one family.
+ * Tint for the ascendancy budget - a violet, distinct from the plain basic
+ * count and the weapon-set red/green, so the four budgets read as one family.
  */
 const ASCENDANCY_HEX = '#b48ce0';
 
 /**
- * Node search over names and stat lines, in the same bronze {@link PLAQUE}
+ * Node search over names and stat lines, in the same {@link PLAQUE}
  * shell as the rest of the rail. Typing highlights matches live on the tree;
  * Enter frames them. The match count reads out at the end.
  */
@@ -50,9 +63,14 @@ export function SearchBox({
     return (
         <div className="relative min-w-[12rem] flex-1 md:w-80 md:flex-none">
             <div
-                className={`flex h-10 items-center gap-1 pr-1 pl-3.5 transition-colors focus-within:border-[#8098ff] ${PLAQUE}`}
+                className={`flex h-10 items-center gap-1 pr-1 pl-3 transition-colors duration-[120ms] focus-within:border-ember-400 ${PLAQUE}`}
             >
-                <SearchGlyph />
+                <Search
+                    size={15}
+                    strokeWidth={ICON_STROKE}
+                    className="mr-1 shrink-0 text-mist"
+                    aria-hidden="true"
+                />
                 <input
                     type="text"
                     name="node-search"
@@ -67,8 +85,7 @@ export function SearchBox({
                     placeholder="Search name or stat…"
                     aria-label="Search passive nodes by name or stat"
                     spellCheck={false}
-                    style={PANEL_FONT}
-                    className="h-full min-w-0 flex-1 bg-transparent text-base font-medium tracking-wide text-[#e8ebf4] outline-none placeholder:text-sm placeholder:text-[#929caf]"
+                    className={FIELD_INPUT}
                 />
                 {value !== '' && (
                     <button
@@ -76,16 +93,16 @@ export function SearchBox({
                         onClick={() => onValue('')}
                         title="Clear search"
                         aria-label="Clear search"
-                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none"
+                        className={FIELD_ICON_BUTTON}
                     >
                         <ClearGlyph />
                     </button>
                 )}
                 <SearchHint />
                 <Divider />
-                <span className="shrink-0 px-2 text-base font-medium tracking-wide text-[#e8ebf4] tabular-nums">
+                <span className="shrink-0 px-2 text-sm font-medium text-paper tabular-nums">
                     {matchCount}
-                    <span className="text-[#a7b7ff]">
+                    <span className="text-mist">
                         {matchCount === 1 ? ' hit' : ' hits'}
                     </span>
                 </span>
@@ -103,11 +120,10 @@ const SEARCH_EXAMPLES: { query: string; effect: string }[] = [
 ];
 
 /**
- * Regex support is invisible without this. Only the trigger wears the rail's
- * bronze; the panel is plain white on near-black, because a pattern has to be
- * legible character by character. Radix runs through its primitives to set
- * those colours directly, and the panel outranks the fullscreen canvas
- * (`z-[120]`).
+ * Regex support is invisible without this. The panel keeps the lightest text
+ * on a plain dark field, because a pattern has to be legible character by
+ * character. Radix runs through its primitives to set those colours directly,
+ * and the panel outranks the fullscreen canvas (`z-[120]`).
  */
 function SearchHint() {
     const [open, setOpen] = useState(false);
@@ -141,9 +157,13 @@ function SearchHint() {
                             event.preventDefault();
                         }}
                         aria-label="Search syntax"
-                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none data-[state=delayed-open]:text-[#a7b7ff] data-[state=instant-open]:text-[#a7b7ff]"
+                        className={`${FIELD_ICON_BUTTON} data-[state=delayed-open]:text-ember-400 data-[state=instant-open]:text-ember-400`}
                     >
-                        <HintGlyph />
+                        <CircleHelp
+                            size={15}
+                            strokeWidth={ICON_STROKE}
+                            aria-hidden="true"
+                        />
                     </button>
                 </TooltipPrimitive.Trigger>
                 <TooltipPrimitive.Portal>
@@ -152,7 +172,7 @@ function SearchHint() {
                         align="end"
                         sideOffset={16}
                         collisionPadding={12}
-                        className="z-[200] max-w-[min(27rem,calc(100vw-1.5rem))] rounded-lg border border-white/15 bg-[#101215] px-4 py-3.5 font-sans text-[13px]/[1.5] text-white shadow-xl shadow-black/60"
+                        className="z-[200] max-w-[min(27rem,calc(100vw-1.5rem))] rounded-[2px] border border-line-strong bg-stone-700 px-4 py-3.5 font-ui text-[13px]/[1.5] text-paper shadow-xl shadow-black/60"
                     >
                         <p>
                             Matches a node name or a stat line. Add regex
@@ -160,11 +180,11 @@ function SearchHint() {
                         </p>
                         <table className="mt-3 w-full border-collapse text-left">
                             <thead>
-                                <tr className="border-b border-white/30">
-                                    <th className="border-r border-white/15 py-1.5 pr-3 font-semibold">
+                                <tr className="border-b border-pewter-700 text-slate">
+                                    <th className="border-r border-line-strong py-1.5 pr-3 font-medium">
                                         Example
                                     </th>
-                                    <th className="py-1.5 pl-3 font-semibold">
+                                    <th className="py-1.5 pl-3 font-medium">
                                         Matches
                                     </th>
                                 </tr>
@@ -173,12 +193,12 @@ function SearchHint() {
                                 {SEARCH_EXAMPLES.map(({ query, effect }) => (
                                     <tr
                                         key={query}
-                                        className="border-b border-white/15 last:border-b-0"
+                                        className="border-b border-line-strong last:border-b-0"
                                     >
-                                        <td className="border-r border-white/15 py-1.5 pr-3 font-mono whitespace-nowrap text-[#4ade80]">
+                                        <td className="border-r border-line-strong py-1.5 pr-3 font-mono whitespace-nowrap">
                                             {query}
                                         </td>
-                                        <td className="py-1.5 pl-3">
+                                        <td className="py-1.5 pl-3 text-bone">
                                             {effect}
                                         </td>
                                     </tr>
@@ -196,32 +216,12 @@ function SearchHint() {
     );
 }
 
-/** Opens the search syntax hint. */
-function HintGlyph() {
-    return (
-        <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-        >
-            <circle cx="12" cy="12" r="9.25" />
-            <path d="M9.4 9.2a2.7 2.7 0 0 1 5.2.9c0 1.8-2.6 2.2-2.6 3.9" />
-            <path d="M12 17.4h.01" />
-        </svg>
-    );
-}
-
 /**
  * The point budgets in one compact plaque, doubling as the paint toggle: each
  * segment is a budget (Basic, Weapon set I/II) showing its `used/limit`, coloured
  * in its mode tint. While editing the segments are radio buttons picking the
- * paint target (the active one glows filled); read-only they just read out.
+ * paint target (the active one carries the ember underline); read-only they
+ * just read out.
  * Ascendancy, which isn't a paint mode, is appended as a static count. No ring
  * gauges - the numbers carry the read-out, so the bar fits a phone.
  */
@@ -253,7 +253,7 @@ export function BudgetBar({
         {
             value: 0,
             label: 'Basic',
-            color: '#8098ff',
+            color: COLOR.paper,
             used: basic,
             limit: basicLimit,
         },
@@ -282,24 +282,19 @@ export function BudgetBar({
         label: string,
         used: number,
         limit: number,
-        active: boolean,
     ): React.JSX.Element => (
         <span className="flex items-baseline gap-1.5">
             <span>{label}</span>
             <span
-                className="tabular-nums"
-                style={{
-                    color: active
-                        ? '#12141b'
-                        : used > limit
-                          ? '#e0a04f'
-                          : '#e8ebf4',
-                }}
+                className={`tabular-nums ${used > limit ? 'text-blood-lit' : 'text-paper'}`}
             >
                 {used}/{limit}
             </span>
         </span>
     );
+
+    const segmentShape =
+        'flex h-8 items-center rounded-[2px] px-2.5 text-sm font-semibold';
 
     return (
         <div
@@ -307,48 +302,35 @@ export function BudgetBar({
             role={onMode ? 'radiogroup' : undefined}
             aria-label="Point budgets"
         >
-            <span className="pl-2 text-[11px] font-semibold tracking-[0.14em] text-[#929caf] uppercase">
-                Points
-            </span>
+            <span className={`pl-2 ${LABEL}`}>Points</span>
             <Divider />
             <div className="flex items-center gap-0.5">
                 {segments.map((segment) => {
-                    const active = mode === segment.value;
-                    const className =
-                        'flex h-7 items-center rounded-lg px-2.5 text-sm font-semibold tracking-wide transition-colors';
-                    const style: CSSProperties = active
-                        ? { color: '#12141b', background: segment.color }
-                        : { color: segment.color };
+                    const label = segmentLabel(
+                        segment.label,
+                        segment.used,
+                        segment.limit,
+                    );
 
                     return onMode ? (
                         <button
                             key={segment.value}
                             type="button"
                             role="radio"
-                            aria-checked={active}
+                            aria-checked={mode === segment.value}
                             onClick={() => onMode(segment.value)}
-                            className={className}
-                            style={style}
+                            className={`${segmentShape} transition-colors duration-[120ms] hover:bg-stone-800 aria-checked:bg-stone-700 aria-checked:shadow-[inset_0_-2px_0_var(--color-ember-500)] ${FOCUS_RING}`}
+                            style={{ color: segment.color }}
                         >
-                            {segmentLabel(
-                                segment.label,
-                                segment.used,
-                                segment.limit,
-                                active,
-                            )}
+                            {label}
                         </button>
                     ) : (
                         <span
                             key={segment.value}
-                            className={className}
-                            style={style}
+                            className={segmentShape}
+                            style={{ color: segment.color }}
                         >
-                            {segmentLabel(
-                                segment.label,
-                                segment.used,
-                                segment.limit,
-                                active,
-                            )}
+                            {label}
                         </span>
                     );
                 })}
@@ -357,7 +339,7 @@ export function BudgetBar({
                     <>
                         <Divider />
                         <span
-                            className="flex h-7 items-center rounded-lg px-2.5 text-sm font-semibold tracking-wide"
+                            className={segmentShape}
                             style={{ color: ASCENDANCY_HEX }}
                             aria-label="Ascendancy points"
                         >
@@ -365,7 +347,6 @@ export function BudgetBar({
                                 'Asc',
                                 ascendancy.used,
                                 ascendancy.limit,
-                                false,
                             )}
                         </span>
                     </>
@@ -376,8 +357,8 @@ export function BudgetBar({
 }
 
 /**
- * Wipe-the-whole-build button, in the same bronze plaque as the rest of the
- * canvas chrome. Clears every allocated node - basic, both weapon sets and the
+ * Wipe-the-whole-build button, in the same plaque as the rest of the canvas
+ * chrome. Clears every allocated node - basic, both weapon sets and the
  * ascendancy - in one click.
  */
 export function ClearBuildButton({ onClear }: { onClear: () => void }) {
@@ -388,7 +369,7 @@ export function ClearBuildButton({ onClear }: { onClear: () => void }) {
                 onClick={onClear}
                 title="Clear the whole build"
                 aria-label="Clear the whole build"
-                className="flex h-8 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#eb6060]/15 hover:text-[#eb6060] focus-visible:bg-[#eb6060]/15 focus-visible:text-[#eb6060] focus-visible:outline-none"
+                className={`flex h-8 items-center gap-1.5 rounded-[2px] px-3 text-[13px] font-semibold text-slate transition-colors duration-[120ms] hover:bg-blood/15 hover:text-blood-lit ${FOCUS_RING}`}
             >
                 <ClearGlyph />
                 Clear
@@ -398,7 +379,7 @@ export function ClearBuildButton({ onClear }: { onClear: () => void }) {
 }
 
 /**
- * Zoom + fullscreen as one engraved bar. View-only, both modes. Renders just the
+ * Zoom + fullscreen as one bar. View-only, both modes. Renders just the
  * plaque; the caller positions it.
  */
 export function ZoomBar({
@@ -419,18 +400,18 @@ export function ZoomBar({
                 onClick={onZoomIn}
                 title="Zoom in"
                 aria-label="Zoom in"
-                className={`${ICON_SEGMENT} text-lg leading-none`}
+                className={ICON_SEGMENT}
             >
-                +
+                <Plus size={16} strokeWidth={ICON_STROKE} aria-hidden="true" />
             </button>
             <button
                 type="button"
                 onClick={onZoomOut}
                 title="Zoom out"
                 aria-label="Zoom out"
-                className={`${ICON_SEGMENT} text-lg leading-none`}
+                className={ICON_SEGMENT}
             >
-                −
+                <Minus size={16} strokeWidth={ICON_STROKE} aria-hidden="true" />
             </button>
             <Divider />
             <button
@@ -446,68 +427,20 @@ export function ZoomBar({
     );
 }
 
-/** Magnifier glyph for the node search. */
-function SearchGlyph() {
-    return (
-        <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="shrink-0 text-[#929caf]"
-            aria-hidden="true"
-        >
-            <circle cx="11" cy="11" r="7" />
-            <path d="M21 21l-4.3-4.3" />
-        </svg>
-    );
-}
-
 /** Sliders glyph for the mobile "Tools" toggle. */
 export function ToolsGlyph() {
     return (
-        <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <SlidersHorizontal
+            size={15}
+            strokeWidth={ICON_STROKE}
             className="shrink-0"
             aria-hidden="true"
-        >
-            <path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0" />
-            <circle cx="16" cy="6" r="2" />
-            <circle cx="8" cy="12" r="2" />
-            <circle cx="18" cy="18" r="2" />
-        </svg>
+        />
     );
 }
 
 function FullscreenIcon({ active }: { active: boolean }) {
-    return (
-        <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-        >
-            {active ? (
-                <path d="M9 3v3a3 3 0 0 1-3 3H3m18 0h-3a3 3 0 0 1-3-3V3M3 15h3a3 3 0 0 1 3 3v3m6 0v-3a3 3 0 0 1 3-3h3" />
-            ) : (
-                <path d="M3 9V5a2 2 0 0 1 2-2h4M21 9V5a2 2 0 0 0-2-2h-4M3 15v4a2 2 0 0 0 2 2h4m12-6v4a2 2 0 0 1-2 2h-4" />
-            )}
-        </svg>
-    );
+    const Icon = active ? Minimize : Maximize;
+
+    return <Icon size={15} strokeWidth={ICON_STROKE} aria-hidden="true" />;
 }

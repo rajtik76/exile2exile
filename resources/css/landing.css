@@ -5,7 +5,7 @@
  */
 
 .landing {
-    --head-h: clamp(56px, 4.7vw, 82px);
+    --head-h: var(--masthead-h);
     --paper: #f3eadc;
     --slate: #b4c3d4;
     color: var(--paper);

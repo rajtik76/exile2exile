@@ -305,9 +305,11 @@
     --sidebar-ring: #ff9a4d;
 }
 
-/* Shared shapes: the pewter rule under the masthead and above panels, and the
-   chamfer cut of the copper button. */
+/* Shared shapes: the pewter rule under the masthead and above panels, the
+   chamfer cut of the copper button, and the masthead height that full-height
+   tools subtract from the viewport. */
 :root {
+    --masthead-h: clamp(56px, 4.7vw, 82px);
     --rule-pewter: linear-gradient(
         90deg,
         transparent,
@@ -477,6 +479,104 @@
     .link:focus-visible {
         outline: 2px solid var(--color-ember-400);
         outline-offset: 2px;
+    }
+}
+
+/* Surfaces and fields of the working tier: flat stone, a line border and one
+   pewter rule on top. A dialog is the floating version of a panel. */
+@layer components {
+    .panel,
+    .dialog {
+        position: relative;
+        border: 1px solid var(--color-line);
+        background: var(--color-stone-900);
+    }
+
+    .panel::before,
+    .dialog::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        right: -1px;
+        left: -1px;
+        height: 1px;
+        background: var(--rule-pewter);
+    }
+
+    .dialog {
+        border-color: var(--color-pewter-700);
+        box-shadow: 0 30px 80px -20px #000;
+    }
+
+    .dialog::before {
+        height: 2px;
+    }
+
+    .panel-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--color-line);
+        color: var(--color-paper);
+        font-family: var(--font-label);
+        font-size: 17px;
+        letter-spacing: 0.06em;
+    }
+
+    .panel-head::before {
+        content: '';
+        flex: none;
+        width: 7px;
+        height: 7px;
+        transform: rotate(45deg);
+        background: var(--color-pewter-500);
+    }
+
+    .input {
+        width: 100%;
+        height: 36px;
+        padding: 8px 12px;
+        border: 1px solid var(--color-line);
+        border-radius: 2px;
+        outline: 0;
+        background: var(--color-void);
+        color: var(--color-paper);
+        font-family: var(--font-ui);
+        font-size: 15px;
+        transition:
+            border-color 120ms,
+            box-shadow 120ms;
+    }
+
+    .input::placeholder {
+        color: var(--color-mist);
+    }
+
+    .input:hover {
+        border-color: var(--color-line-strong);
+    }
+
+    .input:focus {
+        border-color: var(--color-ember-400);
+        box-shadow: 0 0 0 3px rgba(255, 154, 77, 0.22);
+    }
+
+    /* A message with a coloured left edge: ember by default, blood for a
+       problem, verdigris for done. */
+    .notice {
+        border: 1px solid var(--color-line);
+        border-left: 3px solid var(--color-ember-500);
+        background: var(--color-stone-800);
+        color: var(--color-bone);
+    }
+
+    .notice-bad {
+        border-left-color: var(--color-blood);
+    }
+
+    .notice-ok {
+        border-left-color: var(--color-verdigris);
     }
 }
 
@@ -957,69 +1057,4 @@
     .pl-waypoint-ping {
         display: none;
     }
-}
-
-/* Passive-tree controls share the build planner's slate surfaces and type. */
-.tree-planner-bar .tree-version-badge {
-    order: -1;
-    width: 100%;
-    justify-content: flex-start;
-    padding: 0;
-    border: 0 !important;
-    color: #a7b7ff;
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
-}
-
-.tree-planner-bar input,
-.passive-tree-toolbar input {
-    font-size: 0.875rem;
-    letter-spacing: normal;
-}
-
-.tree-save-button {
-    border-radius: 8px;
-    background: #8098ff;
-    color: #101424;
-}
-
-.tree-save-button:hover:not(:disabled),
-.tree-save-button:focus-visible:not(:disabled) {
-    background: #a7b7ff;
-    color: #101424;
-}
-
-.tree-save-button:disabled {
-    background: #30394f;
-    color: #9ba8ca;
-}
-
-@media (max-width: 639px) {
-    .tree-importer > div {
-        height: auto;
-        flex-wrap: wrap;
-        padding: 0.5rem;
-    }
-
-    .tree-importer input {
-        height: 2rem;
-        min-height: 2rem;
-        flex-basis: calc(100% - 2rem);
-    }
-
-    .tree-importer > div > span[aria-hidden='true'] {
-        display: none;
-    }
-
-    .tree-importer > div > button:not([aria-label]) {
-        flex: 1;
-    }
-}
-
-.tree-shared-version {
-    height: 2.25rem;
-    border: 1px solid #343a4a !important;
-    border-radius: 8px;
-    background: #1b1e28;
-    color: #a7b7ff;
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
 }

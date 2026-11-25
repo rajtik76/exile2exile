@@ -40,6 +40,16 @@ function useIsLanding(): boolean {
     return usePage().url.split(/[?#]/)[0] === home.url();
 }
 
+/**
+ * True on pages that carry their own copper action (save, unlock). Copper is
+ * one per screen, so the masthead's "Build planner" turns iron there.
+ */
+function useHasOwnMainAction(): boolean {
+    const { component } = usePage();
+
+    return component === 'tree' || component === 'tree/unlock';
+}
+
 /** On the landing, cap a full-width band at 2240px and fade its edges beyond. */
 const LANDING_CAP =
     'min-[821px]:mx-auto min-[821px]:w-full min-[821px]:max-w-[2240px] min-[2241px]:[mask-image:linear-gradient(90deg,transparent,black_2.5%,black_97.5%,transparent)]';
@@ -304,7 +314,15 @@ function TopBar({ landing }: { landing: boolean }) {
     // Close the mobile menu whenever a navigation starts (link followed, CTA fired).
     useEffect(() => router.on('start', () => setMenuOpen(false)), []);
 
-    const cta = <PrimaryCta href="/build-planner">Build planner</PrimaryCta>;
+    const ownMainAction = useHasOwnMainAction();
+
+    const cta = ownMainAction ? (
+        <Link href="/build-planner" className="btn btn-iron">
+            Build planner
+        </Link>
+    ) : (
+        <PrimaryCta href="/build-planner">Build planner</PrimaryCta>
+    );
 
     return (
         <header
@@ -315,7 +333,7 @@ function TopBar({ landing }: { landing: boolean }) {
                     : 'linear-gradient(90deg, #060a0f, #0d1722)',
             }}
         >
-            <div className="flex min-h-[clamp(56px,4.7vw,82px)] items-center gap-4 px-[min(3.4%,76px)] max-[820px]:px-[6%]">
+            <div className="flex min-h-[var(--masthead-h)] items-center gap-4 px-[min(3.4%,76px)] max-[820px]:px-[6%]">
                 <Link
                     href="/"
                     aria-label="Exile to Exile home"

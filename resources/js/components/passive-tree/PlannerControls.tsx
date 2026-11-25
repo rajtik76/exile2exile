@@ -1,9 +1,19 @@
 import type { AscendancyDef, ClassDef } from '@poe2-toolkit/tree-core';
+import { ChevronDown, Link2, Lock } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { ClassPortrait, classPortrait } from '@/components/build/classPortrait';
 import { GameVersionBadge } from '@/components/build/GameVersion';
 import TreeSharePanel from '@/components/passive-tree/TreeSharePanel';
-import { ClearGlyph, Divider, PANEL_FONT, PLAQUE } from './chrome';
+import {
+    BAR_GUTTER,
+    ClearGlyph,
+    FIELD_ERROR,
+    FIELD_ICON_BUTTON,
+    FIELD_INPUT,
+    FIELD_SHELL,
+    FOCUS_RING,
+    ICON_STROKE,
+    Medallion,
+} from './chrome';
 
 /**
  * The planner's control bar, sitting above the tree on the /tree page: the
@@ -76,8 +86,7 @@ export function PlannerControls({
     // instead of being painted over by it.
     return (
         <div
-            className="tree-planner-bar relative z-20 flex w-full flex-wrap items-stretch gap-3 border-b border-[#303544] bg-[#11131b] px-3 py-4 sm:gap-3 sm:px-6 lg:px-12"
-            style={PANEL_FONT}
+            className={`relative z-20 flex w-full flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-line bg-stone-900 py-3 font-ui text-paper ${BAR_GUTTER}`}
         >
             <PlannerPanel
                 classes={classes}
@@ -88,7 +97,7 @@ export function PlannerControls({
                 onSelectAscendancy={onSelectAscendancy}
                 locked={locked}
             />
-            <GameVersionBadge className="tree-version-badge" />
+            <GameVersionBadge className="order-first w-full" />
             {mode === 'create' ? (
                 <BuildImporter
                     code={code}
@@ -150,32 +159,29 @@ function EditorActions({
     onTogglePanel: () => void;
 }) {
     return (
-        <div className="ml-auto flex items-center">
-            <div
-                className={`flex h-full items-center gap-1 px-1 py-1 ${PLAQUE}`}
+        <div className="ml-auto flex items-center gap-2">
+            <button
+                type="button"
+                onClick={onTogglePanel}
+                aria-expanded={panelOpen}
+                title="Public link, edit link and token"
+                className="btn btn-iron aria-expanded:border-ember-400 aria-expanded:text-ember-300"
             >
-                <button
-                    type="button"
-                    onClick={onTogglePanel}
-                    aria-expanded={panelOpen}
-                    title="Public link, edit link and token"
-                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#8098ff]/12 hover:text-[#a7b7ff] focus-visible:bg-[#8098ff]/12 focus-visible:text-[#a7b7ff] focus-visible:outline-none"
-                >
-                    Links
-                </button>
-                <Divider />
-                <button
-                    type="button"
-                    onClick={onSave}
-                    disabled={saving || !canSave || (!dirty && !saveError)}
-                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#8098ff]/22 hover:text-[#d4ddff] focus-visible:bg-[#8098ff]/22 focus-visible:text-[#d4ddff] focus-visible:outline-none disabled:text-[#697183] disabled:hover:bg-transparent"
-                >
-                    {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save changes'}
-                </button>
-            </div>
+                Links
+            </button>
+            <button
+                type="button"
+                onClick={onSave}
+                disabled={saving || !canSave || (!dirty && !saveError)}
+                className="btn btn-copper"
+            >
+                {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save changes'}
+            </button>
 
             {saveError && (
-                <p className="absolute top-full right-3.5 z-30 mt-1 rounded-full bg-[#1a0c0c]/80 px-3 py-1 text-xs text-[#e07a7a]">
+                <p
+                    className={`${FIELD_ERROR} right-[6%] min-[821px]:right-[min(3.4%,76px)]`}
+                >
                     {saveError}
                 </p>
             )}
@@ -183,21 +189,22 @@ function EditorActions({
     );
 }
 
-/** The planner panel: class + ascendancy pickers in a row. */
-const SIGIL_BAR = `flex items-center gap-0.5 ${PLAQUE}`;
+/** The joined shell of the class and ascendancy pickers. */
+const PICKER_SHELL =
+    'flex h-9 items-stretch rounded-[2px] border border-line bg-void';
 
-/** An interactive picker segment inside the sigil-bar. */
+/** An interactive picker segment inside the shell. */
 const SEGMENT =
-    'group flex items-center gap-2 rounded-full py-1 pr-2.5 pl-1 text-left transition-colors hover:bg-[#8098ff]/8 focus-visible:bg-[#8098ff]/10 focus-visible:outline-none';
+    'group flex h-full items-center gap-2 pr-2.5 pl-1.5 text-left text-sm font-medium text-paper transition-colors duration-[120ms] hover:bg-stone-800';
 
 /** Locked segment: reads out the import's choice, no hover, can't open. */
 const SEGMENT_LOCKED =
-    'flex items-center gap-2 rounded-full py-1 pr-2.5 pl-1 text-left opacity-90';
+    'flex h-full items-center gap-2 pr-2.5 pl-1.5 text-left text-sm font-medium text-bone';
 
 /**
  * The build importer: paste a PoB code or pobb.in link to read its allocation
- * in. It wears the same bronze {@link PLAQUE} shell as the pickers and stretches
- * to fill the rest of the bar. Save & share persists the tree - the server
+ * in. The field stretches to fill the rest of the bar; on a phone it takes its
+ * own row above the two buttons. Save & share persists the tree - the server
  * answers by redirecting into the edit page with the fresh public link, edit
  * link and token in its panel.
  */
@@ -223,11 +230,16 @@ function BuildImporter({
     saveError: string | null;
 }) {
     return (
-        <div className="tree-importer relative w-full md:w-auto md:min-w-0 md:flex-1">
+        <div className="relative flex w-full flex-wrap items-center gap-2 md:w-auto md:min-w-0 md:flex-1 md:flex-nowrap">
             <div
-                className={`flex h-full items-center gap-1 py-1 pr-1 pl-3.5 transition-colors focus-within:border-[#8098ff] ${PLAQUE}`}
+                className={`flex h-9 min-w-0 basis-full items-center gap-2 pr-1.5 pl-3 md:flex-1 md:basis-auto ${FIELD_SHELL}`}
             >
-                <LinkGlyph />
+                <Link2
+                    size={15}
+                    strokeWidth={ICON_STROKE}
+                    className="shrink-0 text-mist"
+                    aria-hidden="true"
+                />
                 <input
                     value={code}
                     onChange={(event) => onCode(event.target.value)}
@@ -238,8 +250,7 @@ function BuildImporter({
                     }}
                     placeholder="Paste a Path of Building 2 code or pobb.in link…"
                     spellCheck={false}
-                    style={PANEL_FONT}
-                    className="h-full min-w-0 flex-1 bg-transparent text-base font-medium tracking-wide text-[#e8ebf4] outline-none placeholder:text-sm placeholder:text-[#929caf]"
+                    className={FIELD_INPUT}
                 />
                 {code !== '' && (
                     <button
@@ -247,49 +258,41 @@ function BuildImporter({
                         onClick={() => onCode('')}
                         title="Clear input"
                         aria-label="Clear input"
-                        className="grid size-5 shrink-0 place-items-center rounded-full text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none"
+                        className={FIELD_ICON_BUTTON}
                     >
                         <ClearGlyph />
                     </button>
                 )}
-                <Divider />
-                <button
-                    type="button"
-                    onClick={onLoad}
-                    disabled={loading || code.trim() === ''}
-                    className="shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#8098ff]/22 hover:text-[#d4ddff] focus-visible:bg-[#8098ff]/22 focus-visible:text-[#d4ddff] focus-visible:outline-none disabled:text-[#697183] disabled:hover:bg-transparent"
-                >
-                    {loading ? 'Reading…' : 'Load build'}
-                </button>
-                <Divider />
-                <button
-                    type="button"
-                    onClick={onSave}
-                    disabled={!canSave || saving}
-                    title="Save this tree and get its public link and edit token"
-                    className="tree-save-button shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-[#a7b7ff] uppercase transition-colors hover:bg-[#8098ff]/22 hover:text-[#d4ddff] focus-visible:bg-[#8098ff]/22 focus-visible:text-[#d4ddff] focus-visible:outline-none disabled:text-[#697183] disabled:hover:bg-transparent"
-                >
-                    {saving ? 'Saving…' : 'Save & share'}
-                </button>
             </div>
+            <button
+                type="button"
+                onClick={onLoad}
+                disabled={loading || code.trim() === ''}
+                className="btn btn-iron flex-1 md:flex-none"
+            >
+                {loading ? 'Reading…' : 'Load build'}
+            </button>
+            <button
+                type="button"
+                onClick={onSave}
+                disabled={!canSave || saving}
+                title="Save this tree and get its public link and edit token"
+                className="btn btn-copper flex-1 md:flex-none"
+            >
+                {saving ? 'Saving…' : 'Save & share'}
+            </button>
 
-            {error && (
-                <p className="absolute top-full left-3.5 mt-1 rounded-full bg-[#1a0c0c]/80 px-3 py-1 text-xs text-[#e07a7a]">
-                    {error}
-                </p>
-            )}
+            {error && <p className={`${FIELD_ERROR} left-0`}>{error}</p>}
 
             {saveError && !error && (
-                <p className="absolute top-full right-3.5 mt-1 rounded-full bg-[#1a0c0c]/80 px-3 py-1 text-xs text-[#e07a7a]">
-                    {saveError}
-                </p>
+                <p className={`${FIELD_ERROR} right-0`}>{saveError}</p>
             )}
         </div>
     );
 }
 
 /**
- * The class and ascendancy pickers in one engraved bar. When `locked` (a build
+ * The class and ascendancy pickers in one joined shell. When `locked` (a build
  * has been imported), both pickers freeze - the import fixes the class and
  * ascendancy, so they read out but no longer open.
  */
@@ -315,7 +318,7 @@ function PlannerPanel({
 
     return (
         <div className="shrink-0">
-            <div className={SIGIL_BAR}>
+            <div className={PICKER_SHELL}>
                 {classes.length > 0 && (
                     <ClassDropdown
                         classes={classes}
@@ -327,7 +330,7 @@ function PlannerPanel({
 
                 {showAscendancy && (
                     <>
-                        <Divider />
+                        <span className="w-px bg-line" aria-hidden="true" />
                         <AscendancyDropdown
                             className={activeClass.name}
                             ascendancies={ascendancies}
@@ -339,44 +342,6 @@ function PlannerPanel({
                 )}
             </div>
         </div>
-    );
-}
-
-/** A circular class/ascendancy medallion in a gold ring. */
-function Medallion({
-    className,
-    ascendancy = null,
-    size = 30,
-}: {
-    className: string;
-    ascendancy?: string | null;
-    size?: number;
-}) {
-    const has = classPortrait(className, ascendancy) !== null;
-
-    return (
-        <span
-            className="grid shrink-0 place-items-center overflow-hidden rounded-full"
-            style={{
-                width: size,
-                height: size,
-                background:
-                    'radial-gradient(circle at 50% 30%, #2a1d0c, #12141b 80%)',
-                boxShadow: 'inset 0 0 0 1.5px rgba(199,154,63,0.55)',
-            }}
-        >
-            {has ? (
-                <ClassPortrait
-                    className={className}
-                    ascendancy={ascendancy}
-                    size={size}
-                />
-            ) : (
-                <span className="text-[11px] text-[#dfe4ee]">
-                    {className.charAt(0).toUpperCase()}
-                </span>
-            )}
-        </span>
     );
 }
 
@@ -402,9 +367,7 @@ function ClassDropdown({
                 title="Locked by the imported build"
             >
                 <Medallion className={active?.name ?? '?'} size={26} />
-                <span className="text-sm font-semibold text-[#e8ebf4]">
-                    {name}
-                </span>
+                <span>{name}</span>
                 <LockGlyph />
             </span>
         );
@@ -416,9 +379,7 @@ function ClassDropdown({
             trigger={
                 <span className={SEGMENT}>
                     <Medallion className={active?.name ?? '?'} size={26} />
-                    <span className="text-sm font-semibold text-[#e8ebf4]">
-                        {name}
-                    </span>
+                    <span>{name}</span>
                     <Chevron />
                 </span>
             }
@@ -434,9 +395,7 @@ function ClassDropdown({
                         }}
                     >
                         <Medallion className={cls.name} size={26} />
-                        <span className="text-sm font-semibold text-[#dfe4ee]">
-                            {cls.name}
-                        </span>
+                        <span>{cls.name}</span>
                     </DropdownItem>
                 ))
             }
@@ -471,9 +430,7 @@ function AscendancyDropdown({
                     ascendancy={current?.name ?? null}
                     size={24}
                 />
-                <span className="text-sm font-medium text-[#e8ebf4]">
-                    {current?.name ?? 'No ascendancy'}
-                </span>
+                <span>{current?.name ?? 'No ascendancy'}</span>
                 <LockGlyph />
             </span>
         );
@@ -489,9 +446,7 @@ function AscendancyDropdown({
                         ascendancy={current?.name ?? null}
                         size={24}
                     />
-                    <span className="text-sm font-medium text-[#e8ebf4]">
-                        {current?.name ?? 'No ascendancy'}
-                    </span>
+                    <span>{current?.name ?? 'No ascendancy'}</span>
                     <Chevron />
                 </span>
             }
@@ -505,10 +460,10 @@ function AscendancyDropdown({
                             close();
                         }}
                     >
-                        <span className="grid size-[26px] place-items-center rounded-full border border-[#4a5268] text-[#929caf]">
+                        <span className="grid size-[26px] place-items-center rounded-full border border-line-strong text-mist">
                             ✕
                         </span>
-                        <span className="text-[#a7b7ff]">No ascendancy</span>
+                        <span>No ascendancy</span>
                     </DropdownItem>
                     {ascendancies.map((asc) => (
                         <DropdownItem
@@ -524,9 +479,7 @@ function AscendancyDropdown({
                                 ascendancy={asc.name}
                                 size={26}
                             />
-                            <span className="text-sm font-semibold text-[#dfe4ee]">
-                                {asc.name}
-                            </span>
+                            <span>{asc.name}</span>
                         </DropdownItem>
                     ))}
                 </>
@@ -577,14 +530,14 @@ function Dropdown({
     }, [open]);
 
     return (
-        <div ref={ref} className="relative">
+        <div ref={ref} className="relative h-full">
             <button
                 type="button"
                 onClick={() => setOpen((on) => !on)}
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-label={label}
-                className="block rounded-full focus-visible:ring-1 focus-visible:ring-[#8098ff]/45 focus-visible:outline-none"
+                className={`block h-full ${FOCUS_RING}`}
             >
                 {trigger}
             </button>
@@ -592,7 +545,7 @@ function Dropdown({
             {open && (
                 <div
                     role="listbox"
-                    className="absolute top-full left-0 z-30 mt-1.5 max-h-72 min-w-[12rem] overflow-auto rounded-xl border border-[#343a4a] bg-[#1b1e28] p-1 shadow-xl shadow-black/60"
+                    className="absolute top-full left-0 z-30 mt-1.5 max-h-96 min-w-[13rem] [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent] overflow-auto rounded-[2px] border border-pewter-700 bg-stone-900 shadow-xl shadow-black/60"
                 >
                     {children(() => setOpen(false))}
                 </div>
@@ -616,10 +569,10 @@ function DropdownItem({
             role="option"
             aria-selected={active}
             onClick={onClick}
-            className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors focus-visible:outline-none ${
+            className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium transition-colors duration-[120ms] focus-visible:outline-none ${
                 active
-                    ? 'bg-[#8098ff]/12 text-[#a7b7ff]'
-                    : 'text-[#c3cad8] hover:bg-[#8098ff]/8 focus-visible:bg-[#8098ff]/8'
+                    ? 'bg-[linear-gradient(90deg,rgba(255,106,0,0.14),transparent_70%)] text-paper shadow-[inset_2px_0_0_var(--color-ember-500)]'
+                    : 'text-bone hover:bg-stone-800 hover:text-paper focus-visible:bg-stone-800 focus-visible:text-paper'
             }`}
         >
             {children}
@@ -629,61 +582,23 @@ function DropdownItem({
 
 function Chevron() {
     return (
-        <svg
-            width="11"
-            height="11"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-[#929caf] transition-colors group-hover:text-[#c3ceff]"
+        <ChevronDown
+            size={14}
+            strokeWidth={ICON_STROKE}
+            className="text-mist transition-colors duration-[120ms] group-hover:text-paper"
             aria-hidden="true"
-        >
-            <path d="M6 9l6 6 6-6" />
-        </svg>
-    );
-}
-
-/** A small link glyph leading the import field - it accepts codes and links. */
-function LinkGlyph() {
-    return (
-        <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="shrink-0 text-[#929caf]"
-            aria-hidden="true"
-        >
-            <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
-            <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
-        </svg>
+        />
     );
 }
 
 /** Small padlock shown in place of the chevron when a picker is locked. */
 function LockGlyph() {
     return (
-        <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="ml-1 text-[#929caf]"
+        <Lock
+            size={13}
+            strokeWidth={ICON_STROKE}
+            className="ml-0.5 text-mist"
             aria-hidden="true"
-        >
-            <rect x="5" y="11" width="14" height="9" rx="1.5" />
-            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-        </svg>
+        />
     );
 }

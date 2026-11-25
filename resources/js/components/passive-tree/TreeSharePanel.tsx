@@ -1,6 +1,10 @@
 import { useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { ClearGlyph, PANEL_FONT } from '@/components/passive-tree/chrome';
+import {
+    ClearGlyph,
+    FIELD_ICON_BUTTON,
+    LABEL,
+} from '@/components/passive-tree/chrome';
 import { cn } from '@/lib/utils';
 import shared from '@/routes/shared';
 
@@ -12,7 +16,7 @@ import shared from '@/routes/shared';
  * DELETE request body is the only place the secret ever travels - never a URL,
  * so it cannot reach logs, history or referrers.
  *
- * The panel shares the tree controls' slate styling and keeps its rows readable
+ * The panel is a floating dialog of the working tier and keeps its rows readable
  * on phones, where the labels wrap above their values.
  */
 export default function TreeSharePanel({
@@ -34,79 +38,73 @@ export default function TreeSharePanel({
     const editUrl = resolve(shared.edit.url({ sharedTree: slug }));
 
     return (
-        <div
-            className="absolute top-full right-3 left-3 z-30 mt-2 max-h-[calc(100dvh-160px)] overflow-y-auto rounded-xl border border-[#343a4a] bg-[#1b1e28] shadow-lg shadow-black/45 sm:left-auto sm:w-[36rem] sm:max-w-[calc(100%-3rem)]"
-            style={PANEL_FONT}
-        >
-            <div className="flex items-center justify-between gap-3 border-b border-[#343a4a] px-4 py-2.5">
-                <span className="text-[11px] font-semibold tracking-[0.16em] text-[#a7b7ff] uppercase">
-                    Build links
-                </span>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    title="Close"
-                    aria-label="Close build links"
-                    className="grid size-6 shrink-0 place-items-center rounded-lg text-[#929caf] transition-colors hover:bg-[#8098ff]/10 hover:text-[#a7b7ff] focus-visible:text-[#a7b7ff] focus-visible:outline-none"
-                >
-                    <ClearGlyph />
-                </button>
-            </div>
-
-            <div className="px-4">
-                <Row label="Public" divider>
-                    <a
-                        href={publicUrl}
-                        style={PANEL_FONT}
-                        className="min-w-0 flex-1 truncate text-sm text-[#e8ebf4] hover:text-[#d4ddff]"
+        <div className="dialog absolute top-full right-[6%] left-[6%] z-30 mt-2 flex max-h-[calc(100dvh-160px)] flex-col font-ui min-[821px]:right-[min(3.4%,76px)] sm:left-auto sm:w-[36rem] sm:max-w-[calc(100%-3rem)]">
+            {/* The pewter rule sits on the dialog's border, so the scrolling
+                box is this inner one - a scroller would clip the rule. */}
+            <div className="min-h-0 overflow-y-auto">
+                <div className="panel-head">
+                    <span className="mr-auto">Build links</span>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        title="Close"
+                        aria-label="Close build links"
+                        className={FIELD_ICON_BUTTON}
                     >
-                        {publicUrl}
-                    </a>
-                    <CopyButton text={publicUrl} label="Copy public link" />
-                </Row>
-                <Row label="Edit" divider>
-                    <a
-                        href={editUrl}
-                        style={PANEL_FONT}
-                        className="min-w-0 flex-1 truncate text-sm text-[#e8ebf4] hover:text-[#d4ddff]"
-                    >
-                        {editUrl}
-                    </a>
-                    <CopyButton text={editUrl} label="Copy edit link" />
-                </Row>
-                <Row label="Token">
-                    <TokenValue token={editToken} />
-                    <CopyButton
-                        text={editToken}
-                        label="Copy edit token"
-                        emphasis
-                    />
-                    <p className="w-full text-xs text-[#929caf]">
-                        The only key to edit this build - save it somewhere safe
-                        and keep it private.
-                    </p>
-                </Row>
-            </div>
+                        <ClearGlyph />
+                    </button>
+                </div>
 
-            <div className="border-t border-[#7a2e2e]/50 bg-[#2a1010]/45 px-4 py-2.5">
-                {deleting ? (
-                    <DeleteConfirm
-                        slug={slug}
-                        onCancel={() => setDeleting(false)}
-                    />
-                ) : (
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-sm text-[#e09a9a]">
-                            Danger zone - deleting is permanent.
-                        </p>
-                        <PillButton
-                            variant="danger"
-                            onClick={() => setDeleting(true)}
+                <div className="px-4">
+                    <Row label="Public" divider>
+                        <a
+                            href={publicUrl}
+                            className="min-w-0 flex-1 truncate text-sm text-paper transition-colors duration-[120ms] hover:text-ember-300"
                         >
-                            Delete build
-                        </PillButton>
-                    </div>
-                )}
+                            {publicUrl}
+                        </a>
+                        <CopyButton text={publicUrl} label="Copy public link" />
+                    </Row>
+                    <Row label="Edit" divider>
+                        <a
+                            href={editUrl}
+                            className="min-w-0 flex-1 truncate text-sm text-paper transition-colors duration-[120ms] hover:text-ember-300"
+                        >
+                            {editUrl}
+                        </a>
+                        <CopyButton text={editUrl} label="Copy edit link" />
+                    </Row>
+                    <Row label="Token">
+                        <TokenValue token={editToken} />
+                        <CopyButton text={editToken} label="Copy edit token" />
+                        <p className="w-full text-[13px] text-mist">
+                            The only key to edit this build - save it somewhere
+                            safe and keep it private.
+                        </p>
+                    </Row>
+                </div>
+
+                <div className="border-t border-line bg-void px-4 py-3">
+                    {deleting ? (
+                        <DeleteConfirm
+                            slug={slug}
+                            onCancel={() => setDeleting(false)}
+                        />
+                    ) : (
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm text-slate">
+                                Danger zone - deleting is permanent.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setDeleting(true)}
+                                className="btn btn-sm btn-danger"
+                            >
+                                Delete build
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -120,7 +118,7 @@ function resolve(path: string): string {
 }
 
 /**
- * One ledger row: an uppercase label and its value + action. On a phone the
+ * One ledger row: a small-caps label and its value + action. On a phone the
  * label takes the full first line and the value wraps beneath it; from `sm`
  * up they sit side by side.
  */
@@ -135,55 +133,11 @@ function Row({
 }) {
     return (
         <div
-            className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5 ${divider ? 'border-b border-[#343a4a]' : ''}`}
+            className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 py-3 ${divider ? 'border-b border-line' : ''}`}
         >
-            <span className="w-full shrink-0 text-[10px] font-semibold tracking-[0.16em] text-[#929caf] uppercase sm:w-16">
-                {label}
-            </span>
+            <span className={`w-full shrink-0 sm:w-16 ${LABEL}`}>{label}</span>
             {children}
         </div>
-    );
-}
-
-/** A compact action matching the planner controls. */
-function PillButton({
-    variant = 'ghost',
-    disabled = false,
-    onClick,
-    children,
-    title,
-    ariaLabel,
-    className = '',
-}: {
-    variant?: 'ghost' | 'accent' | 'danger';
-    disabled?: boolean;
-    onClick: () => void;
-    children: React.ReactNode;
-    title?: string;
-    ariaLabel?: string;
-    className?: string;
-}) {
-    const palette = {
-        ghost: 'border-[#414a60] bg-[#252b39] text-[#c7d2ff] hover:bg-[#303950] focus-visible:bg-[#303950]',
-        accent: 'border-[#8098ff] bg-[#8098ff] text-[#101424] hover:bg-[#a7b7ff] focus-visible:bg-[#a7b7ff]',
-        danger: 'border-[#b45050] bg-[#48252b] text-[#ffb5ae] hover:bg-[#633039] focus-visible:bg-[#633039]',
-    }[variant];
-
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={disabled}
-            title={title}
-            aria-label={ariaLabel}
-            className={cn(
-                'h-9 shrink-0 cursor-pointer rounded-lg border px-3.5 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a7b7ff] disabled:cursor-not-allowed disabled:border-[#343a4a] disabled:text-[#697183] disabled:hover:bg-transparent',
-                palette,
-                className,
-            )}
-        >
-            {children}
-        </button>
     );
 }
 
@@ -195,12 +149,10 @@ function PillButton({
 function CopyButton({
     text,
     label,
-    emphasis = false,
 }: {
     text: string;
     /** Accessible name naming WHAT is copied - the visible text stays "Copy". */
     label: string;
-    emphasis?: boolean;
 }) {
     const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
 
@@ -240,25 +192,27 @@ function CopyButton({
     }
 
     return (
-        <PillButton
-            variant={
-                state === 'copied' ? 'accent' : emphasis ? 'accent' : 'ghost'
-            }
+        <button
+            type="button"
             onClick={copy}
             title="Copy to clipboard"
-            ariaLabel={label}
+            aria-label={label}
             // Fixed width, "Copy failed" (its longest label) sized with room to
             // spare: the label swaps on click, and a resizing button mid-click
             // reads as layout jitter to a human and as an unstable click target
             // to Playwright, which can then redispatch the click as a retry.
-            className="min-w-[6.5rem] text-center"
+            className={cn(
+                'btn btn-sm btn-iron min-w-[6.5rem]',
+                state === 'copied' && 'border-verdigris text-verdigris',
+                state === 'failed' && 'border-blood text-blood-lit',
+            )}
         >
             {state === 'copied'
                 ? 'Copied ✓'
                 : state === 'failed'
                   ? 'Copy failed'
                   : 'Copy'}
-        </PillButton>
+        </button>
     );
 }
 
@@ -271,8 +225,7 @@ function TokenValue({ token }: { token: string }) {
             type="button"
             onClick={() => setShown((value) => !value)}
             title={shown ? 'Hide token' : 'Reveal token'}
-            style={PANEL_FONT}
-            className="min-w-0 flex-1 cursor-pointer truncate text-left text-sm text-[#e8ebf4] hover:text-[#d4ddff]"
+            className="min-w-0 flex-1 cursor-pointer truncate text-left text-sm text-paper transition-colors duration-[120ms] hover:text-ember-300"
         >
             {shown ? token : '•'.repeat(24) + '  (click to reveal)'}
         </button>
@@ -318,12 +271,12 @@ function DeleteConfirm({
     return (
         <form
             onSubmit={submit}
-            className="my-1 flex flex-col gap-2 rounded-lg border border-[#a34141]/70 bg-[#1b1e28] p-3"
+            className="notice notice-bad flex flex-col gap-2 p-3"
         >
-            <p className="text-sm font-semibold text-[#f3bcbc]">
+            <p className="text-sm font-semibold text-paper">
                 Delete this build permanently?
             </p>
-            <p className="text-sm text-[#c3cad8]">
+            <p className="text-sm text-bone">
                 The build and its public page disappear immediately.{' '}
                 <strong>There is no undo</strong> - nobody can bring it back,
                 not even with the token. Paste the edit token to confirm.
@@ -339,13 +292,12 @@ function DeleteConfirm({
                             form.setData('token', event.target.value)
                         }
                         placeholder="Edit token…"
-                        style={PANEL_FONT}
-                        className="w-full rounded-lg border border-[#343a4a] bg-[#12141b] px-3.5 py-1.5 pr-16 text-sm text-[#e8ebf4] outline-none placeholder:text-[#929caf] focus:border-[#8098ff]"
+                        className="input pr-16"
                     />
                     <button
                         type="button"
                         onClick={() => setShown((value) => !value)}
-                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-[10px] font-semibold tracking-[0.14em] text-[#929caf] uppercase hover:text-[#a7b7ff]"
+                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-[13px] font-medium text-mist transition-colors duration-[120ms] hover:text-paper"
                     >
                         {shown ? 'Hide' : 'Show'}
                     </button>
@@ -353,15 +305,19 @@ function DeleteConfirm({
                 <button
                     type="submit"
                     disabled={form.processing || form.data.token.trim() === ''}
-                    className="h-9 shrink-0 cursor-pointer rounded-lg border border-[#b45050] bg-[#48252b] px-3.5 text-xs font-semibold text-[#ffb5ae] transition-colors hover:bg-[#633039] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb5ae] disabled:cursor-not-allowed disabled:border-[#343a4a] disabled:bg-transparent disabled:text-[#697183]"
+                    className="btn btn-danger"
                 >
                     {form.processing ? 'Deleting…' : 'Delete for good'}
                 </button>
-                <PillButton variant="ghost" onClick={onCancel}>
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="btn btn-ghost"
+                >
                     Cancel
-                </PillButton>
+                </button>
             </div>
-            {error && <p className="text-sm text-[#f3bcbc]">{error}</p>}
+            {error && <p className="text-sm text-blood-lit">{error}</p>}
         </form>
     );
 }

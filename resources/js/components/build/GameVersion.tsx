@@ -1,5 +1,4 @@
 import { usePage } from '@inertiajs/react';
-import { INPUT_FONT } from '@/components/passive-tree/chrome';
 
 export interface GameVersion {
     era: string | null;
@@ -46,8 +45,7 @@ export function GameVersionBadge({
 
     return (
         <span
-            className={`inline-flex items-center self-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.14em] whitespace-nowrap text-[#b39a64] uppercase ${className}`}
-            style={{ border: '1px solid rgba(169,132,47,0.35)', ...INPUT_FONT }}
+            className={`font-label text-[15px] tracking-[0.06em] whitespace-nowrap text-pewter-300 ${className}`}
         >
             {label}
         </span>

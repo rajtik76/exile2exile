@@ -107,17 +107,19 @@ function ConvertedTree({
 
     if (error !== null) {
         return (
-            <div className="mx-auto max-w-lg px-4 pt-16 text-sm text-[#e0a58f]">
-                The tree could not be converted: {error}. Reload the page to try
-                again.
+            <div className="mx-auto max-w-lg px-4 pt-16">
+                <p className="notice notice-bad px-3.5 py-3 font-ui text-sm text-blood-lit">
+                    The tree could not be converted: {error}. Reload the page to
+                    try again.
+                </p>
             </div>
         );
     }
 
     if (migration === null) {
         return (
-            <div className="h-[calc(100dvh-69px)] w-full p-4">
-                <div className="h-full w-full animate-pulse rounded-[var(--pl-radius)] bg-[var(--pl-panel-2)]" />
+            <div className="h-[calc(100dvh-var(--masthead-h))] w-full p-4">
+                <div className="h-full w-full animate-pulse bg-stone-900" />
             </div>
         );
     }
@@ -180,7 +182,7 @@ function TreeEditor({
         <>
             <Head title="Passive tree" />
 
-            <div className="flex h-[calc(100dvh-69px)] w-full flex-col">
+            <div className="flex h-[calc(100dvh-var(--masthead-h))] w-full flex-col">
                 {!fullscreen && data && (
                     <PlannerControls
                         classes={planner.classes}
@@ -216,7 +218,7 @@ function TreeEditor({
                     className="min-h-0 flex-1"
                     fallback={
                         <div className="grid h-full place-items-center">
-                            <div className="h-full w-full animate-pulse rounded-[var(--pl-radius)] bg-[var(--pl-panel-2)]" />
+                            <div className="h-full w-full animate-pulse bg-stone-900" />
                         </div>
                     }
                 >
