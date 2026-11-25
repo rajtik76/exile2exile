@@ -24,9 +24,9 @@ import UniqueVariantPicker from '@/components/planner/equipment/UniqueVariantPic
 import ModPicker from '@/components/planner/ModPicker';
 import ReferencePicker from '@/components/planner/ReferencePicker';
 import { useReferences } from '@/components/planner/ReferencesContext';
-import { TextInput } from '@/components/planner/ui/Field';
+import { INPUT_CLASS, TextInput } from '@/components/planner/ui/Field';
 import { Modal } from '@/components/planner/ui/Overlay';
-import { Divider } from '@/components/planner/ui/Text';
+import { Divider, LABEL_CLASS } from '@/components/planner/ui/Text';
 import { deriveRarity } from '@/lib/itemRarity';
 import { itemErrors } from '@/lib/itemRules';
 import { refKey } from '@/lib/planReferences';
@@ -44,11 +44,9 @@ import {
 } from '@/types/planner';
 import type { ItemMod, ItemPlan, ItemProps, RuneRef } from '@/types/planner';
 
-const NUMBER_INPUT =
-    'pl-text-sm w-full rounded-[var(--pl-radius)] border border-[var(--pl-input-border)] bg-[var(--pl-input-bg)] px-2 py-1 text-[var(--pl-text)] outline-none focus-visible:border-[var(--pl-focus)]';
+const NUMBER_INPUT = `${INPUT_CLASS} pl-text-sm px-2 py-1`;
 
-const SECTION_LABEL =
-    'pl-text-2xs mb-1.5 tracking-[var(--pl-label-tracking)] text-[var(--pl-faint)] uppercase';
+const SECTION_LABEL = `${LABEL_CLASS} mb-1.5`;
 
 /** A digit-only text field - no spinner, and an empty value shows blank, not a 0. */
 function NumberField({
@@ -84,7 +82,7 @@ const CORRUPTED_COLOR = '#d20000';
 /** The game's "augmented" blue - a stat line a modifier (or quality) has changed. */
 const AUGMENTED_COLOR = '#8888ff';
 
-/** A toggle pill for the item's Corrupted flag, tinted the tooltip's own Corrupted
+/** A toggle for the item's Corrupted flag, tinted the tooltip's own Corrupted
  * red so it reads the same way in both places. */
 function CorruptedToggle({
     active,
@@ -338,13 +336,7 @@ export default function SlotEditor({
                     long scroll) the top and bottom bars stick, keeping the slot name
                     and the Done/Clear actions reachable without scroll-hunting. On
                     sm+ they scroll with the card as before. */}
-                <div
-                    className="z-20 flex items-center gap-3 border-b px-4 py-3 max-sm:sticky max-sm:top-0"
-                    style={{
-                        borderColor: 'var(--pl-header-border)',
-                        background: 'var(--pl-header-bg)',
-                    }}
-                >
+                <div className="z-20 flex items-center gap-3 border-b border-line bg-[var(--pl-panel)] px-4 py-3 max-sm:sticky max-sm:top-0">
                     {/* Below sm the full art column (a fixed 11rem wide) has nowhere to
                         go next to the form - it's hidden there (see the row below), so
                         its only trace on mobile is this header thumbnail instead. */}
@@ -352,18 +344,11 @@ export default function SlotEditor({
                         <img
                             src={reference.icon}
                             alt=""
-                            className="size-9 shrink-0 rounded-[var(--pl-radius)] border-2 bg-[var(--pl-input-bg)] object-contain p-0.5 sm:hidden"
+                            className="size-9 shrink-0 rounded-[var(--pl-radius)] border bg-[var(--pl-input-bg)] object-contain p-0.5 sm:hidden"
                             style={{ borderColor: `${rarityColor}aa` }}
                         />
                     )}
-                    <h3
-                        className="pl-text-lg"
-                        style={{
-                            color: 'var(--pl-heading)',
-                            fontFamily: 'var(--pl-font-head)',
-                            fontWeight: 'var(--pl-heading-weight)',
-                        }}
-                    >
+                    <h3 className="font-display text-[24px] leading-[1.15] text-[var(--pl-heading)] [word-spacing:-0.1em]">
                         {slot.label}
                     </h3>
                     <Button
@@ -383,7 +368,7 @@ export default function SlotEditor({
                         so a small thumbnail moves into the header above instead. */}
                     <div className="hidden w-44 shrink-0 flex-col gap-2 sm:flex">
                         <div
-                            className="relative flex flex-1 items-center justify-center rounded-[var(--pl-radius-lg)] border-2 bg-[var(--pl-input-bg)] p-2"
+                            className="relative flex flex-1 items-center justify-center rounded-[var(--pl-radius)] border bg-[var(--pl-input-bg)] p-2"
                             style={{
                                 borderColor: `${rarityColor}aa`,
                                 minHeight: '12rem',
@@ -399,11 +384,11 @@ export default function SlotEditor({
                                 <span className="flex flex-col items-center gap-2 px-3 text-center">
                                     <span
                                         aria-hidden
-                                        className="text-6xl leading-none font-semibold text-[#3a3844]"
+                                        className="font-display text-6xl leading-none text-line-strong"
                                     >
                                         ?
                                     </span>
-                                    <span className="pl-text-xs text-[#6b6878]">
+                                    <span className="pl-text-xs text-[var(--pl-faint)]">
                                         Choose an item - rarity is detected
                                         automatically
                                     </span>
@@ -708,7 +693,7 @@ export default function SlotEditor({
                                                                     }}
                                                                 />
                                                                 <span
-                                                                    className="pl-text-2xs tracking-[var(--pl-label-tracking)] uppercase"
+                                                                    className="pl-text-xs font-medium"
                                                                     style={{
                                                                         color: MOD_TYPE_STYLE
                                                                             .suffix
@@ -906,7 +891,7 @@ export default function SlotEditor({
                 {(errors.length > 0 || hasInvalidInput) && (
                     <ul
                         role="alert"
-                        className="pl-text-xs border-t border-[var(--pl-danger)] bg-[var(--pl-danger-soft)] px-4 py-2 text-[var(--pl-danger-lit)]"
+                        className="pl-text-xs border-t border-[#7a2a25] bg-[var(--pl-danger-soft)] px-4 py-2 text-[var(--pl-danger-lit)]"
                     >
                         {hasInvalidInput && (
                             <li>
@@ -920,10 +905,7 @@ export default function SlotEditor({
                     </ul>
                 )}
 
-                <div
-                    className="z-20 mt-auto flex items-center justify-between border-t bg-[var(--pl-panel)] px-4 py-3 max-sm:sticky max-sm:bottom-0"
-                    style={{ borderColor: 'var(--pl-header-border)' }}
-                >
+                <div className="z-20 mt-auto flex items-center justify-between border-t border-line bg-void px-4 py-3 max-sm:sticky max-sm:bottom-0">
                     <Button variant="danger" size="sm" onClick={onClear}>
                         Clear slot
                     </Button>

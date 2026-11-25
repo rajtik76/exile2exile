@@ -179,7 +179,7 @@ export default function PlannerShow({
                                                 <span className="px-1.5 text-[var(--pl-faint)]">
                                                     ·
                                                 </span>
-                                                <span className="text-[var(--pl-accent-lit)]">
+                                                <span className="text-[var(--pl-muted)]">
                                                     {ascendancyName}
                                                 </span>
                                             </>
@@ -289,7 +289,7 @@ export default function PlannerShow({
                                 </p>
                                 <Link
                                     href={planner.create.url()}
-                                    className="pl-text-sm inline-flex items-center rounded-[var(--pl-radius)] border border-[var(--pl-accent)] bg-[var(--pl-accent)] px-4 py-2 font-medium text-[#15120b] transition hover:brightness-110"
+                                    className="btn btn-iron"
                                 >
                                     Start a build plan
                                 </Link>
@@ -318,7 +318,7 @@ function ArchiveNotice({ slug }: { slug: string }) {
                 </p>
                 <Link
                     href={planner.convert.url(slug)}
-                    className="pl-text-sm inline-flex shrink-0 items-center rounded-[var(--pl-radius)] border border-[var(--pl-accent)] px-4 py-2 font-medium text-[var(--pl-accent-lit)] transition hover:bg-[var(--pl-accent)] hover:text-[#15120b]"
+                    className="btn btn-iron shrink-0"
                 >
                     Convert to current version
                 </Link>

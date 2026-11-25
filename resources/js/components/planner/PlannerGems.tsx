@@ -6,6 +6,7 @@ import { useReferences } from '@/components/planner/ReferencesContext';
 import ReferenceTooltip, {
     accentColor,
 } from '@/components/planner/ReferenceTooltip';
+import { LABEL_CLASS } from '@/components/planner/ui/Text';
 import {
     excludedGemIds,
     gemsByPriority as flattenGemsByPriority,
@@ -186,9 +187,7 @@ export default function PlannerGems({
                                 <span className="pl-text-2xs text-[var(--pl-faint)]">
                                     #
                                 </span>
-                                <span className="pl-text-2xs font-semibold tracking-wide text-[var(--pl-faint)] uppercase">
-                                    Skill
-                                </span>
+                                <span className={LABEL_CLASS}>Skill</span>
                                 {Array.from(
                                     { length: supportColumns },
                                     (_, col) => (
@@ -211,7 +210,7 @@ export default function PlannerGems({
                                 {...(editable ? groupDnd.target(group.id) : {})}
                                 className={`group/row relative flex flex-col gap-2 rounded-[var(--pl-radius)] border bg-[var(--pl-panel-2)] p-2 transition sm:grid sm:items-center sm:justify-items-center sm:gap-3 ${
                                     editable && groupDnd.isOver(group.id)
-                                        ? 'border-[var(--pl-accent-lit)] ring-2 ring-[var(--pl-accent-lit)]'
+                                        ? 'border-[var(--pl-accent)] ring-1 ring-[var(--pl-accent)]'
                                         : 'border-[var(--pl-panel-border)]'
                                 } ${
                                     editable && groupDnd.isDragging(group.id)
@@ -228,14 +227,14 @@ export default function PlannerGems({
                                                     '[data-gem-group]',
                                             })}
                                             title="Drag to reorder group"
-                                            className="cursor-grab text-sm leading-none text-[var(--pl-faint)] transition select-none hover:text-[var(--pl-accent-lit)] active:cursor-grabbing"
+                                            className="cursor-grab text-sm leading-none text-[var(--pl-faint)] transition-colors select-none hover:text-[var(--pl-text-strong)] active:cursor-grabbing"
                                         >
                                             ⠿
                                         </span>
                                     )}
 
                                     <span
-                                        className="pl-text-xs flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--pl-accent-soft)] font-semibold text-[var(--pl-accent-lit)]"
+                                        className="pl-text-xs flex size-6 shrink-0 items-center justify-center rounded-[2px] border border-line bg-void font-semibold text-[var(--pl-muted)] tabular-nums"
                                         title={`Skill priority ${groupIndex + 1}`}
                                     >
                                         {groupIndex + 1}
@@ -274,7 +273,7 @@ export default function PlannerGems({
                                             icon
                                             variant="danger"
                                             title="Remove group"
-                                            className="ml-auto border-2 sm:hidden"
+                                            className="ml-auto sm:hidden"
                                             onClick={() =>
                                                 removeGroup(groupIndex)
                                             }
@@ -314,7 +313,7 @@ export default function PlannerGems({
                                                             supportDnd.isOver(
                                                                 key,
                                                             )
-                                                                ? 'ring-2 ring-[var(--pl-accent-lit)]'
+                                                                ? 'ring-2 ring-[var(--pl-accent)]'
                                                                 : ''
                                                         }`}
                                                     >
@@ -389,7 +388,6 @@ export default function PlannerGems({
                                             icon
                                             variant="danger"
                                             title="Remove group"
-                                            className="border-2"
                                             onClick={() =>
                                                 removeGroup(groupIndex)
                                             }
@@ -442,9 +440,9 @@ export default function PlannerGems({
                                 key={group.id}
                                 data-gem-group
                                 {...(editable ? groupDnd.target(group.id) : {})}
-                                className={`relative rounded-[var(--pl-radius-lg)] border bg-[var(--pl-panel-2)] p-3 transition ${
+                                className={`relative border bg-[var(--pl-panel-2)] p-3 transition ${
                                     editable && groupDnd.isOver(group.id)
-                                        ? 'border-[var(--pl-accent-lit)] ring-2 ring-[var(--pl-accent-lit)]'
+                                        ? 'border-[var(--pl-accent)] ring-1 ring-[var(--pl-accent)]'
                                         : 'border-[var(--pl-panel-border)]'
                                 } ${
                                     editable && groupDnd.isDragging(group.id)
@@ -461,20 +459,20 @@ export default function PlannerGems({
                                                     '[data-gem-group]',
                                             })}
                                             title="Drag to reorder group"
-                                            className="cursor-grab text-sm leading-none text-[var(--pl-faint)] transition select-none hover:text-[var(--pl-accent-lit)] active:cursor-grabbing"
+                                            className="cursor-grab text-sm leading-none text-[var(--pl-faint)] transition-colors select-none hover:text-[var(--pl-text-strong)] active:cursor-grabbing"
                                         >
                                             ⠿
                                         </span>
                                     )}
 
                                     <span
-                                        className="pl-text-xs flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--pl-accent-soft)] font-semibold text-[var(--pl-accent-lit)]"
+                                        className="pl-text-xs flex size-6 shrink-0 items-center justify-center rounded-[2px] border border-line bg-void font-semibold text-[var(--pl-muted)] tabular-nums"
                                         title={`Skill priority ${groupIndex + 1}`}
                                     >
                                         {groupIndex + 1}
                                     </span>
 
-                                    <span className="pl-text-2xs tracking-wide text-[var(--pl-faint)] uppercase">
+                                    <span className={LABEL_CLASS}>
                                         Skill group
                                     </span>
 
@@ -483,7 +481,7 @@ export default function PlannerGems({
                                             icon
                                             variant="danger"
                                             title="Remove group"
-                                            className="ml-auto border-2"
+                                            className="ml-auto"
                                             onClick={() =>
                                                 removeGroup(groupIndex)
                                             }
@@ -548,7 +546,7 @@ export default function PlannerGems({
                                                         ? skill.name
                                                         : 'Choose a skill'}
                                                 </p>
-                                                <span className="pl-text-2xs shrink-0 tracking-wide text-[var(--pl-faint)] uppercase">
+                                                <span className="pl-text-xs shrink-0 text-[var(--pl-faint)]">
                                                     Skill
                                                 </span>
                                             </div>
@@ -578,7 +576,7 @@ export default function PlannerGems({
                                                             : ''
                                                     } ${supportDnd.isDragging(key) ? 'opacity-40' : ''} ${
                                                         supportDnd.isOver(key)
-                                                            ? 'ring-2 ring-[var(--pl-accent-lit)]'
+                                                            ? 'ring-2 ring-[var(--pl-accent)]'
                                                             : ''
                                                     }`}
                                                     style={{
@@ -621,7 +619,7 @@ export default function PlannerGems({
                                                     <p className="pl-text-sm min-w-0 flex-1 truncate font-medium text-[var(--pl-text)]">
                                                         {support.name}
                                                     </p>
-                                                    <span className="pl-text-2xs shrink-0 tracking-wide text-[var(--pl-faint)] uppercase">
+                                                    <span className="pl-text-xs shrink-0 text-[var(--pl-faint)]">
                                                         Support
                                                     </span>
                                                 </div>
@@ -691,7 +689,7 @@ export default function PlannerGems({
 
             {gemsByPriority.length > 0 && (
                 <div className="mt-2 border-t border-[var(--pl-divider)] pt-3">
-                    <p className="pl-text-2xs mb-2 font-semibold tracking-wide text-[var(--pl-faint)] uppercase">
+                    <p className={`${LABEL_CLASS} mb-2`}>
                         All gems by priority
                     </p>
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -728,11 +726,17 @@ export function GemsViewToggle({
             value={value}
             onChange={onChange}
             options={[
-                { value: 'grid', label: <GridGlyph />, title: 'Icon grid' },
+                {
+                    value: 'grid',
+                    label: <GridGlyph />,
+                    title: 'Icon grid',
+                    ariaLabel: 'Icon grid',
+                },
                 {
                     value: 'list',
                     label: <ListGlyph />,
                     title: 'List with names',
+                    ariaLabel: 'List with names',
                 },
             ]}
         />
@@ -862,7 +866,7 @@ function GemThumb({
                         event.stopPropagation();
                         onRemove();
                     }}
-                    className="pl-text-2xs absolute -top-1 -right-1 hidden size-4 items-center justify-center rounded-full bg-[var(--pl-danger)] text-white group-hover/gem:flex"
+                    className="pl-text-2xs absolute -top-1 -right-1 hidden size-4 items-center justify-center rounded-[2px] bg-[var(--pl-danger)] text-white group-hover/gem:flex"
                 >
                     ✕
                 </button>

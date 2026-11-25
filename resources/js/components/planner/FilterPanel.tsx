@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Button, { SegmentedControl } from '@/components/planner/Button';
 import FilterPreview from '@/components/planner/FilterPreview';
 import { Panel } from '@/components/planner/ui/Panel';
+import { LABEL_CLASS } from '@/components/planner/ui/Text';
 
 export type FilterThemePayload = {
     value: string;
@@ -91,9 +92,7 @@ export default function FilterPanel({
 
                 {/* Theme picker */}
                 <div className="flex flex-col gap-1.5">
-                    <span className="pl-text-2xs font-semibold tracking-[0.12em] text-[var(--pl-faint)] uppercase">
-                        Theme
-                    </span>
+                    <span className={LABEL_CLASS}>Theme</span>
                     <div className="flex flex-wrap gap-2">
                         {themes.map((item) => (
                             <Button
@@ -114,9 +113,7 @@ export default function FilterPanel({
 
                 {/* Strictness picker */}
                 <div className="flex flex-col gap-1.5">
-                    <span className="pl-text-2xs font-semibold tracking-[0.12em] text-[var(--pl-faint)] uppercase">
-                        Strictness
-                    </span>
+                    <span className={LABEL_CLASS}>Strictness</span>
                     <div className="flex flex-wrap items-center gap-3">
                         <SegmentedControl
                             value={level}
@@ -138,10 +135,10 @@ export default function FilterPanel({
                                 (_, index) => (
                                     <span
                                         key={index}
-                                        className={`size-1.5 rounded-full ${
+                                        className={`size-1.5 rotate-45 ${
                                             index <= activeLevel.level
-                                                ? 'bg-[var(--pl-accent)]'
-                                                : 'bg-[var(--pl-panel-border)]'
+                                                ? 'bg-ember-500'
+                                                : 'bg-line-strong'
                                         }`}
                                     />
                                 ),
@@ -152,9 +149,7 @@ export default function FilterPanel({
 
                 {/* Custom: multiselect of loot categories to hide on top of the chosen level. */}
                 <div className="flex flex-col gap-1.5">
-                    <span className="pl-text-2xs font-semibold tracking-[0.12em] text-[var(--pl-faint)] uppercase">
-                        Categories
-                    </span>
+                    <span className={LABEL_CLASS}>Categories</span>
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
                             size="sm"
@@ -192,7 +187,7 @@ export default function FilterPanel({
                                             onChange={() =>
                                                 toggleCategory(category.value)
                                             }
-                                            className="size-3.5 accent-[var(--pl-accent)]"
+                                            className="size-3.5 accent-copper"
                                         />
                                         <span
                                             className={
@@ -212,9 +207,7 @@ export default function FilterPanel({
 
                 {/* Live preview: real labels from the chosen NeverSink theme and strictness. */}
                 <div className="flex flex-col gap-1.5">
-                    <span className="pl-text-2xs font-semibold tracking-[0.12em] text-[var(--pl-faint)] uppercase">
-                        Preview
-                    </span>
+                    <span className={LABEL_CLASS}>Preview</span>
                     <FilterPreview
                         theme={activeTheme.value}
                         strictness={activeLevel.value}
@@ -224,11 +217,7 @@ export default function FilterPanel({
 
                 {/* Download the real .filter */}
                 <div className="flex justify-end">
-                    <a
-                        href={downloadUrl}
-                        download
-                        className="pl-text-sm inline-flex items-center justify-center gap-1.5 rounded-[var(--pl-radius)] border-2 border-[var(--pl-accent)] bg-[var(--pl-accent)] px-4 py-2 font-medium text-[#15120b] transition outline-none hover:border-[var(--pl-accent-lit)] hover:bg-[var(--pl-accent-lit)] focus-visible:ring-2 focus-visible:ring-[var(--pl-ring)]"
-                    >
+                    <a href={downloadUrl} download className="btn btn-copper">
                         Download filter
                     </a>
                 </div>

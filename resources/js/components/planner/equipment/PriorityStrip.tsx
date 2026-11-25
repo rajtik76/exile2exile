@@ -3,6 +3,7 @@ import { ItemCard } from '@/components/build/ItemDisplay';
 import { CursorTooltip, rarityTone } from '@/components/build/tooltip';
 import { toDisplayItem } from '@/components/planner/equipment/displayItem';
 import type { SlotDef } from '@/components/planner/equipment/displayItem';
+import { LABEL_CLASS } from '@/components/planner/ui/Text';
 import { refKey } from '@/lib/planReferences';
 import type { ReferenceMap } from '@/lib/planReferences';
 import type { ItemPlan } from '@/types/planner';
@@ -35,20 +36,15 @@ export default function PriorityStrip({
         : undefined;
 
     return (
-        <div
-            className="flex max-w-full flex-wrap items-center justify-center gap-y-2 rounded-[var(--pl-radius-lg)] border border-[var(--pl-panel-border)] bg-[var(--pl-panel-2)] px-4 py-2.5"
-            style={{ boxShadow: 'var(--pl-shadow)' }}
-        >
-            <span className="pl-text-2xs mr-1 shrink-0 tracking-[var(--pl-label-tracking)] text-[var(--pl-faint)] uppercase">
-                Chase order
-            </span>
+        <div className="flex max-w-full flex-wrap items-center justify-center gap-y-2 border border-[var(--pl-panel-border)] bg-[var(--pl-panel-2)] px-4 py-2.5">
+            <span className={`${LABEL_CLASS} mr-2 shrink-0`}>Chase order</span>
             {items.map(({ slot, item }, index) => {
                 const reference = item.base
                     ? map[refKey(item.base.type, item.base.id)]
                     : undefined;
                 const tone = rarityTone(item.rarity);
                 const label = reference?.name ?? item.base?.id ?? slot.label;
-                // The very first pick in the chase order gets a quiet gold ring - the
+                // The very first pick in the chase order gets a quiet pewter ring - the
                 // one piece of emphasis in an otherwise even-handed row.
                 const isTop = index === 0;
 
@@ -76,7 +72,7 @@ export default function PriorityStrip({
                                 onHover(null);
                                 setActive(null);
                             }}
-                            className={`relative flex size-10 shrink-0 items-center justify-center rounded-[8px] border bg-[#0a0a10] transition ${isTop ? 'ring-1 ring-[#c9a24a]/70' : ''}`}
+                            className={`relative flex size-10 shrink-0 items-center justify-center rounded-[2px] border bg-void transition ${isTop ? 'outline-1 outline-offset-2 outline-pewter-500' : ''}`}
                             style={{
                                 borderColor: tone.edge,
                                 boxShadow: `inset 0 0 14px -7px ${tone.glow}, 0 0 5px -2px ${tone.glow}`,
@@ -100,16 +96,15 @@ export default function PriorityStrip({
 
                             {item.priority !== null && (
                                 <span
-                                    className="pl-text-2xs absolute right-[-4px] bottom-[-4px] flex size-4 items-center justify-center rounded-[5px] border leading-none font-semibold tabular-nums"
+                                    className="pl-text-2xs absolute right-[-4px] bottom-[-4px] flex size-4 items-center justify-center rounded-[2px] border leading-none font-semibold tabular-nums"
                                     style={{
                                         borderColor: tone.edge,
                                         // Opaque, not a colour-wash: this badge sits over the
                                         // item's own art, so a translucent tint (fine for the
                                         // paper-doll badge, which floats on plain bg) loses
                                         // contrast against busy icon art underneath.
-                                        backgroundColor: '#0a0a10',
+                                        backgroundColor: 'var(--color-void)',
                                         color: tone.text,
-                                        fontFamily: "'Lexend', sans-serif",
                                     }}
                                 >
                                     {item.priority}

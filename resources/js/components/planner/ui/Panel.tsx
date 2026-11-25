@@ -3,9 +3,9 @@ import { cn } from '@/lib/utils';
 
 /**
  * The one panel used across the build planner - build description, every section,
- * the share bar. All colour, radius, shadow and the optional left accent bar come
- * from --pl-* design tokens, so it re-skins with the active design. A section title
- * renders a themed header bar; `collapsible` adds a chevron toggle.
+ * the loot filter. It is the working-tier `.panel`: flat stone, a line border and
+ * the pewter rule on top. A section title renders the `.panel-head` bar (pewter
+ * diamond, small-caps label); `collapsible` adds a chevron toggle.
  */
 export function Panel({
     title,
@@ -27,66 +27,31 @@ export function Panel({
     /**
      * Let content spill past the panel edges instead of clipping it. Needed where a
      * child renders a hover tooltip that must stay visible above the panel (the
-     * paper-doll, gems, tree); the header's top corners are rounded to match so the
-     * unclipped panel keeps its shape.
+     * paper-doll, gems, tree).
      */
     overflowVisible?: boolean;
 }) {
     const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
     return (
-        <section
-            className={cn(
-                'relative flex flex-col border border-[var(--pl-panel-border)] bg-[var(--pl-panel)]',
-                overflowVisible ? 'overflow-visible' : 'overflow-hidden',
-                className,
-            )}
-            style={{
-                borderRadius: 'var(--pl-radius-lg)',
-                boxShadow:
-                    'inset var(--pl-accent-bar) 0 0 0 var(--pl-accent), var(--pl-shadow)',
-            }}
-        >
+        <section className={cn('panel flex flex-col', className)}>
             {title && (
                 <div
-                    className="flex items-center gap-2.5 border-b px-5 py-3.5 sm:px-6"
-                    style={{
-                        borderColor: 'var(--pl-header-border)',
-                        background: 'var(--pl-header-bg)',
-                        // Without the section's overflow clip, round the header's own top
-                        // corners so its square background doesn't poke past the rounding.
-                        ...(overflowVisible
-                            ? {
-                                  borderTopLeftRadius: 'var(--pl-radius-lg)',
-                                  borderTopRightRadius: 'var(--pl-radius-lg)',
-                              }
-                            : {}),
-                    }}
+                    className={cn(
+                        'panel-head sm:px-5',
+                        collapsed && 'border-b-0',
+                    )}
                 >
-                    <span
-                        aria-hidden
-                        className="size-2 shrink-0 rotate-45 rounded-[1px]"
-                        style={{ background: 'var(--pl-accent)' }}
-                    />
-                    <h2
-                        className="pl-text-xs uppercase"
-                        style={{
-                            color: 'var(--pl-accent-lit)',
-                            fontFamily: 'var(--pl-font-head)',
-                            fontWeight: 'var(--pl-label-weight)',
-                            letterSpacing: 'var(--pl-label-tracking)',
-                        }}
-                    >
-                        {title}
-                    </h2>
+                    <h2 className="min-w-0">{title}</h2>
                     {action && <div className="ml-auto">{action}</div>}
                     {collapsible && (
                         <button
                             type="button"
                             onClick={() => setCollapsed((value) => !value)}
                             aria-label={collapsed ? 'Expand' : 'Collapse'}
+                            aria-expanded={!collapsed}
                             className={cn(
-                                'inline-flex size-6 items-center justify-center rounded-[var(--pl-radius)] text-[var(--pl-muted)] transition outline-none hover:text-[var(--pl-accent-lit)] focus-visible:text-[var(--pl-accent-lit)]',
+                                'inline-flex size-6 items-center justify-center rounded-[2px] text-mist transition-colors duration-[120ms] hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-400',
                                 action ? 'ml-1.5' : 'ml-auto',
                             )}
                         >
@@ -112,7 +77,8 @@ export function Panel({
             {!collapsed && (
                 <div
                     className={cn(
-                        'flex flex-1 flex-col p-5 sm:p-6',
+                        'flex flex-1 flex-col p-4 sm:p-5',
+                        !overflowVisible && 'overflow-hidden',
                         bodyClassName,
                     )}
                 >

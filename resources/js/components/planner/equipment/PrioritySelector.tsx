@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { rarityTone } from '@/components/build/tooltip';
+import { LABEL_CLASS } from '@/components/planner/ui/Text';
 import { priorityOptions } from '@/lib/priority';
 import type { ItemPlan, ItemRarity } from '@/types/planner';
 
@@ -37,15 +38,14 @@ export default function PrioritySelector({
         borderColor: `${tone.edge}66`,
         backgroundColor: `${tone.edge}26`,
         color: tone.text,
-        fontFamily: "'Lexend', sans-serif",
     };
     const cornerClass =
         // Below the item tooltip (z-60) so a hover never shows the corner poking through.
-        'group/prio pl-text-xs absolute right-1.5 bottom-1.5 z-[50] flex min-w-5 h-5 items-center justify-center rounded-[6px] border px-1 font-semibold leading-none tabular-nums backdrop-blur-sm';
+        'group/prio pl-text-xs absolute right-1.5 bottom-1.5 z-[50] flex min-w-5 h-5 items-center justify-center rounded-[2px] border px-1 font-semibold leading-none tabular-nums backdrop-blur-sm';
 
     // The small hint shown while the pointer is over the square (the item card is hidden).
     const hint = (
-        <span className="pl-text-sm pointer-events-none absolute right-0 bottom-full z-[65] mb-1.5 hidden rounded-[var(--pl-radius)] border border-[var(--pl-panel-border)] bg-[var(--pl-panel)] px-2.5 py-1 font-normal whitespace-nowrap text-[var(--pl-text-strong)] shadow-xl group-focus-within/prio:block group-hover/prio:block">
+        <span className="pl-text-sm pointer-events-none absolute right-0 bottom-full z-[65] mb-1.5 hidden border border-line-strong bg-stone-700 px-2.5 py-1 font-normal whitespace-nowrap text-[var(--pl-text-strong)] shadow-[0_10px_24px_-8px_#000] group-focus-within/prio:block group-hover/prio:block">
             {priority !== null ? `Priority #${priority}` : 'Set priority'}
         </span>
     );
@@ -114,12 +114,10 @@ function PriorityMenu({
                 }}
             />
             <div
-                className="absolute top-full right-0 z-[80] mt-1 w-max rounded-[var(--pl-radius)] border border-[var(--pl-panel-border)] bg-[var(--pl-panel)] p-1.5 shadow-2xl"
+                className="absolute top-full right-0 z-[80] mt-1 w-max border border-pewter-700 bg-[var(--pl-panel)] p-1.5 shadow-[0_18px_40px_-12px_#000]"
                 onClick={(event) => event.stopPropagation()}
             >
-                <p className="pl-text-2xs mb-1 px-0.5 tracking-[var(--pl-label-tracking)] text-[var(--pl-faint)] uppercase">
-                    Priority
-                </p>
+                <p className={`${LABEL_CLASS} mb-1 px-0.5`}>Priority</p>
                 <div className="grid grid-cols-5 gap-1">
                     {options.map(({ value, taken }) => {
                         const isCurrent = value === current;
@@ -133,10 +131,10 @@ function PriorityMenu({
                                 onClick={() => onPick(value)}
                                 className={`pl-text-2xs flex size-6 items-center justify-center rounded-[var(--pl-radius)] tabular-nums transition ${
                                     isCurrent
-                                        ? 'bg-[var(--pl-accent)] font-semibold text-[#15120b]'
+                                        ? 'bg-stone-700 font-semibold text-paper shadow-[inset_0_-2px_0_var(--color-ember-500)]'
                                         : disabled
                                           ? 'cursor-not-allowed text-[var(--pl-faint)] opacity-50'
-                                          : 'text-[var(--pl-text)] hover:bg-[var(--pl-accent-soft)]'
+                                          : 'text-[var(--pl-text)] hover:bg-stone-800 hover:text-paper'
                                 }`}
                             >
                                 {value}
@@ -148,7 +146,7 @@ function PriorityMenu({
                     <button
                         type="button"
                         onClick={() => onPick(null)}
-                        className="pl-text-2xs mt-1.5 w-full rounded-[var(--pl-radius)] px-1 py-1 text-center text-[var(--pl-muted)] transition hover:bg-white/5"
+                        className="pl-text-2xs mt-1.5 w-full rounded-[var(--pl-radius)] px-1 py-1 text-center text-[var(--pl-muted)] transition-colors hover:bg-stone-800 hover:text-paper"
                     >
                         Clear priority
                     </button>

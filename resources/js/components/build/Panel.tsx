@@ -21,7 +21,7 @@ export function Filigree() {
         >
             <g
                 fill="none"
-                stroke="#46454d"
+                stroke="#364454"
                 strokeWidth="1.4"
                 strokeLinecap="round"
             >

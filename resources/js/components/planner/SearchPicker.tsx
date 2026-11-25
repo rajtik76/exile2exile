@@ -263,7 +263,7 @@ export default function SearchPicker<T>({
                                 className={cn(
                                     'flex w-full items-start gap-2 rounded-[var(--pl-radius)] px-1.5 py-1.5 text-left transition',
                                     index === highlight &&
-                                        'bg-[var(--pl-accent-soft)]',
+                                        'bg-[linear-gradient(90deg,var(--pl-accent-soft),transparent_70%)] shadow-[inset_2px_0_0_var(--color-ember-500)]',
                                 )}
                             >
                                 {renderOption(item, index === highlight)}

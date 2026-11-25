@@ -475,16 +475,6 @@ export const MAX_GEM_GROUPS = 12;
 /** A group holds one active skill plus its 5 support gems. Mirrors PlanSchema. */
 export const MAX_GEMS_PER_GROUP = 6;
 
-/**
- * The planner's reading typography: Plus Jakarta Sans (self-hosted), chosen over
- * the brand display fonts for legibility. `base` is the root size the em-based
- * content scales from; the `.planner-reading` wrapper applies both.
- */
-export const PLANNER_FONT = {
-    stack: '"Plus Jakarta Sans", system-ui, sans-serif',
-    base: '16px',
-} as const;
-
 export const SECTION_KEYS: SectionKey[] = ['items', 'gems', 'tree'];
 
 /** Human labels + helper copy for each content group, shared by editor and viewer. */

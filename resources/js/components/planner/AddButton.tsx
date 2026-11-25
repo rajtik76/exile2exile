@@ -3,23 +3,16 @@ import { cn } from '@/lib/utils';
 type Shape = 'pill' | 'circle' | 'block';
 
 /**
- * Shape only - the dashed border, accent colour and text size are fixed so every
- * "add" affordance reads the same. `pill` carries its own padding (labelled
- * buttons); `circle`/`block` are sized by the caller's className (icon slots).
+ * Shape only - the dashed pewter outline and text size are fixed so every "add"
+ * affordance reads the same. `pill` carries its own size (labelled buttons);
+ * `circle`/`block` are sized by the caller's className (icon slots). The circle
+ * exists because gems are round game art.
  */
 const SHAPES: Record<Shape, string> = {
-    pill: 'rounded-[var(--pl-radius)] px-[0.75em] py-[0.375em]',
+    pill: 'h-[30px] px-3',
     circle: 'rounded-full',
-    block: 'rounded-[var(--pl-radius)]',
+    block: '',
 };
-
-/** The shared frame: 2px border, text size, focus ring - colour/style is layered on. */
-const FRAME =
-    'pl-text-sm inline-flex items-center justify-center gap-1.5 border-2 font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-[var(--pl-ring)] disabled:cursor-not-allowed disabled:opacity-50';
-
-/** The empty "add" look - dashed accent outline that lights on hover. */
-const DASHED =
-    'border-dashed border-[var(--pl-accent)] text-[var(--pl-accent)] hover:enabled:bg-[var(--pl-accent-soft)]';
 
 /** The shared "+" glyph - a label prefix (leadingPlus) or the whole icon (icon). */
 function PlusGlyph({ className }: { className?: string }) {
@@ -29,7 +22,7 @@ function PlusGlyph({ className }: { className?: string }) {
             viewBox="0 0 16 16"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1.6"
             strokeLinecap="round"
             className={cn('size-[1.1em] shrink-0', className)}
         >
@@ -41,8 +34,8 @@ function PlusGlyph({ className }: { className?: string }) {
 /**
  * The single "add" button across the planner - "Reference", "Gem group", the
  * empty Skill/support gem slots, "Add entry", "Add phase", "Add modifier",
- * "Add socket". They share one 2px dashed frame and one text size; only the shape
- * (and, for icon slots, the size via className) differs per call site.
+ * "Add socket". They share the `.chip-add` dashed frame; only the shape (and,
+ * for icon slots, the size via className) differs per call site.
  */
 export default function AddButton({
     shape = 'pill',
@@ -66,14 +59,14 @@ export default function AddButton({
         <button
             type={type}
             className={cn(
-                FRAME,
-                solid ? 'border-solid' : DASHED,
+                'chip-add',
+                solid && 'border-solid',
                 SHAPES[shape],
                 className,
             )}
             {...props}
         >
-            {leadingPlus && <PlusGlyph className="mr-0.5" />}
+            {leadingPlus && <PlusGlyph />}
             {icon ? <PlusGlyph className="size-[1.4em]" /> : children}
         </button>
     );

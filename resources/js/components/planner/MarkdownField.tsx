@@ -62,7 +62,7 @@ export default function MarkdownField({
         <div>
             {label && <FieldLabel className="mb-1.5 block">{label}</FieldLabel>}
 
-            <div className="mb-1.5 flex items-center gap-1.5">
+            <div className="mb-2 flex items-center gap-1.5">
                 <div className="relative">
                     <AddButton
                         leadingPlus
@@ -102,7 +102,7 @@ export default function MarkdownField({
                     maxLength={maxLength}
                 />
             ) : (
-                <div className="min-h-[5rem] rounded-[var(--pl-radius)] border border-[var(--pl-panel-border)] bg-[var(--pl-panel-2)] p-3">
+                <div className="min-h-[5rem] rounded-[var(--pl-radius)] border border-[var(--pl-panel-border)] bg-[var(--pl-input-bg)] p-3">
                     {value.trim() === '' ? (
                         <p className="pl-text-sm text-[var(--pl-muted)]">
                             Nothing to preview.

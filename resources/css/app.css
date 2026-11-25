@@ -578,6 +578,89 @@
     .notice-ok {
         border-left-color: var(--color-verdigris);
     }
+
+    /* A switch between a few states: the active segment is lifted stone with
+       an ember underline. Also the look of any pressed toggle button. */
+    .seg {
+        display: inline-flex;
+        flex-wrap: wrap;
+        padding: 2px;
+        border: 1px solid var(--color-line);
+        border-radius: 2px;
+        background: var(--color-void);
+    }
+
+    .seg > button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 26px;
+        padding: 0 12px;
+        border: 0;
+        background: none;
+        color: var(--color-mist);
+        font-family: var(--font-ui);
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+        transition:
+            color 120ms,
+            background-color 120ms;
+    }
+
+    .seg > button:hover {
+        color: var(--color-paper);
+    }
+
+    .seg > button:focus-visible {
+        outline: 2px solid var(--color-ember-400);
+        outline-offset: 1px;
+    }
+
+    .seg > button[aria-pressed='true'],
+    .btn-on,
+    .btn-on:hover:not(:disabled) {
+        border-color: var(--color-line-strong);
+        background: var(--color-stone-700);
+        box-shadow: inset 0 -2px 0 var(--color-ember-500);
+        color: var(--color-paper);
+    }
+
+    /* "Something gets added here": a dashed pewter outline, never filled. */
+    .chip-add {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px dashed var(--color-pewter-700);
+        border-radius: 2px;
+        background: none;
+        color: var(--color-slate);
+        font-family: var(--font-ui);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+            color 120ms,
+            border-color 120ms;
+    }
+
+    .chip-add:hover:not(:disabled) {
+        border-color: var(--color-ember-400);
+        color: var(--color-ember-300);
+    }
+
+    .chip-add:focus-visible {
+        outline: 2px solid var(--color-ember-400);
+        outline-offset: 2px;
+    }
+
+    .chip-add:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
 }
 
 /* Painted scriptorium behind the legal pages, set by LegalPage through
@@ -647,61 +730,53 @@
     }
 }
 
-/* Build planner - reader-first design tokens (the "Slate" design). Every planner
-   surface reads these semantic --pl-* variables instead of hardcoded hex, so the
-   whole page shares one palette, radius, shadow and type scale. Cool neutral,
-   one crisp indigo accent, flat panels, no glow - readability first. Content
+/* Build planner - semantic tokens of the working tier. Every planner surface
+   reads these --pl-* variables instead of raw colours, so the whole page shares
+   one palette and type scale. The values are the shared design tokens: stone
+   surfaces, pewter lines, ember for action, selection and focus only. Content
    sizes stay em-based (pl-text-* ladder), so they scale from --pl-font-size. */
 .planner-reading {
     /* Typography */
-    --pl-font: 'Plus Jakarta Sans', system-ui, sans-serif;
-    --pl-font-head: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --pl-font: var(--font-ui);
+    --pl-font-head: var(--font-display);
     --pl-font-size: 16px;
-    --pl-line: 1.6;
-    --pl-body-weight: 450;
-    --pl-heading-weight: 680;
-    --pl-label-weight: 650;
-    --pl-label-tracking: 0.1em;
+    --pl-line: 1.55;
     /* Surfaces */
-    --pl-panel: #1b1e26;
-    --pl-panel-2: #171a21;
-    --pl-panel-border: #2c313d;
-    --pl-header-bg: #1e222b;
-    --pl-header-border: #2c313d;
-    --pl-input-bg: #12141a;
-    --pl-input-border: #333a48;
-    --pl-focus: #8098ff;
+    --pl-panel: var(--color-stone-900);
+    --pl-panel-2: var(--color-stone-800);
+    --pl-panel-border: var(--color-line);
+    --pl-input-bg: var(--color-void);
+    --pl-input-border: var(--color-line);
+    --pl-focus: var(--color-ember-400);
     /* Text */
-    --pl-text: #dfe4ee;
-    --pl-text-strong: #f1f4fa;
-    --pl-heading: #f3f6fc;
-    --pl-muted: #9aa3b4;
-    --pl-faint: #6f7889;
-    /* Accent + danger */
-    --pl-accent: #8098ff;
-    --pl-accent-lit: #a7b7ff;
-    --pl-accent-soft: rgba(128, 152, 255, 0.16);
-    --pl-danger: #f0736a;
-    --pl-danger-lit: #ff9d95;
-    --pl-danger-soft: rgba(240, 115, 106, 0.15);
+    --pl-text: var(--color-bone);
+    --pl-text-strong: var(--color-paper);
+    --pl-heading: var(--color-paper);
+    --pl-muted: var(--color-slate);
+    --pl-faint: var(--color-mist);
+    /* Selection + danger */
+    --pl-accent: var(--color-ember-400);
+    --pl-accent-lit: var(--color-ember-300);
+    --pl-accent-soft: rgba(255, 106, 0, 0.14);
+    --pl-danger: var(--color-blood);
+    --pl-danger-lit: var(--color-blood-lit);
+    --pl-danger-soft: rgba(210, 71, 60, 0.14);
     /* Structure */
-    --pl-divider: #2c313d;
-    --pl-radius: 10px;
-    --pl-radius-lg: 14px;
-    --pl-accent-bar: 0px;
-    --pl-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.8);
-    --pl-ring: rgba(128, 152, 255, 0.4);
+    --pl-divider: var(--color-line);
+    --pl-radius: 2px;
+    --pl-shadow: 0 30px 80px -20px #000;
+    --pl-ring: var(--color-ember-400);
 
     font-family: var(--pl-font);
     font-size: var(--pl-font-size);
-    font-weight: var(--pl-body-weight);
+    font-weight: 400;
     line-height: var(--pl-line);
     color: var(--pl-text);
 }
 
 /* On phones the reading font size shrinks, and because the whole planner type scale
-   (pl-text-* ladder) and the shared control paddings are em-based, every button,
-   picker, toggle and label scales down with it in one step. Desktop is untouched. */
+   (pl-text-* ladder) is em-based, every label and control text scales down with it
+   in one step. Desktop is untouched. */
 @media (max-width: 640px) {
     .planner-reading {
         --pl-font-size: 14px;
@@ -714,12 +789,15 @@
     }
 }
 
-/* Form controls don't inherit fonts by default - pull them onto the reading font. */
-.planner-reading input,
-.planner-reading textarea,
-.planner-reading select,
-.planner-reading button {
-    font-family: inherit;
+/* Form controls don't inherit fonts by default - pull them onto the reading font.
+   In the base layer, so a font utility on the control itself still wins. */
+@layer base {
+    .planner-reading input,
+    .planner-reading textarea,
+    .planner-reading select,
+    .planner-reading button {
+        font-family: inherit;
+    }
 }
 
 /* The embedded passive tree is a shared component with its own typography, so reset
@@ -729,205 +807,13 @@
     font-family: var(--font-ui);
 }
 
-/* Plus Jakarta Sans - the build-planner reading face, self-hosted (via Bunny Fonts),
-   no external CDN. Reader-first legibility, chosen over the brand display fonts on
-   the planner pages only. Latin + latin-ext (Czech) subsets, weights 400-700. */
-@font-face {
-    font-family: 'Plus Jakarta Sans';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-400-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-        U+2212, U+2215, U+FEFF, U+FFFD;
+/* Rendered Markdown in the build planner (descriptions / notes): prose in the
+   body face, a step larger than the UI text around it. */
+.planner-md {
+    font-family: var(--font-body);
+    font-size: 1.0625em;
+    color: var(--color-bone);
 }
-@font-face {
-    font-family: 'Plus Jakarta Sans';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-ext-400-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
-        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
-        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-    font-family: 'Plus Jakarta Sans';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-500-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-        U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-    font-family: 'Plus Jakarta Sans';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-ext-500-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
-        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
-        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-    font-family: 'Plus Jakarta Sans';
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-600-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-        U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-    font-family: 'Plus Jakarta Sans';
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-ext-600-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
-        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
-        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-    font-family: 'Plus Jakarta Sans';
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-700-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-        U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-    font-family: 'Plus Jakarta Sans';
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-ext-700-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
-        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
-        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-/* Lexend - the item/gem tooltip face, self-hosted (via Bunny Fonts), no external
-   CDN. Legibility-tuned (designed to reduce reading effort), chosen for the
-   in-tooltip stat text on both the planner and /compare. Latin + latin-ext
-   (Czech) subsets, weights 400-700. */
-@font-face {
-    font-family: 'Lexend';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('../fonts/lexend/lexend-latin-400-normal.woff2') format('woff2');
-    unicode-range:
-        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-        U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-    font-family: 'Lexend';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('../fonts/lexend/lexend-latin-ext-400-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
-        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
-        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-    font-family: 'Lexend';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url('../fonts/lexend/lexend-latin-500-normal.woff2') format('woff2');
-    unicode-range:
-        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-        U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-    font-family: 'Lexend';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url('../fonts/lexend/lexend-latin-ext-500-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
-        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
-        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-    font-family: 'Lexend';
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-    src: url('../fonts/lexend/lexend-latin-600-normal.woff2') format('woff2');
-    unicode-range:
-        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-        U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-    font-family: 'Lexend';
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-    src: url('../fonts/lexend/lexend-latin-ext-600-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
-        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
-        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-    font-family: 'Lexend';
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    src: url('../fonts/lexend/lexend-latin-700-normal.woff2') format('woff2');
-    unicode-range:
-        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-        U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-    font-family: 'Lexend';
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    src: url('../fonts/lexend/lexend-latin-ext-700-normal.woff2')
-        format('woff2');
-    unicode-range:
-        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
-        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
-        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-/* Rendered Markdown in the build planner (descriptions / notes). Spacing only -
-   the reading font/size come from the .planner-reading wrapper. */
 .planner-md > :first-child {
     margin-top: 0;
 }
@@ -942,17 +828,19 @@
 .planner-md h2,
 .planner-md h3 {
     margin: 0.8em 0 0.4em;
-    font-weight: 600;
-    color: #e6ecf6;
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--color-paper);
 }
 .planner-md h1 {
-    font-size: 1.3em;
+    font-size: 1.55em;
 }
 .planner-md h2 {
-    font-size: 1.15em;
+    font-size: 1.35em;
 }
 .planner-md h3 {
-    font-size: 1.02em;
+    font-size: 1.15em;
 }
 .planner-md ul,
 .planner-md ol {
@@ -968,42 +856,45 @@
 .planner-md li {
     margin: 0.2em 0;
 }
+.planner-md li::marker {
+    color: var(--color-pewter-500);
+}
 .planner-md a {
-    color: #ecd49a;
+    color: var(--color-ember-300);
 }
 .planner-md strong {
     font-weight: 600;
-    color: #e6ecf6;
+    color: var(--color-paper);
 }
 .planner-md em {
     font-style: italic;
 }
 .planner-md code {
-    border-radius: 3px;
-    background: #15141b;
+    border-radius: 2px;
+    background: var(--color-void);
     padding: 0.1em 0.35em;
     font-size: 0.9em;
 }
 .planner-md blockquote {
     margin: 0.5em 0;
-    border-left: 2px solid rgba(201, 162, 74, 0.4);
+    border-left: 2px solid var(--color-pewter-700);
     padding-left: 0.8em;
-    color: #a7acb8;
+    color: var(--color-slate);
 }
 .planner-md hr {
     margin: 0.9em 0;
     border: 0;
-    border-top: 1px solid rgba(201, 162, 74, 0.15);
+    border-top: 1px solid var(--color-line);
 }
 
 /* Build-planner typography scale. One em-based ladder (relative to the reading
    font size on .planner-reading) so every planner surface shares the same sizes
    instead of ad-hoc text-[x.yem] values. */
 .pl-text-2xs {
-    font-size: 0.68em;
+    font-size: 0.75em;
 }
 .pl-text-xs {
-    font-size: 0.78em;
+    font-size: 0.8125em;
 }
 .pl-text-sm {
     font-size: 0.9em;
@@ -1020,48 +911,6 @@
 .pl-text-2xl {
     font-size: 1.9em;
 }
-
-/* The "waypoint" scroll-to-top dial (build planner): an ember-topaz glow breathes
-   behind the socket at rest, like the standing torches on a waypoint stone, and a
-   ring of light expands once when activated - see ScrollToTop.tsx. */
-@keyframes pl-waypoint-breathe {
-    0%,
-    100% {
-        opacity: 0.4;
-        transform: scale(0.92);
-    }
-    50% {
-        opacity: 0.85;
-        transform: scale(1.05);
-    }
-}
-
-@keyframes pl-waypoint-ping {
-    from {
-        opacity: 0.7;
-        transform: scale(0.35);
-    }
-    to {
-        opacity: 0;
-        transform: scale(1.85);
-    }
-}
-
-.pl-waypoint-glow {
-    animation: pl-waypoint-breathe 2.6s ease-in-out infinite;
-}
-
-.pl-waypoint-ping {
-    animation: pl-waypoint-ping 0.6s ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .pl-waypoint-glow {
-        animation: none;
-        opacity: 0.6;
-    }
-
-    .pl-waypoint-ping {
-        display: none;
-    }
+.pl-text-3xl {
+    font-size: clamp(1.9em, 4vw, 2.75em);
 }

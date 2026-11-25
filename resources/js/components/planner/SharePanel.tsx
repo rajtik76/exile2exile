@@ -2,6 +2,7 @@ import { useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Button from '@/components/planner/Button';
 import { TextInput } from '@/components/planner/ui/Field';
+import { LABEL_CLASS } from '@/components/planner/ui/Text';
 import { clearDraft, draftKeyFor } from '@/lib/planner';
 import planner from '@/routes/planner';
 
@@ -30,10 +31,7 @@ export default function SharePanel({
     const [deleting, setDeleting] = useState(() => Boolean(pageErrors?.token));
 
     return (
-        <div
-            className="mb-6 overflow-hidden border border-[var(--pl-panel-border)] bg-[var(--pl-panel-2)]"
-            style={{ borderRadius: 'var(--pl-radius-lg)' }}
-        >
+        <div className="mb-6 border border-[var(--pl-panel-border)] bg-[var(--pl-panel-2)]">
             <div className="px-4">
                 <LinkRow label="Public" url={publicUrl} divider />
                 {editUrl && (
@@ -42,12 +40,14 @@ export default function SharePanel({
 
                 {editToken && (
                     <div className="flex flex-wrap items-center gap-3 py-2.5">
-                        <span className="pl-text-2xs w-24 shrink-0 font-semibold tracking-[0.12em] text-[var(--pl-accent-lit)] uppercase">
+                        <span
+                            className={`${LABEL_CLASS} w-24 shrink-0 text-[var(--pl-text-strong)]`}
+                        >
                             Token
                         </span>
                         <TokenValue token={editToken} />
-                        <CopyButton text={editToken} variant="primary" />
-                        <p className="pl-text-2xs w-full text-[var(--pl-faint)]">
+                        <CopyButton text={editToken} />
+                        <p className="pl-text-xs w-full text-[var(--pl-faint)]">
                             The only key to edit this build - save it somewhere
                             safe and keep it private.
                         </p>
@@ -56,7 +56,7 @@ export default function SharePanel({
             </div>
 
             {slug && editToken && (
-                <div className="border-t border-[var(--pl-danger)]/40 bg-[var(--pl-danger-soft)] px-4 py-2.5">
+                <div className="border-t border-[#7a2a25] bg-[var(--pl-danger-soft)] px-4 py-2.5">
                     {deleting ? (
                         <DeleteConfirm
                             slug={slug}
@@ -82,7 +82,7 @@ export default function SharePanel({
     );
 }
 
-/** One ledger row: an uppercase label, the resolved URL and its copy action. */
+/** One ledger row: a label, the resolved URL and its copy action. */
 function LinkRow({
     label,
     url,
@@ -101,9 +101,7 @@ function LinkRow({
         <div
             className={`flex flex-wrap items-center gap-3 py-2.5 ${divider ? 'border-b border-[var(--pl-divider)]' : ''}`}
         >
-            <span className="pl-text-2xs w-24 shrink-0 font-semibold tracking-[0.12em] text-[var(--pl-faint)] uppercase">
-                {label}
-            </span>
+            <span className={`${LABEL_CLASS} w-24 shrink-0`}>{label}</span>
             <a
                 href={url}
                 className="pl-text-sm min-w-40 flex-1 truncate font-mono text-[var(--pl-text)] hover:text-[var(--pl-accent-lit)]"
@@ -116,17 +114,11 @@ function LinkRow({
 }
 
 /**
- * Copy with unmissable feedback: the button flips to an accent "Copied ✓" for a moment
- * (or reports the rare failure), with a hidden-textarea fallback for contexts where the
- * async clipboard API is unavailable.
+ * Copy with unmissable feedback: the button flips to a verdigris "Copied ✓" for a
+ * moment (or reports the rare failure), with a hidden-textarea fallback for contexts
+ * where the async clipboard API is unavailable.
  */
-function CopyButton({
-    text,
-    variant = 'ghost',
-}: {
-    text: string;
-    variant?: 'ghost' | 'primary';
-}) {
+function CopyButton({ text }: { text: string }) {
     const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
 
     function flash(next: 'copied' | 'failed'): void {
@@ -167,7 +159,7 @@ function CopyButton({
     return (
         <Button
             size="sm"
-            variant={state === 'copied' ? 'primary' : variant}
+            variant={state === 'copied' ? 'done' : 'ghost'}
             onClick={copy}
             title="Copy to clipboard"
         >
@@ -233,10 +225,7 @@ function DeleteConfirm({
     }
 
     return (
-        <div
-            className="my-1 flex flex-col gap-2 border-2 border-[var(--pl-danger)] bg-[var(--pl-panel-2)] p-3"
-            style={{ borderRadius: 'var(--pl-radius)' }}
-        >
+        <div className="notice notice-bad my-1 flex flex-col gap-2 p-3">
             <p className="pl-text-sm font-semibold text-[var(--pl-danger-lit)]">
                 Delete this build permanently?
             </p>
@@ -262,7 +251,7 @@ function DeleteConfirm({
                     <button
                         type="button"
                         onClick={() => setShown((value) => !value)}
-                        className="pl-text-2xs absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer font-semibold text-[var(--pl-muted)] uppercase hover:text-[var(--pl-text)]"
+                        className="pl-text-xs absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer font-medium text-[var(--pl-faint)] hover:text-[var(--pl-text-strong)]"
                     >
                         {shown ? 'Hide' : 'Show'}
                     </button>

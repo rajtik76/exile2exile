@@ -1,4 +1,5 @@
 import { SelectInput } from '@/components/planner/ui/Field';
+import { LABEL_CLASS } from '@/components/planner/ui/Text';
 import {
     groupIds,
     groupOptions,
@@ -12,8 +13,7 @@ import type {
     UniqueVariantSelection,
 } from '@/lib/uniqueVariants';
 
-const SECTION_LABEL =
-    'pl-text-xs mb-1 uppercase tracking-wide text-[var(--pl-muted)]';
+const SECTION_LABEL = `${LABEL_CLASS} mb-1`;
 
 function toSelection(
     normalised: NormalisedVariantSelection,

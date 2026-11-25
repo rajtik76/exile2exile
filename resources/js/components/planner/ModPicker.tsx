@@ -1,3 +1,4 @@
+import { MOD_TYPE_STYLE } from '@/components/planner/equipment/style';
 import SearchPicker from '@/components/planner/SearchPicker';
 import { renderModLines } from '@/lib/modLines';
 import type { ModInfo, ModRoll } from '@/lib/modLines';
@@ -38,11 +39,6 @@ interface ModGroup {
 type Suggestion =
     | { kind: 'tier'; group: ModGroup; tier: ModTier }
     | { kind: 'text'; text: string };
-
-const TYPE_STYLE: Record<'prefix' | 'suffix', React.CSSProperties> = {
-    prefix: { color: '#8fb3ff', backgroundColor: '#8fb3ff20' },
-    suffix: { color: '#e0b070', backgroundColor: '#e0b07020' },
-};
 
 /** Craft-only tier badges: the flag on the tier, its label and accent colour. */
 const CRAFT_BADGES = [
@@ -243,8 +239,8 @@ export default function ModPicker({
                 ) : (
                     <>
                         <span
-                            className="pl-text-2xs mt-0.5 rounded-xs px-1 py-px font-semibold uppercase"
-                            style={TYPE_STYLE[option.group.type]}
+                            className="pl-text-2xs mt-0.5 rounded-[2px] px-1 py-px font-semibold tabular-nums"
+                            style={MOD_TYPE_STYLE[option.group.type]}
                         >
                             {option.group.type === 'prefix' ? 'P' : 'S'}
                             {option.tier.tier ?? ''}
@@ -256,7 +252,7 @@ export default function ModPicker({
                             option.tier[key] ? (
                                 <span
                                     key={key}
-                                    className="pl-text-2xs mt-0.5 shrink-0 rounded-xs px-1 py-px font-semibold uppercase"
+                                    className="pl-text-2xs mt-0.5 shrink-0 rounded-[2px] px-1 py-px font-semibold"
                                     style={{
                                         color,
                                         backgroundColor: `${color}20`,

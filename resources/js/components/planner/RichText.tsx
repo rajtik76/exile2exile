@@ -13,7 +13,7 @@ const components = {
             href={href}
             target="_blank"
             rel="noopener noreferrer nofollow"
-            className="text-[#ecd49a] underline decoration-[#c9a24a]/40 underline-offset-2 hover:decoration-[#c9a24a]"
+            className="link"
         >
             {children}
         </a>

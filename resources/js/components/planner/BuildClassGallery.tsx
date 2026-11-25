@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ClassPortrait } from '@/components/build/classPortrait';
+import { MEDALLION } from '@/components/passive-tree/chrome';
 import { Eyebrow, Heading } from '@/components/planner/ui/Text';
 import { useTreeData } from '@/lib/useTreeData';
 import type { PlanBuild } from '@/types/planner';
@@ -34,7 +35,7 @@ export default function BuildClassGallery({
             <Heading level={1} className="mt-2">
                 Choose your class
             </Heading>
-            <p className="pl-text-sm mt-1 text-[var(--pl-muted)]">
+            <p className="pl-text-sm mt-3 text-[var(--pl-muted)]">
                 Pick a class, then its ascendancy - or start without one. This
                 is locked once set - use New build to change it.
             </p>
@@ -128,10 +129,10 @@ function PortraitTile({
             className="group flex w-24 flex-col items-center gap-2 outline-none"
         >
             <span
-                className={`relative flex size-20 items-center justify-center overflow-hidden rounded-full border bg-[var(--pl-panel-2)] transition duration-200 group-hover:scale-110 group-hover:border-[var(--pl-accent)] group-hover:ring-2 group-hover:ring-[var(--pl-ring)] group-focus-visible:scale-110 group-focus-visible:border-[var(--pl-accent)] group-focus-visible:ring-2 group-focus-visible:ring-[var(--pl-ring)] ${
+                className={`${MEDALLION} relative size-20 transition duration-200 group-hover:scale-110 group-hover:border-[var(--pl-accent)] group-focus-visible:scale-110 group-focus-visible:border-[var(--pl-accent)] group-focus-visible:ring-2 group-focus-visible:ring-[var(--pl-ring)] ${
                     active
-                        ? 'scale-110 border-[var(--pl-accent)] ring-2 ring-[var(--pl-ring)]'
-                        : 'border-[var(--pl-panel-border)]'
+                        ? 'scale-110 !border-[var(--pl-accent)] ring-2 ring-[var(--pl-ring)]'
+                        : ''
                 }`}
             >
                 <ClassPortrait
@@ -141,16 +142,10 @@ function PortraitTile({
                 />
             </span>
             <span className="flex flex-col items-center leading-tight">
-                <span
-                    className={`pl-text-sm font-medium transition group-hover:text-[var(--pl-accent-lit)] ${
-                        active
-                            ? 'text-[var(--pl-accent-lit)]'
-                            : 'text-[var(--pl-text-strong)]'
-                    }`}
-                >
+                <span className="font-display text-[17px] text-[var(--pl-text-strong)] transition-colors group-hover:text-[var(--pl-accent-lit)]">
                     {label}
                 </span>
-                <span className="pl-text-2xs text-[var(--pl-faint)]">
+                <span className="pl-text-xs text-[var(--pl-faint)]">
                     {sublabel}
                 </span>
             </span>
@@ -168,8 +163,8 @@ function NoAscendancyTile({ onClick }: { onClick: () => void }) {
             title="Start without an ascendancy"
             className="group flex w-24 flex-col items-center gap-2 outline-none"
         >
-            <span className="relative flex size-20 items-center justify-center rounded-full border border-dashed border-[var(--pl-panel-border)] text-center transition duration-200 group-hover:scale-110 group-hover:border-[var(--pl-accent)] group-focus-visible:scale-110 group-focus-visible:border-[var(--pl-accent)]">
-                <span className="pl-text-2xs px-2 leading-tight text-[var(--pl-muted)] transition group-hover:text-[var(--pl-accent-lit)] group-focus-visible:text-[var(--pl-accent-lit)]">
+            <span className="relative flex size-20 items-center justify-center rounded-full border border-dashed border-pewter-700 text-center transition duration-200 group-hover:scale-110 group-hover:border-[var(--pl-accent)] group-focus-visible:scale-110 group-focus-visible:border-[var(--pl-accent)]">
+                <span className="pl-text-xs px-2 leading-tight text-[var(--pl-muted)] transition group-hover:text-[var(--pl-accent-lit)] group-focus-visible:text-[var(--pl-accent-lit)]">
                     No ascendancy
                 </span>
             </span>

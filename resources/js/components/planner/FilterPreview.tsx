@@ -48,8 +48,8 @@ function Label({ label }: { label: PreviewLabel }) {
         border: `1px solid ${label.border ? rgb(label.border) : 'rgba(255,255,255,0.12)'}`,
         color: label.hidden ? 'rgb(150 150 150)' : rgb(label.text),
         // Path of Exile draws loot labels in Fontin SmallCaps (self-hosted); the font renders
-        // the small caps itself, so no text-transform. Marcellus is the fallback.
-        fontFamily: "'Fontin SmallCaps', 'Marcellus', Georgia, serif",
+        // the small caps itself, so no text-transform.
+        fontFamily: "'Fontin SmallCaps', 'Fontin', Georgia, serif",
         fontWeight: 400,
         fontSize,
         lineHeight: 1.2,
@@ -126,7 +126,7 @@ export default function FilterPreview({
 
     return (
         <div
-            className="relative overflow-hidden rounded-[var(--pl-radius)] border border-black/50"
+            className="relative overflow-hidden border border-line"
             style={{
                 backgroundImage: `url(${ground})`,
                 backgroundSize: 'cover',

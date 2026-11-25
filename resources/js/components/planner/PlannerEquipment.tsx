@@ -17,7 +17,7 @@ import { EQUIPMENT_SLOTS, WEAPON_SWAP_SLOTS } from '@/types/planner';
 import type { ItemPlan } from '@/types/planner';
 
 /**
- * A pill sitting just above a weapon/off-hand tile that swaps the whole doll between
+ * A small switch sitting just above a weapon/off-hand tile that swaps the whole doll between
  * its main and swap weapon pairs. Rendered twice - once per column - so either hand
  * can trigger the switch without reaching across the doll.
  */
@@ -29,7 +29,7 @@ function WeaponSetToggle({
     onChange: (active: boolean) => void;
 }) {
     return (
-        <div className="absolute -top-2 left-1/2 z-20 flex -translate-x-1/2 -translate-y-full overflow-hidden rounded-full bg-[var(--pl-panel)] shadow-[inset_0_0_0_1.5px_var(--pl-panel-border),0_1px_4px_rgba(0,0,0,0.5)]">
+        <div className="absolute -top-2 left-1/2 z-20 flex -translate-x-1/2 -translate-y-full rounded-[2px] border border-line bg-void p-px">
             {(['main', 'swap'] as const).map((value) => (
                 <button
                     key={value}
@@ -37,12 +37,13 @@ function WeaponSetToggle({
                     title={
                         value === 'main' ? 'Main weapon set' : 'Swap weapon set'
                     }
+                    aria-pressed={(active ? 'swap' : 'main') === value}
                     onClick={() => onChange(value === 'swap')}
                     className={cn(
-                        'pl-text-xs flex size-5 items-center justify-center font-bold transition-colors',
+                        'pl-text-xs flex h-5 min-w-5 items-center justify-center px-1 font-semibold transition-colors',
                         (active ? 'swap' : 'main') === value
-                            ? 'bg-[var(--pl-accent-lit)] text-[var(--pl-panel)]'
-                            : 'text-[var(--pl-muted)] hover:text-[var(--pl-accent-lit)]',
+                            ? 'bg-stone-700 text-paper shadow-[inset_0_-2px_0_var(--color-ember-500)]'
+                            : 'text-mist hover:text-paper',
                     )}
                 >
                     {value === 'main' ? 'I' : 'II'}

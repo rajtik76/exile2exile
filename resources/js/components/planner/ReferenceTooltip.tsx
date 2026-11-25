@@ -282,9 +282,9 @@ export default function ReferenceTooltip({
                         tree with this notable highlighted, so the reader sees where
                         it sits at a glance. */}
                         {type === 'notable' && reference?.id && (
-                            <div className="mt-2 overflow-hidden rounded-sm border border-[#2a2833] bg-[#0b0b12]/95 shadow-2xl backdrop-blur-sm">
+                            <div className="mt-2 overflow-hidden border border-line-strong bg-stone-900/95 shadow-2xl backdrop-blur-sm">
                                 <div
-                                    className="border-b border-[#2a2833] px-4 py-2 text-xs font-semibold tracking-wide uppercase"
+                                    className="border-b border-line px-4 py-2 font-label text-[15px] tracking-[0.06em]"
                                     style={{ color }}
                                 >
                                     Tree location

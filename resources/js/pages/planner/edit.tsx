@@ -859,7 +859,7 @@ function PlannerEdit({
                                                             <span className="px-1.5 text-[var(--pl-faint)]">
                                                                 ·
                                                             </span>
-                                                            <span className="text-[var(--pl-accent-lit)]">
+                                                            <span className="text-[var(--pl-muted)]">
                                                                 {
                                                                     selectedAscName
                                                                 }
@@ -882,7 +882,7 @@ function PlannerEdit({
                                                     }}
                                                     placeholder="Name your build…"
                                                     maxLength={120}
-                                                    className="pl-text-xl mt-10 !border-0 !border-b !bg-transparent !px-4 pb-1 font-semibold text-[var(--pl-heading)] placeholder:text-[var(--pl-muted)] sm:placeholder:text-[var(--pl-faint)]"
+                                                    className="pl-text-2xl mt-10 !rounded-none !border-0 !border-b !border-line-strong !bg-transparent !px-0 !pt-1 !pb-2 font-display !shadow-none [word-spacing:-0.1em] placeholder:text-[var(--pl-muted)] focus-visible:!border-ember-400 sm:placeholder:text-[var(--pl-faint)]"
                                                 />
                                                 {formErrors.title && (
                                                     <p className="pl-text-sm mt-1 text-[var(--pl-danger-lit)]">
@@ -924,13 +924,13 @@ function PlannerEdit({
                                         {/* The game data moved to a new era since the editor
                                         opened: the save is refused until a reload. */}
                                         {formErrors.gamePatch && (
-                                            <p className="pl-text-sm mb-4 rounded-[var(--pl-radius)] border border-[var(--pl-danger)] bg-[var(--pl-danger-soft)] px-3 py-2 text-[var(--pl-danger-lit)]">
+                                            <p className="notice notice-bad pl-text-sm mb-4 px-3 py-2 text-[var(--pl-danger-lit)]">
                                                 {formErrors.gamePatch}
                                             </p>
                                         )}
 
                                         {formErrors.tabs && (
-                                            <p className="pl-text-sm mb-4 rounded-[var(--pl-radius)] border border-[var(--pl-danger)] bg-[var(--pl-danger-soft)] px-3 py-2 text-[var(--pl-danger-lit)]">
+                                            <p className="notice notice-bad pl-text-sm mb-4 px-3 py-2 text-[var(--pl-danger-lit)]">
                                                 {formErrors.tabs}
                                             </p>
                                         )}

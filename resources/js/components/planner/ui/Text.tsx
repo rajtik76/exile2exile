@@ -2,12 +2,15 @@ import { cn } from '@/lib/utils';
 
 /**
  * Shared planner typography primitives - the eyebrow, field label, headings and
- * hairline divider. All read the --pl-* tokens so weight, tracking, colour and the
- * heading face swap with the design. Use these instead of ad-hoc text-[#..] spans
- * so every surface reads identically.
+ * hairline divider. Fontin carries headings and section labels (its own small
+ * caps, never letter-spaced capitals); anything small is the UI face. Use these
+ * instead of ad-hoc spans so every surface reads identically.
  */
 
-/** Small accent-coloured uppercase kicker above a title (e.g. "Build planner"). */
+/** Small label over a form field or a group: UI face, never capitals. */
+export const LABEL_CLASS = 'pl-text-xs font-medium text-[var(--pl-muted)]';
+
+/** Section label in the face's own small caps (e.g. "Build planner"). */
 export function Eyebrow({
     children,
     className,
@@ -17,20 +20,17 @@ export function Eyebrow({
 }) {
     return (
         <p
-            className={cn('pl-text-xs uppercase', className)}
-            style={{
-                color: 'var(--pl-accent)',
-                fontFamily: 'var(--pl-font-head)',
-                fontWeight: 'var(--pl-label-weight)',
-                letterSpacing: 'var(--pl-label-tracking)',
-            }}
+            className={cn(
+                'font-label text-[15px] tracking-[0.06em] text-pewter-300',
+                className,
+            )}
         >
             {children}
         </p>
     );
 }
 
-/** Muted uppercase label above a form field or group. */
+/** Small label above a form field or group. */
 export function FieldLabel({
     children,
     className,
@@ -38,21 +38,10 @@ export function FieldLabel({
     children: React.ReactNode;
     className?: string;
 }) {
-    return (
-        <p
-            className={cn('pl-text-2xs uppercase', className)}
-            style={{
-                color: 'var(--pl-faint)',
-                fontWeight: 'var(--pl-label-weight)',
-                letterSpacing: 'var(--pl-label-tracking)',
-            }}
-        >
-            {children}
-        </p>
-    );
+    return <p className={cn(LABEL_CLASS, className)}>{children}</p>;
 }
 
-/** Page or section heading in the design's heading face. */
+/** Page or section heading in the display face. */
 export function Heading({
     level = 2,
     children,
@@ -67,14 +56,12 @@ export function Heading({
     return (
         <Tag
             className={cn(
-                level === 1 ? 'pl-text-2xl' : 'pl-text-lg',
+                'font-display font-normal text-[var(--pl-heading)]',
+                level === 1
+                    ? 'pl-text-3xl leading-[1.1] [word-spacing:-0.1em]'
+                    : 'pl-text-lg leading-[1.2]',
                 className,
             )}
-            style={{
-                color: 'var(--pl-heading)',
-                fontFamily: 'var(--pl-font-head)',
-                fontWeight: 'var(--pl-heading-weight)',
-            }}
         >
             {children}
         </Tag>

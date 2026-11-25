@@ -47,7 +47,13 @@ function useIsLanding(): boolean {
 function useHasOwnMainAction(): boolean {
     const { component } = usePage();
 
-    return component === 'tree' || component === 'tree/unlock';
+    return [
+        'tree',
+        'tree/unlock',
+        'planner/edit',
+        'planner/show',
+        'planner/unlock',
+    ].includes(component);
 }
 
 /** On the landing, cap a full-width band at 2240px and fade its edges beyond. */

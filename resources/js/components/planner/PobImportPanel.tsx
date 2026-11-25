@@ -106,12 +106,13 @@ export default function PobImportPanel({
     return (
         <Panel
             title="Import from Path of Building"
+            className="border-0 before:hidden"
             action={
                 <button
                     type="button"
                     onClick={onClose}
                     aria-label="Close"
-                    className="inline-flex size-6 items-center justify-center rounded-[var(--pl-radius)] text-[var(--pl-muted)] transition outline-none hover:text-[var(--pl-accent-lit)] focus-visible:text-[var(--pl-accent-lit)]"
+                    className="inline-flex size-6 items-center justify-center rounded-[var(--pl-radius)] text-mist transition-colors duration-[120ms] hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-400"
                 >
                     <svg
                         viewBox="0 0 16 16"
@@ -151,7 +152,6 @@ export default function PobImportPanel({
                     <Button
                         type="button"
                         variant="primary"
-                        className="border-2"
                         onClick={submit}
                         disabled={importing || !looksImportable(code)}
                     >

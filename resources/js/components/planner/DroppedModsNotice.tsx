@@ -1,3 +1,4 @@
+import { LABEL_CLASS } from '@/components/planner/ui/Text';
 import { EQUIPMENT_SLOTS, WEAPON_SWAP_SLOTS } from '@/types/planner';
 
 /** Planner slot key → its paper-doll label ("gloves" → "Gloves"). */
@@ -35,10 +36,7 @@ export default function DroppedModsNotice({
     const total = groups.reduce((sum, [, lines]) => sum + lines.length, 0);
 
     return (
-        <div
-            role="status"
-            className="mb-8 rounded-[var(--pl-radius)] border border-[#c99a3a]/45 bg-[#c99a3a]/10 p-4"
-        >
+        <div role="status" className="notice mb-8 p-4">
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="pl-text-sm font-medium text-[var(--pl-text-strong)]">
@@ -56,7 +54,7 @@ export default function DroppedModsNotice({
                     type="button"
                     onClick={onDismiss}
                     aria-label="Dismiss"
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-[var(--pl-radius)] text-[var(--pl-muted)] transition outline-none hover:text-[var(--pl-accent-lit)] focus-visible:text-[var(--pl-accent-lit)]"
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-[var(--pl-radius)] text-mist transition-colors duration-[120ms] hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-400"
                 >
                     <svg
                         viewBox="0 0 16 16"
@@ -74,7 +72,7 @@ export default function DroppedModsNotice({
             <ul className="mt-3 flex flex-col gap-3">
                 {groups.map(([slot, lines]) => (
                     <li key={slot}>
-                        <p className="pl-text-xs font-medium tracking-wide text-[var(--pl-faint)] uppercase">
+                        <p className={LABEL_CLASS}>
                             {SLOT_LABEL[slot] ?? slot}
                         </p>
                         <ul className="mt-1 flex flex-col gap-0.5">

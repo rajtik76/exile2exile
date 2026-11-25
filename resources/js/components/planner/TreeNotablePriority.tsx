@@ -45,7 +45,7 @@ export default function TreeNotablePriority(props: TreeNotablePriorityProps) {
     return (
         <LazyMount
             fallback={
-                <div className="h-12 w-24 animate-pulse rounded-full bg-[var(--pl-input-bg)]" />
+                <div className="h-12 w-24 animate-pulse rounded-[2px] bg-[var(--pl-panel-2)]" />
             }
         >
             <NotablePriorityList {...props} />
@@ -144,7 +144,7 @@ function NotablePriorityList({
                                 style={{ borderColor: border }}
                                 className={`flex size-12 items-center justify-center overflow-hidden rounded-full border-2 bg-[var(--pl-input-bg)] transition ${
                                     drag.isOver(key)
-                                        ? 'ring-2 ring-[var(--pl-accent-lit)]'
+                                        ? 'ring-2 ring-[var(--pl-accent)]'
                                         : ''
                                 }`}
                             >
@@ -167,7 +167,7 @@ function NotablePriorityList({
 
                         <span
                             aria-hidden
-                            className="pl-text-2xs absolute -top-1 -left-1 flex size-5 items-center justify-center rounded-full bg-[var(--pl-accent)] font-semibold text-[#15120b]"
+                            className="pl-text-2xs absolute -top-1 -left-1 flex size-5 items-center justify-center rounded-[2px] border border-line-strong bg-stone-800 font-semibold text-[var(--pl-text-strong)] tabular-nums"
                         >
                             {index + 1}
                         </span>

@@ -4,9 +4,9 @@ import { cn } from '@/lib/utils';
 
 /**
  * Shared overlay surfaces: the full-screen Modal (slot editor) and the floating
- * PopoverCard (item/mod pickers, priority menu). Both take their panel colour,
- * border, radius and shadow from --pl-* tokens. Positioning of the popover is left
- * to the caller (it only styles the card); the modal owns its own backdrop.
+ * PopoverCard (item/mod pickers, priority menu). Both are floating layers, so they
+ * carry the pewter frame and a shadow. Positioning of the popover is left to the
+ * caller (it only styles the card); the modal owns its own backdrop.
  */
 
 export function Modal({
@@ -61,17 +61,16 @@ export function Modal({
                 'planner-reading fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto',
                 fullScreenMobile ? 'sm:p-4 sm:pt-12' : 'p-4 pt-12',
             )}
-            style={{ background: 'rgba(0,0,0,0.72)' }}
+            style={{ background: 'rgba(5,8,12,0.78)' }}
             onClick={onClose}
         >
             <div
                 className={cn(
-                    'w-full max-w-3xl rounded-[var(--pl-radius-lg)] border border-[var(--pl-panel-border)] bg-[var(--pl-panel)]',
+                    'dialog w-full max-w-3xl',
                     fullScreenMobile &&
-                        'max-sm:min-h-dvh max-sm:max-w-none max-sm:rounded-none max-sm:border-0',
+                        'max-sm:min-h-dvh max-sm:max-w-none max-sm:border-0',
                     className,
                 )}
-                style={{ boxShadow: 'var(--pl-shadow)' }}
                 onClick={(event) => event.stopPropagation()}
             >
                 {children}
@@ -89,13 +88,9 @@ export function PopoverCard({
     return (
         <div
             className={cn(
-                'border border-[var(--pl-panel-border)] bg-[var(--pl-panel)]',
+                'border border-pewter-700 bg-[var(--pl-panel)] shadow-[0_18px_40px_-12px_#000]',
                 className,
             )}
-            style={{
-                borderRadius: 'var(--pl-radius)',
-                boxShadow: 'var(--pl-shadow)',
-            }}
             {...props}
         >
             {children}

@@ -1,14 +1,14 @@
 import { cn } from '@/lib/utils';
 
 /**
- * Shared planner form controls. One input look (bg / border / focus / text) driven
- * by --pl-* tokens, reused by the title field, entry name/note inputs, mod value
- * boxes and number fields - so every input matches and re-skins with the design.
+ * Shared planner form controls. One input look - a void field in a line border
+ * that lights ember on focus - reused by the title field, entry name/note inputs,
+ * mod value boxes and number fields, so every input matches.
  */
 
 /** The base input styling; exported so bespoke inputs (mod values) match exactly. */
 export const INPUT_CLASS =
-    'w-full rounded-[var(--pl-radius)] border border-[var(--pl-input-border)] bg-[var(--pl-input-bg)] text-[var(--pl-text)] outline-none transition placeholder:text-[var(--pl-faint)] focus-visible:border-[var(--pl-focus)]';
+    'w-full rounded-[var(--pl-radius)] border border-[var(--pl-input-border)] bg-[var(--pl-input-bg)] text-[var(--pl-text-strong)] outline-none transition-[border-color,box-shadow] duration-[120ms] placeholder:text-[var(--pl-faint)] hover:border-line-strong focus-visible:border-[var(--pl-focus)] focus-visible:shadow-[0_0_0_3px_rgba(255,154,77,0.22)]';
 
 export function TextInput({
     className,

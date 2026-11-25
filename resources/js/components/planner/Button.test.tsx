@@ -7,19 +7,19 @@ test('Button applies the variant class and defaults to type=button', () => {
 
     const button = screen.getByRole('button', { name: 'Save' });
     expect(button.getAttribute('type')).toBe('button');
-    expect(button.className).toContain('bg-[var(--pl-accent)]');
+    expect(button.className).toContain('btn-copper');
 });
 
-test('an active Button shows the selected state, not the variant', () => {
+test('an active Button shows the pressed state', () => {
     render(
         <Button variant="ghost" active>
             Act I
         </Button>,
     );
 
-    expect(screen.getByRole('button').className).toContain(
-        'bg-[var(--pl-accent-soft)]',
-    );
+    const button = screen.getByRole('button');
+    expect(button.className).toContain('btn-on');
+    expect(button.getAttribute('aria-pressed')).toBe('true');
 });
 
 test('SegmentedControl lights the active option and reports changes', () => {
@@ -36,9 +36,16 @@ test('SegmentedControl lights the active option and reports changes', () => {
         />,
     );
 
-    expect(screen.getByRole('button', { name: 'Phases' }).className).toContain(
-        'text-[var(--pl-accent-lit)]',
-    );
+    expect(
+        screen
+            .getByRole('button', { name: 'Phases' })
+            .getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(
+        screen
+            .getByRole('button', { name: 'No tabs' })
+            .getAttribute('aria-pressed'),
+    ).toBe('false');
 
     fireEvent.click(screen.getByRole('button', { name: 'No tabs' }));
     expect(onChange).toHaveBeenCalledWith('single');

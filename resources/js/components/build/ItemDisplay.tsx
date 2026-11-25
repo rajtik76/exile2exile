@@ -720,22 +720,23 @@ export function SlotTile({
                 clear button and priority overlay all anchor to the item, not the wider
                 grid cell a left/right-justified flask leaves around it. */}
                 <div
-                    className={`relative flex h-full items-center justify-center rounded-[10px] ${flask ? 'w-[45%] min-w-[1.6rem]' : 'w-full'} ${highlighted ? 'ring-2 ring-[var(--pl-accent-lit)]' : ''}`}
+                    className={`relative flex h-full items-center justify-center rounded-[2px] ${flask ? 'w-[45%] min-w-[1.6rem]' : 'w-full'} ${highlighted ? 'outline-2 outline-offset-2 outline-ember-400' : ''}`}
                 >
                     <div
-                        className={`flex h-full w-full items-center justify-center overflow-hidden rounded-[10px] border transition ${onEdit && !item ? 'hover:border-[#c9a24a]/70 hover:bg-[#c9a24a]/[0.06]' : ''}`}
-                        style={{
-                            borderColor: tone ? tone.edge : '#1e1e26',
-                            // A filled tile tints its background with the rarity's own
-                            // glow (as the game's inventory does), fading into the dark
-                            // base so the art stays readable.
-                            background: tone
-                                ? `radial-gradient(85% 85% at 50% 18%, ${tone.glow} 0%, transparent 70%), linear-gradient(180deg, #14141c 0%, #0a0a10 100%)`
-                                : 'radial-gradient(65% 65% at 50% 32%, rgba(201,162,74,0.06), transparent 72%), linear-gradient(180deg, #131319 0%, #0a0a0e 100%)',
-                            boxShadow: tone
-                                ? `inset 0 0 26px -12px ${tone.glow}, 0 0 6px -3px ${tone.glow}`
-                                : 'inset 0 1px 0 rgba(255,255,255,0.04), inset 0 0 22px -14px rgba(0,0,0,0.85)',
-                        }}
+                        className={`flex h-full w-full items-center justify-center overflow-hidden rounded-[2px] border border-line bg-void transition-colors duration-[120ms] ${onEdit && !item ? 'group-hover:border-pewter-500' : ''}`}
+                        // A filled tile carries the rarity's own colour: its border and
+                        // a glow fading into the dark field (as the game's inventory
+                        // does), so the art stays readable. An empty one is a plain
+                        // dark field.
+                        style={
+                            tone
+                                ? {
+                                      borderColor: tone.edge,
+                                      background: `radial-gradient(85% 85% at 50% 18%, ${tone.glow} 0%, transparent 70%), var(--color-void)`,
+                                      boxShadow: `inset 0 0 26px -12px ${tone.glow}`,
+                                  }
+                                : undefined
+                        }
                     >
                         {item ? (
                             showArt ? (
@@ -774,13 +775,13 @@ export function SlotTile({
                                         stroke="currentColor"
                                         strokeWidth="1.6"
                                         strokeLinecap="round"
-                                        className="size-3 text-[#4a4855] transition group-hover:text-[#c9a24a]"
+                                        className="size-3 text-mist transition-colors group-hover:text-paper"
                                     >
                                         <path d="M8 3.5 V12.5 M3.5 8 H12.5" />
                                     </svg>
                                 )}
                                 <span
-                                    className={`px-1 text-center text-[8px] tracking-wide uppercase ${onEdit ? 'text-[#8a7a52] group-hover:text-[#c9a24a]' : 'text-[#4a4855]'}`}
+                                    className={`px-1 text-center font-label text-[11px] leading-tight tracking-[0.05em] text-mist transition-colors ${onEdit ? 'group-hover:text-paper' : 'opacity-60'}`}
                                 >
                                     {slot}
                                 </span>
@@ -806,7 +807,7 @@ export function SlotTile({
                                 event.stopPropagation();
                                 onClear();
                             }}
-                            className="pointer-events-none absolute top-1.5 right-1.5 z-[61] flex size-5 items-center justify-center rounded-full bg-[var(--pl-panel)] text-[#ff8a80] opacity-0 shadow-[inset_0_0_0_2px_#e0584f,0_1px_4px_rgba(0,0,0,0.6)] transition-opacity duration-150 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 hover:bg-[#e0584f] hover:text-white"
+                            className="pointer-events-none absolute top-1.5 right-1.5 z-[61] flex size-5 items-center justify-center rounded-[2px] bg-stone-900 text-blood-lit opacity-0 shadow-[inset_0_0_0_1px_var(--color-blood),0_1px_4px_rgba(0,0,0,0.6)] transition-opacity duration-150 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 hover:bg-blood hover:text-white"
                         >
                             <svg
                                 aria-hidden

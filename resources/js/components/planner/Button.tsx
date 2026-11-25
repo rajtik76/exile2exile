@@ -1,34 +1,24 @@
 import { cn } from '@/lib/utils';
 
-type Variant = 'primary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'ghost' | 'danger' | 'done';
 type Size = 'sm' | 'md';
 
-const BASE =
-    'inline-flex items-center justify-center gap-1.5 rounded-[var(--pl-radius)] border-2 font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-[var(--pl-ring)] disabled:cursor-not-allowed disabled:opacity-50';
-
-/** The recurring active/selected state (tabs, segmented controls). */
-const ACTIVE =
-    'border-[var(--pl-accent)] bg-[var(--pl-accent-soft)] text-[var(--pl-accent-lit)]';
-
+/**
+ * Copper is the one main action of a screen, iron every ordinary button, danger
+ * the destructive one; `done` is iron confirming a finished action (copied).
+ */
 const VARIANTS: Record<Variant, string> = {
-    primary:
-        'border-[var(--pl-accent)] bg-[var(--pl-accent)] text-[#15120b] hover:enabled:bg-[var(--pl-accent-lit)] hover:enabled:border-[var(--pl-accent-lit)]',
-    ghost: 'border-[var(--pl-panel-border)] text-[var(--pl-text)] hover:enabled:border-[var(--pl-accent)] hover:enabled:text-[var(--pl-accent-lit)]',
-    danger: 'border-[var(--pl-danger)] bg-[var(--pl-danger-soft)] text-[var(--pl-danger-lit)] hover:enabled:brightness-125',
-};
-
-// Paddings are em-based (matched to the desktop px at the 16px base) so they scale
-// with --pl-font-size, shrinking the whole control on phones without touching desktop.
-const SIZES: Record<Size, string> = {
-    sm: 'px-[0.625em] py-[0.25em] pl-text-xs',
-    md: 'px-[1em] py-[0.5em] pl-text-sm',
+    primary: 'btn-copper',
+    ghost: 'btn-iron',
+    danger: 'btn-danger',
+    done: 'btn-iron border-verdigris text-verdigris',
 };
 
 /**
- * The single button used across the build planner, so Save, tabs, "+ Reference",
- * "Add entry", delete and every toggle share one look. `active` applies the
- * selected state (for tabs/segments); `icon` makes a square icon button. Styling
- * is driven entirely by the --pl-* design tokens, so it re-skins with the design.
+ * The single button used across the build planner, so Save, "Add entry", delete
+ * and every toggle share one look - the shared `.btn` classes of the working
+ * tier. `active` applies the pressed state (for toggles); `icon` makes a square
+ * icon button.
  */
 export default function Button({
     variant = 'ghost',
@@ -51,10 +41,13 @@ export default function Button({
     return (
         <button
             type={type}
+            aria-pressed={active || undefined}
             className={cn(
-                BASE,
-                active ? ACTIVE : VARIANTS[variant],
-                icon ? 'pl-text-sm size-[1.75em] p-0' : SIZES[size],
+                'btn',
+                VARIANTS[variant],
+                active && 'btn-on',
+                size === 'sm' && 'btn-sm',
+                icon && 'size-7 p-0',
                 className,
             )}
             {...props}
@@ -65,9 +58,9 @@ export default function Button({
                     viewBox="0 0 16 16"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="1.6"
                     strokeLinecap="round"
-                    className="mr-0.5 size-[1.1em] shrink-0"
+                    className="size-[1.1em] shrink-0"
                 >
                     <path d="M8 3.5 V12.5 M3.5 8 H12.5" />
                 </svg>
@@ -78,8 +71,8 @@ export default function Button({
 }
 
 /**
- * A segmented control (Phases/No tabs, Edit/Preview, Skill/Support, type filter)
- * built from the shared button look - one bordered group, the active option lit.
+ * A segmented control (Phases/No tabs, Edit/Preview, Skill/Support, type filter):
+ * one sunken group, the active option lifted with an ember underline.
  */
 export function SegmentedControl<T extends string>({
     options,
@@ -87,30 +80,27 @@ export function SegmentedControl<T extends string>({
     onChange,
     className,
 }: {
-    options: Array<{ value: T; label: React.ReactNode; title?: string }>;
+    options: Array<{
+        value: T;
+        label: React.ReactNode;
+        title?: string;
+        ariaLabel?: string;
+    }>;
     value: T;
     onChange: (value: T) => void;
     className?: string;
 }) {
     return (
-        <div
-            className={cn(
-                'inline-flex overflow-hidden rounded-[var(--pl-radius)] border-2 border-[var(--pl-panel-border)]',
-                className,
-            )}
-        >
+        <div className={cn('seg', className)}>
             {options.map((option) => (
                 <button
                     key={option.value}
                     type="button"
                     title={option.title}
+                    aria-label={option.ariaLabel}
+                    aria-pressed={value === option.value}
                     onClick={() => onChange(option.value)}
-                    className={cn(
-                        'pl-text-sm px-[0.75em] py-[0.25em] font-medium capitalize transition',
-                        value === option.value
-                            ? 'bg-[var(--pl-accent-soft)] text-[var(--pl-accent-lit)]'
-                            : 'text-[var(--pl-muted)] hover:text-[var(--pl-accent-lit)]',
-                    )}
+                    className="capitalize"
                 >
                     {option.label}
                 </button>

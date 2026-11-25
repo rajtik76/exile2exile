@@ -45,7 +45,7 @@ export default function ModRow({
         <div className="relative">
             <div className="flex items-start gap-2 rounded-[var(--pl-radius)] border border-[var(--pl-panel-border)] bg-[var(--pl-panel-2)] px-2 py-1.5">
                 <span
-                    className="pl-text-2xs mt-1 rounded-xs px-1 py-px font-semibold uppercase tabular-nums"
+                    className="pl-text-2xs mt-1 rounded-[2px] px-1 py-px font-semibold tabular-nums"
                     style={
                         matched && stat.type
                             ? MOD_TYPE_STYLE[stat.type]

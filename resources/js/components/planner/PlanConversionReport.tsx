@@ -206,7 +206,7 @@ export default function PlanConversionReport({
 
 function ListTitle({ children }: { children: React.ReactNode }) {
     return (
-        <h3 className="pl-text-xs mb-1.5 font-semibold tracking-[0.14em] text-[var(--pl-accent)] uppercase">
+        <h3 className="mb-1.5 font-label text-[15px] tracking-[0.06em] text-pewter-300">
             {children}
         </h3>
     );

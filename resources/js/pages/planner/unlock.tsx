@@ -63,7 +63,6 @@ export default function PlannerUnlock({
                             <Button
                                 type="submit"
                                 variant="primary"
-                                className="border-2"
                                 disabled={
                                     form.processing ||
                                     form.data.token.trim() === ''

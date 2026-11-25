@@ -103,7 +103,7 @@ export function TooltipBadge({
     if (color) {
         return (
             <span
-                className="inline-flex items-center rounded-[3px] border px-2 py-0.5 text-xs font-medium tracking-wide"
+                className="inline-flex items-center rounded-[2px] border px-2 py-0.5 text-xs font-medium tracking-wide"
                 style={{
                     color,
                     borderColor: `${color}66`,
@@ -116,7 +116,7 @@ export function TooltipBadge({
     }
 
     return (
-        <span className="inline-flex items-center rounded-[3px] border border-[#2a2833] bg-[#13131b] px-2 py-0.5 text-xs font-medium tracking-wide text-[#a7acb8]">
+        <span className="inline-flex items-center rounded-[2px] border border-pewter-700 px-2 py-0.5 text-xs font-medium tracking-wide text-bone">
             {children}
         </span>
     );

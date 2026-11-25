@@ -57,7 +57,7 @@ function PlannerTree(props: PlannerTreeProps) {
                 // say it twice. Keeps the canvas's exact height, so nothing shifts when
                 // the real tree replaces it.
                 <div
-                    className={`${FRAME} w-full animate-pulse rounded-sm border border-[#2a2833] bg-[#08080b]/50`}
+                    className={`${FRAME} w-full animate-pulse border border-line bg-void/50`}
                 />
             }
         >
@@ -114,7 +114,7 @@ function PlannerTreeCanvas({
     if (!data) {
         return (
             <div
-                className={`pl-text-sm flex ${FRAME} items-center justify-center rounded-sm border border-[#2a2833] bg-[#08080b]/50 text-[#787d8a]`}
+                className={`pl-text-sm flex ${FRAME} items-center justify-center border border-line bg-void/50 text-mist`}
             >
                 Loading passive tree…
             </div>
@@ -124,7 +124,7 @@ function PlannerTreeCanvas({
     if (classId === null) {
         return (
             <div
-                className={`pl-text-sm flex ${FRAME} items-center justify-center rounded-sm border border-[#2a2833] bg-[#08080b]/50 text-[#787d8a]`}
+                className={`pl-text-sm flex ${FRAME} items-center justify-center border border-line bg-void/50 text-mist`}
             >
                 {editable
                     ? 'Pick a class at the top to start the tree.'
@@ -152,7 +152,7 @@ function PlannerTreeCanvas({
 
     return (
         <div
-            className={`planner-tree-frame ${FRAME} overflow-hidden rounded-sm border border-[#2a2833]`}
+            className={`planner-tree-frame ${FRAME} overflow-hidden border border-line`}
         >
             <PassiveTreeView
                 editable={editable}

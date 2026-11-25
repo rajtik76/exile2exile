@@ -53,13 +53,7 @@ export default function PhaseTabs({
             {/* Full-bleed bar spanning the viewport (like the top nav), broken out of
                 the page's max-width; content re-centred inside. */}
             {!hidden && (
-                <div
-                    style={{
-                        background: 'rgba(9,11,16,0.92)',
-                        borderColor: 'var(--pl-accent)',
-                    }}
-                    className="relative left-1/2 w-screen -translate-x-1/2 border-b-2 shadow-[0_10px_24px_-16px_rgba(0,0,0,0.9)] backdrop-blur"
-                >
+                <div className="relative left-1/2 w-screen -translate-x-1/2 bg-ink/95 shadow-[0_10px_24px_-16px_rgba(0,0,0,0.9)] backdrop-blur">
                     <div className="relative mx-auto max-w-5xl px-3 py-2 sm:px-4 sm:py-3">
                         <div className="flex flex-col gap-2 sm:gap-3">
                             {editable && onSetMode && (
@@ -134,24 +128,26 @@ export default function PhaseTabs({
                         </div>
                     </div>
 
+                    {/* The same pewter rule that closes the masthead. */}
+                    <div
+                        aria-hidden
+                        className="absolute inset-x-[1.5%] bottom-0 h-0.5 rule-pewter"
+                    />
+
                     {/* Collapse handle hanging below the bar's centre, arrow-up. */}
                     <button
                         type="button"
                         onClick={() => setHidden(true)}
                         title="Hide phases"
                         aria-label="Hide phases"
-                        style={{
-                            background: 'var(--pl-accent)',
-                            borderColor: 'var(--pl-accent)',
-                        }}
-                        className="absolute top-full left-1/2 inline-flex -translate-x-1/2 items-center justify-center rounded-b-[var(--pl-radius)] border border-t-0 border-b-2 px-5 py-1 text-[#15120b] transition outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--pl-ring)]"
+                        className="absolute top-full left-1/2 inline-flex -translate-x-1/2 items-center justify-center rounded-b-[2px] border border-t-0 border-pewter-700 bg-stone-800 px-5 py-1 text-slate transition-colors duration-[120ms] outline-none hover:border-ember-400 hover:text-ember-300 focus-visible:ring-2 focus-visible:ring-[var(--pl-ring)]"
                     >
                         <svg
                             viewBox="0 0 16 16"
                             aria-hidden
                             fill="none"
                             stroke="currentColor"
-                            strokeWidth="2"
+                            strokeWidth="1.6"
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             className="size-3.5"
@@ -169,24 +165,17 @@ export default function PhaseTabs({
                         type="button"
                         onClick={() => setHidden(false)}
                         title="Show phases"
-                        style={{
-                            borderColor: 'var(--pl-accent)',
-                            background: 'var(--pl-accent)',
-                            borderRadius: 'var(--pl-radius)',
-                            boxShadow: '0 8px 20px -8px rgba(0,0,0,0.85)',
-                            letterSpacing: 'var(--pl-label-tracking)',
-                        }}
-                        className="pl-text-xs inline-flex items-center gap-1.5 border px-[0.75em] py-[0.375em] font-semibold text-[#15120b] uppercase transition outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--pl-ring)] sm:px-[1em] sm:py-[0.5em]"
+                        className="inline-flex h-[30px] items-center gap-2 rounded-[2px] border border-pewter-700 bg-stone-800 px-3.5 font-label text-[15px] tracking-[0.06em] text-paper shadow-[0_8px_20px_-8px_rgba(0,0,0,0.85)] transition-colors duration-[120ms] outline-none hover:border-ember-400 focus-visible:ring-2 focus-visible:ring-[var(--pl-ring)]"
                     >
                         <svg
                             viewBox="0 0 16 16"
                             aria-hidden
                             fill="none"
                             stroke="currentColor"
-                            strokeWidth="2"
+                            strokeWidth="1.6"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="size-[1.15em]"
+                            className="size-4 text-ember-400"
                         >
                             <path d="M4 6 L8 10 L12 6" />
                         </svg>
@@ -206,7 +195,8 @@ export default function PhaseTabs({
 }
 
 /**
- * One phase pill - a 2px-bordered, text-sm tab matching the segmented controls. While
+ * One phase tab - a bordered box whose active state matches the segmented controls
+ * (lifted stone, ember underline). While
  * editing, any phase (base or custom) takes an inline name input, so "Act I" etc. are
  * just prefilled defaults the author can rename. Small ‹/› arrows reorder the phase
  * and a ✕ removes it (as long as at least one phase remains).
@@ -235,15 +225,13 @@ function PhaseChip({
     onRemove: () => void;
 }) {
     const frame = active
-        ? 'border-[var(--pl-accent)] bg-[var(--pl-accent-soft)]'
-        : 'border-[var(--pl-panel-border)] hover:border-[var(--pl-accent)]';
-    const text = active
-        ? 'text-[var(--pl-accent-lit)]'
-        : 'text-[var(--pl-text)]';
+        ? 'border-line-strong bg-stone-700 shadow-[inset_0_-2px_0_var(--color-ember-500)]'
+        : 'border-line hover:border-line-strong';
+    const text = active ? 'text-paper' : 'text-slate hover:text-paper';
 
     return (
         <div
-            className={`relative inline-flex items-center rounded-[var(--pl-radius)] border-2 transition ${frame} ${removable ? 'pr-6' : ''}`}
+            className={`relative inline-flex items-center rounded-[2px] border transition-colors duration-[120ms] ${frame} ${removable ? 'pr-6' : ''}`}
         >
             {editable && (canMoveLeft || canMoveRight) && (
                 <span className="flex items-center pl-1">
@@ -256,7 +244,7 @@ function PhaseChip({
                             event.stopPropagation();
                             onMove('left');
                         }}
-                        className="pl-text-2xs inline-flex size-4 items-center justify-center leading-none text-[var(--pl-muted)] transition hover:text-[var(--pl-accent-lit)] disabled:opacity-20"
+                        className="pl-text-2xs inline-flex size-4 items-center justify-center leading-none text-mist transition-colors hover:text-paper disabled:opacity-20"
                     >
                         ‹
                     </button>
@@ -269,7 +257,7 @@ function PhaseChip({
                             event.stopPropagation();
                             onMove('right');
                         }}
-                        className="pl-text-2xs inline-flex size-4 items-center justify-center leading-none text-[var(--pl-muted)] transition hover:text-[var(--pl-accent-lit)] disabled:opacity-20"
+                        className="pl-text-2xs inline-flex size-4 items-center justify-center leading-none text-mist transition-colors hover:text-paper disabled:opacity-20"
                     >
                         ›
                     </button>
@@ -284,7 +272,7 @@ function PhaseChip({
                     placeholder="Phase name"
                     maxLength={60}
                     style={{ width: `${Math.max(tab.label.length, 4)}ch` }}
-                    className={`pl-text-sm bg-transparent px-[0.75em] py-[0.25em] font-medium outline-none ${text}`}
+                    className={`pl-text-sm box-content bg-transparent px-[0.75em] py-[0.25em] font-medium outline-none ${text}`}
                 />
             ) : (
                 <button
@@ -304,7 +292,7 @@ function PhaseChip({
                         event.stopPropagation();
                         onRemove();
                     }}
-                    className="pl-text-2xs absolute top-1/2 right-1 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded-full leading-none text-[var(--pl-danger)] transition hover:bg-[var(--pl-danger)] hover:text-white"
+                    className="pl-text-2xs absolute top-1/2 right-1 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded-[2px] leading-none text-mist transition-colors hover:bg-[var(--pl-danger-soft)] hover:text-blood-lit"
                 >
                     ✕
                 </button>
