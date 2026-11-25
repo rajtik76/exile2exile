@@ -152,9 +152,7 @@ final class PobPlanMapper
      */
     public function title(BuildSnapshot $snapshot): string
     {
-        $identity = $snapshot->ascendancy !== null
-            ? $snapshot->ascendancy->value
-            : $snapshot->class->value;
+        $identity = $snapshot->ascendancy->value ?? $snapshot->class->value;
 
         return Str::limit("{$identity} · Level {$snapshot->level}", 120, '');
     }
