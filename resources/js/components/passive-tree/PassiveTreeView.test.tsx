@@ -1,5 +1,6 @@
 import type { TreeData } from '@poe2-toolkit/tree-core';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 /**
@@ -236,4 +237,48 @@ test('unmounting while windowed does not fire a spurious fullscreen-ended call',
     unmount();
 
     expect(onFullscreenChange).not.toHaveBeenCalled();
+});
+
+/**
+ * Regression coverage for a bug where Escape pressed with nothing to close
+ * swallowed the next fullscreen toggle. The handler read the picker and the
+ * fullscreen flag through nested state updaters; React can defer such an
+ * updater to the next render, where it ran after the toggle and reset
+ * fullscreen to false.
+ */
+test('Escape leaves fullscreen and never swallows the next toggle', () => {
+    const onFullscreenChange = vi.fn();
+
+    render(
+        <StrictMode>
+            <PassiveTreeView
+                editable={false}
+                classId={0}
+                ascendancy={null}
+                showSearch={false}
+                showPointsCounter={false}
+                allocation={{ allocated: [] }}
+                onFullscreenChange={onFullscreenChange}
+            />
+        </StrictMode>,
+    );
+
+    const stage = () =>
+        screen.getByTestId('tree-view-stub').closest('.fixed.inset-0');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(stage()).toBeNull();
+    expect(onFullscreenChange).toHaveBeenLastCalledWith(false);
+    expect(onFullscreenChange).toHaveBeenCalledTimes(2);
+
+    // Nothing is open now, so this press has nothing to close.
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onFullscreenChange).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
+
+    expect(stage()).not.toBeNull();
+    expect(onFullscreenChange).toHaveBeenLastCalledWith(true);
 });

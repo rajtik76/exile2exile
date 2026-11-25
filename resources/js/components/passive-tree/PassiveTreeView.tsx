@@ -784,27 +784,23 @@ export default function PassiveTreeView(props: PlanTreeProps) {
                 return;
             }
 
-            setPicker((current) => {
-                if (current) {
-                    return null;
-                }
+            // An open picker closes first; only then does Escape leave fullscreen.
+            if (picker) {
+                setPicker(null);
 
-                setFullscreen((on) => {
-                    if (on) {
-                        setFullscreenOverride({});
-                        onFullscreenChange?.(false);
-                    }
+                return;
+            }
 
-                    return false;
-                });
-
-                return current;
-            });
+            if (fullscreen) {
+                setFullscreenOverride({});
+                setFullscreen(false);
+                onFullscreenChange?.(false);
+            }
         };
         window.addEventListener('keydown', onKey);
 
         return () => window.removeEventListener('keydown', onKey);
-    }, [onFullscreenChange]);
+    }, [picker, fullscreen, onFullscreenChange]);
 
     /* ------------------------------------------------------ derived view */
 
