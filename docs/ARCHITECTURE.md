@@ -48,7 +48,7 @@ Conventions worth knowing:
 ## Frontend (`resources/js/`)
 
 - `pages/` - Inertia pages: the welcome page, the passive-tree viewer, the
-  build planner and the small static pages (changelog, stats, legal).
+  build planner and the small static pages (stats, legal).
 - `components/` - `passive-tree/` (canvas rendering), `planner/`, `build/`
   (shared build blocks such as the tooltip system) and `ui/` (shadcn/ui).
 - `lib/` - pure TypeScript modules with 1:1 vitest coverage: tree scene and

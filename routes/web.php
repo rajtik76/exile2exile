@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\FilterController;
 use App\Http\Controllers\PlannerController;
 use App\Http\Controllers\PlannerReferenceController;
@@ -19,9 +18,6 @@ Route::get('llms.txt', [SeoController::class, 'llms']);
 Route::inertia('privacy', 'privacy')->name('privacy');
 Route::inertia('terms', 'terms')->name('terms');
 Route::inertia('credits', 'credits')->name('credits');
-
-// Key changes, parsed from the repo's CHANGELOG.md.
-Route::get('changelog', ChangelogController::class)->name('changelog');
 
 // Download a generated in-game loot filter (public; built from local data, never a live
 // API call). `economy` is the value-only layer; `build` adds a build's own overlay on top,

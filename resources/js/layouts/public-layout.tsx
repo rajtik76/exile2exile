@@ -517,11 +517,6 @@ function Footer({ landing }: { landing: boolean }) {
                                 </FooterLink>
                             </li>
                             <li>
-                                <FooterLink href="/changelog" spa>
-                                    Changelog
-                                </FooterLink>
-                            </li>
-                            <li>
                                 <FooterLink href="/credits" spa>
                                     Credits and licenses
                                 </FooterLink>

@@ -17,7 +17,6 @@ Exile to Exile is an unofficial community project. It is not affiliated with, en
 
 ## About
 
-- [Changelog]({{ route('changelog') }}): notable changes, newest first.
 - [Credits and licenses]({{ route('credits') }})
 - [Privacy policy]({{ route('privacy') }})
 - [Terms of service]({{ route('terms') }})

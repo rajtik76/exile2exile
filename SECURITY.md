@@ -15,7 +15,7 @@ yours while demonstrating the issue.
 
 You can expect a first reply within a few days. This is a free, single-person
 fan project with no bug bounty, but real findings get fixed with priority and
-you will be credited in the changelog if you want.
+you will be credited if you want.
 
 ## Scope
 

@@ -10,7 +10,7 @@ beforeEach(function () {
 });
 
 test('pages load the proxied tracker for the app domain without query strings', function () {
-    $this->get(route('changelog'))
+    $this->get(route('privacy'))
         ->assertOk()
         ->assertSee('<script defer src="/p/s.js" data-website-id="site-123" data-domains="poe.example.com" data-exclude-search="true"></script>', false);
 });
@@ -18,7 +18,7 @@ test('pages load the proxied tracker for the app domain without query strings', 
 test('no tracker is rendered without a website id', function () {
     config(['analytics.umami_website_id' => '']);
 
-    $this->get(route('changelog'))
+    $this->get(route('privacy'))
         ->assertOk()
         ->assertDontSee('/p/s.js', false);
 });
