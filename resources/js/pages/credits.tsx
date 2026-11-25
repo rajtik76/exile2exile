@@ -1,7 +1,7 @@
 import { useAppName } from '@/components/brand';
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-const UPDATED = 'July 11, 2026';
+const UPDATED = 'November 25, 2026';
 
 const LINK =
     'text-[#c9a24a] underline decoration-[#c9a24a]/40 underline-offset-2 hover:text-[#ecd49a]';
@@ -42,6 +42,19 @@ export default function Credits() {
                         github.com/rajtik76/poe2-toolkit
                     </a>
                     .
+                </p>
+            </LegalSection>
+
+            <LegalSection heading="Typefaces and artwork">
+                <p>
+                    Headings and text are set in Fontin and Fontin SmallCaps by
+                    Jos Buivenga (exljbris), small interface text in Archivo by
+                    Omnibus-Type. All fonts are self-hosted.
+                </p>
+                <p>
+                    The landing page artwork (the relic chamber, the tools
+                    shelf, its icons and the candlelit book) is original work
+                    made for {appName}. It is not Grinding Gear Games art.
                 </p>
             </LegalSection>
 
