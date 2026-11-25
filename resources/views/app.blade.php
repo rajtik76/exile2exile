@@ -53,6 +53,22 @@
             <link rel="alternate" type="application/json" href="{{ $meta['alternateJson'] }}" title="Machine-readable build data">
         @endisset
 
+        {{-- Link previews (Discord, Reddit, X...): crawlers read the raw HTML,
+             so these stay server-rendered like the metadata above. --}}
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="{{ config('app.name') }}">
+        <meta property="og:title" content="{{ $meta['title'] ?? config('app.name') }}">
+        @isset($meta['description'])
+            <meta property="og:description" content="{{ $meta['description'] }}">
+        @endisset
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:image" content="{{ asset('og-image.png') }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta property="og:image:alt" content="Exile to Exile - free tools for Path of Exile 2">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:image" content="{{ asset('og-image.png') }}">
+
         {{-- Umami tracker, proxied through this origin (docker/nginx.conf).
              Query strings are dropped because edit links carry ?token=, and
              pages with a token in the path never load the tracker. --}}

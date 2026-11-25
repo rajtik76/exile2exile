@@ -11,6 +11,15 @@ test('robots.txt is served as plain text and carries the configured app url', fu
     $response->assertSee('User-agent: *', false);
 });
 
+test('every page carries a large link-preview image', function () {
+    $response = $this->get('/');
+
+    $response->assertOk();
+    $response->assertSee('<meta property="og:image" content="'.asset('og-image.png').'">', false);
+    $response->assertSee('<meta name="twitter:card" content="summary_large_image">', false);
+    expect(public_path('og-image.png'))->toBeFile();
+});
+
 test('llms.txt lists the tools via route-derived urls and drops build-compare', function () {
     $response = $this->get('/llms.txt');
 
