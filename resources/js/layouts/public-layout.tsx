@@ -1,7 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Logo, PAGE_BG, PrimaryCta } from '@/components/brand';
-import { usePatchStatus } from '@/lib/usePatchStatus';
+import { PatchStatusWidget } from '@/components/patch-status';
 import { home } from '@/routes';
 import makerWordmark from '../../images/brand/rajtmajer-wordmark.svg';
 import darkTile from '../../images/landing/dark-tile.webp';
@@ -53,77 +53,6 @@ function useHasOwnMainAction(): boolean {
 /** On the landing, cap a full-width band at 2240px and fade its edges beyond. */
 const LANDING_CAP =
     'min-[821px]:mx-auto min-[821px]:w-full min-[821px]:max-w-[2240px] min-[2241px]:[mask-image:linear-gradient(90deg,transparent,black_2.5%,black_97.5%,transparent)]';
-
-/**
- * Patch read-out in a small rounded panel. Top row: the pulsing heartbeat and
- * the latest PoE2 version, a vertical divider, then the release age and
- * last-checked time stacked together (they're one pair) split by a hairline -
- * both kept fresh by the {@link usePatchStatus} poll. Below a divider, the
- * request-only patch the app's own data is built from, flagged current or behind.
- */
-function PatchStatus() {
-    const status = usePatchStatus();
-
-    if (!status) {
-        return null;
-    }
-
-    return (
-        <div className="w-fit rounded-[2px] border border-line bg-stone-900 px-3.5 py-2 font-ui text-[11px] text-slate">
-            <div className="flex items-stretch gap-3">
-                <span className="flex items-center gap-2">
-                    <span className="relative flex size-2">
-                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-verdigris opacity-70" />
-                        <span className="relative inline-flex size-2 rounded-full bg-verdigris shadow-[0_0_8px_var(--color-verdigris)]" />
-                    </span>
-                    <span className="text-xs font-semibold text-paper tabular-nums">
-                        PoE2&nbsp;{status.version}
-                    </span>
-                </span>
-
-                <span className="w-px bg-line" aria-hidden="true" />
-
-                <div className="flex flex-col justify-center gap-1">
-                    <span
-                        className="tabular-nums"
-                        title={new Date(status.releasedAt).toLocaleString()}
-                    >
-                        released {status.releasedAgo}
-                    </span>
-                    <span className="h-px bg-line" aria-hidden="true" />
-                    <span
-                        className="tabular-nums"
-                        title={new Date(status.checkedAt).toLocaleString()}
-                    >
-                        checked {status.checkedAgo}
-                    </span>
-                </div>
-            </div>
-
-            <div className="my-1.5 h-px bg-line" />
-
-            <div
-                className="flex items-center gap-1.5"
-                title="The patch the app's bundled game data is built from"
-            >
-                <span className="text-mist">web data</span>
-                <span className="font-semibold text-paper tabular-nums">
-                    {status.dataVersion ?? '-'}
-                </span>
-                {status.dataVersion &&
-                    (status.isDataCurrent ? (
-                        <span className="text-[10px] font-medium text-verdigris">
-                            (current)
-                        </span>
-                    ) : (
-                        <span className="text-[10px] font-medium text-ember-300">
-                            (behind)
-                        </span>
-                    ))}
-            </div>
-        </div>
-    );
-}
 
 /** The tool/section links shared by the desktop nav and the mobile menu. */
 const NAV_LINKS: { href: string; label: string; spa?: boolean }[] = [
@@ -490,7 +419,7 @@ function Footer({ landing }: { landing: boolean }) {
                                 put online for anyone to use.
                             </p>
                             <div className="mt-4">
-                                <PatchStatus />
+                                <PatchStatusWidget />
                             </div>
                         </div>
 

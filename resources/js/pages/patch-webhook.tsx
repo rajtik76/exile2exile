@@ -1,10 +1,10 @@
 import { LegalPage, LegalSection } from '@/components/legal-page';
-import { usePatchStatus } from '@/lib/usePatchStatus';
+import { PatchStatusPanel } from '@/components/patch-status';
 
-/** Monospace request/response block, same incised slab as the credits license. */
+/** Monospace request/response block. */
 function Code({ children }: { children: React.ReactNode }) {
     return (
-        <pre className="overflow-x-auto rounded-sm border border-[#c9a24a]/15 bg-[#0c0c12] p-4 text-xs leading-relaxed whitespace-pre text-[#a7acb8]">
+        <pre className="scroll-quiet overflow-x-auto rounded-[2px] border border-line bg-void p-4 font-mono text-[13px] leading-relaxed whitespace-pre text-bone">
             {children}
         </pre>
     );
@@ -12,97 +12,14 @@ function Code({ children }: { children: React.ReactNode }) {
 
 /** Inline code token. */
 function Mono({ children }: { children: React.ReactNode }) {
-    return <code className="text-[#d6dae2]">{children}</code>;
-}
-
-/** One cell of the live status strip: an eyebrow label over a value. */
-function StatusCell({
-    label,
-    value,
-    title,
-    badge,
-}: {
-    label: React.ReactNode;
-    value: string;
-    title?: string;
-    badge?: React.ReactNode;
-}) {
     return (
-        <div className="bg-[#0c0c12] p-4">
-            <div className="flex items-center gap-1.5 font-ui text-[10px] font-semibold tracking-[0.16em] text-[#c9a24a] uppercase">
-                {label}
-            </div>
-            <div
-                className="mt-1.5 flex items-center gap-2 text-sm text-[#e6ecf6] tabular-nums"
-                title={title}
-            >
-                <span>{value}</span>
-                {badge}
-            </div>
-        </div>
-    );
-}
-
-/**
- * The live patch read-out for this page: a four-cell strip pulling from the same
- * {@link usePatchStatus} hook as the footer, styled as the page's incised slab.
- * Latest version and the two relative times poll every 60s; the data version is
- * request-only.
- */
-function PatchStatusPanel() {
-    const status = usePatchStatus();
-
-    if (!status) {
-        return null;
-    }
-
-    return (
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-sm border border-[#c9a24a]/15 bg-[#c9a24a]/10 sm:grid-cols-4">
-            <StatusCell
-                label={
-                    <>
-                        <span className="relative flex size-1.5">
-                            <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#74b079] opacity-70" />
-                            <span className="relative inline-flex size-1.5 rounded-full bg-[#74b079]" />
-                        </span>
-                        Latest
-                    </>
-                }
-                value={`PoE2 ${status.version}`}
-            />
-            <StatusCell
-                label="Released"
-                value={status.releasedAgo}
-                title={new Date(status.releasedAt).toLocaleString()}
-            />
-            <StatusCell
-                label="Checked"
-                value={status.checkedAgo}
-                title={new Date(status.checkedAt).toLocaleString()}
-            />
-            <StatusCell
-                label="App data"
-                value={status.dataVersion ?? '-'}
-                badge={
-                    status.dataVersion &&
-                    (status.isDataCurrent ? (
-                        <span className="rounded-full bg-[#74b079]/15 px-1.5 py-px font-ui text-[10px] font-medium text-[#8fc594]">
-                            current
-                        </span>
-                    ) : (
-                        <span className="rounded-full bg-[#e0a04f]/15 px-1.5 py-px font-ui text-[10px] font-medium text-[#e0b070]">
-                            behind
-                        </span>
-                    ))
-                }
-            />
-        </div>
+        <code className="font-mono text-[0.88em] text-paper">{children}</code>
     );
 }
 
 export default function PatchWebhook() {
     return (
-        <LegalPage title="PoE2 patch webhook" eyebrow="Developers">
+        <LegalPage backdrop title="PoE2 patch webhook" eyebrow="Developers">
             <LegalSection heading="What it does">
                 <p>
                     A public webhook that fires when a new Path of Exile 2 patch

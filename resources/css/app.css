@@ -628,6 +628,13 @@
     background: var(--rule-pewter);
 }
 
+/* A thin dark scrollbar for small scrolling boxes, instead of the bright
+   system one. */
+@utility scroll-quiet {
+    scrollbar-color: var(--color-line-strong) transparent;
+    scrollbar-width: thin;
+}
+
 /* Entrance for the round "show controls" button (passive-tree planner). */
 @keyframes fadeIn {
     from {

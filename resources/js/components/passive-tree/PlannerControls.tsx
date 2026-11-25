@@ -545,7 +545,7 @@ function Dropdown({
             {open && (
                 <div
                     role="listbox"
-                    className="absolute top-full left-0 z-30 mt-1.5 max-h-96 min-w-[13rem] [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent] overflow-auto rounded-[2px] border border-pewter-700 bg-stone-900 shadow-xl shadow-black/60"
+                    className="absolute top-full left-0 z-30 mt-1.5 max-h-96 min-w-[13rem] scroll-quiet overflow-auto rounded-[2px] border border-pewter-700 bg-stone-900 shadow-xl shadow-black/60"
                 >
                     {children(() => setOpen(false))}
                 </div>
