@@ -202,7 +202,7 @@ class PlanSeeder extends Seeder
 
             $rares = count(array_filter($slots, static fn (array $item): bool => $item['rarity'] === 'rare'));
 
-            $this->command->info(sprintf(
+            $this->command?->info(sprintf(
                 'Seeded %s (%s): %d gem groups, %d items (%d rare), %d passive points × %d phases. Edit token: %s',
                 $build['slug'],
                 $build['className'],
