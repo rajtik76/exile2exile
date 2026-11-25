@@ -146,14 +146,49 @@
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
-    /* Exile to Exile public-page faces. */
-    --font-display: 'Marcellus SC', 'Trajan Pro', serif;
+    /* Exile to Exile faces: Fontin for headings, prose and labels, Archivo for
+       small UI text (anything under 15px). */
+    --font-display: 'Fontin', Georgia, serif;
+    --font-label: 'Fontin SmallCaps', 'Fontin', Georgia, serif;
     --font-ui: 'Archivo', ui-sans-serif, system-ui, sans-serif;
-    --font-body: 'Fraunces', Georgia, serif;
+    --font-body: 'Fontin', Georgia, serif;
+
+    /* Stone holds the surfaces, pewter holds the lines, ember is reserved for
+       actions, selection and focus. Game colours (rarity, sockets, elements)
+       keep their own tokens and are never remapped onto these. */
+    --color-void: #05080c;
+    --color-ink: #080e14;
+    --color-stone-900: #0c131b;
+    --color-stone-800: #121b25;
+    --color-stone-700: #1a2531;
+    --color-line: #263240;
+    --color-line-strong: #364454;
+
+    --color-pewter-900: #463e37;
+    --color-pewter-700: #665e56;
+    --color-pewter-500: #998371;
+    --color-pewter-300: #b1a497;
+
+    --color-paper: #f3eadc;
+    --color-bone: #d2c8bc;
+    --color-slate: #b4c3d4;
+    --color-mist: #8494a6;
+
+    --color-ember-300: #ffba86;
+    --color-ember-400: #ff9a4d;
+    --color-ember-500: #ff6a00;
+    --color-ember-700: #b34a00;
+    --color-ember-900: #491300;
+    --color-copper: #a8430a;
+    --color-on-ember: #fff4e3;
+
+    --color-blood: #d2473c;
+    --color-blood-lit: #ef7b6f;
+    --color-verdigris: #5fae8b;
 
     --radius-lg: var(--radius);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: max(0px, calc(var(--radius) - 2px));
+    --radius-sm: max(0px, calc(var(--radius) - 4px));
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -224,7 +259,7 @@
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
+    --radius: 2px;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);
@@ -236,38 +271,63 @@
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
+    --background: #080e14;
+    --foreground: #f3eadc;
+    --card: #0c131b;
+    --card-foreground: #f3eadc;
+    --popover: #121b25;
+    --popover-foreground: #f3eadc;
+    --primary: #a8430a;
+    --primary-foreground: #fff4e3;
+    --secondary: #121b25;
+    --secondary-foreground: #f3eadc;
+    --muted: #121b25;
+    --muted-foreground: #8494a6;
+    --accent: #1a2531;
+    --accent-foreground: #f3eadc;
+    --destructive: #d2473c;
+    --destructive-foreground: #ef7b6f;
+    --border: #263240;
+    --input: #263240;
+    --ring: #ff9a4d;
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
     --chart-4: oklch(0.627 0.265 303.9);
     --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --sidebar: #0c131b;
+    --sidebar-foreground: #f3eadc;
+    --sidebar-primary: #a8430a;
+    --sidebar-primary-foreground: #fff4e3;
+    --sidebar-accent: #1a2531;
+    --sidebar-accent-foreground: #f3eadc;
+    --sidebar-border: #263240;
+    --sidebar-ring: #ff9a4d;
+}
+
+/* Shared shapes: the pewter rule under the masthead and above panels, and the
+   chamfer cut of the copper button. */
+:root {
+    --rule-pewter: linear-gradient(
+        90deg,
+        transparent,
+        #998371 10%,
+        #463e37 30%,
+        #b1a497 50%,
+        #574e4a 70%,
+        #998371 90%,
+        transparent
+    );
+    --chamfer: polygon(
+        6px 0,
+        calc(100% - 6px) 0,
+        100% 6px,
+        100% calc(100% - 6px),
+        calc(100% - 6px) 100%,
+        6px 100%,
+        0 calc(100% - 6px),
+        0 6px
+    );
 }
 
 @layer base {
@@ -292,6 +352,116 @@
     body {
         @apply bg-background text-foreground;
     }
+}
+
+/* Buttons of the working tier. Copper is the one main action per screen, iron
+   the ordinary one, ghost the quiet one, danger the destructive one. */
+@layer components {
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 16px;
+        border: 1px solid transparent;
+        border-radius: 2px;
+        background: none;
+        font-family: var(--font-ui);
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+        transition:
+            color 120ms,
+            background-color 120ms,
+            border-color 120ms,
+            filter 120ms;
+    }
+
+    .btn:focus-visible {
+        outline: 2px solid var(--color-ember-400);
+        outline-offset: 2px;
+    }
+
+    .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    .btn-sm {
+        height: 28px;
+        gap: 6px;
+        padding: 0 11px;
+        font-size: 13px;
+    }
+
+    .btn-lg {
+        height: 44px;
+        padding: 0 22px;
+        font-size: 16px;
+    }
+
+    .btn-copper {
+        border: 0;
+        clip-path: var(--chamfer);
+        background: linear-gradient(
+            180deg,
+            #b94e0d,
+            var(--color-copper) 55%,
+            #86330a
+        );
+        box-shadow:
+            inset 0 1px 0 #ffb27a80,
+            inset 0 -1px 0 #4913008c;
+        color: var(--color-on-ember);
+        text-shadow: 0 1px 1px #371204;
+    }
+
+    .btn-copper:hover:not(:disabled) {
+        filter: brightness(1.15);
+    }
+
+    /* The chamfer clips an outline away, so focus is drawn inside instead. */
+    .btn-copper:focus-visible {
+        outline: 0;
+        box-shadow: inset 0 0 0 2px var(--color-ember-300);
+    }
+
+    .btn-iron {
+        border-color: var(--color-pewter-700);
+        background: var(--color-stone-800);
+        color: var(--color-paper);
+    }
+
+    .btn-iron:hover:not(:disabled) {
+        border-color: var(--color-ember-400);
+        color: var(--color-ember-300);
+    }
+
+    .btn-ghost {
+        color: var(--color-slate);
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+        background: var(--color-stone-800);
+        color: var(--color-paper);
+    }
+
+    .btn-danger {
+        border-color: #7a2a25;
+        color: var(--color-blood-lit);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+        border-color: var(--color-blood);
+        background: rgba(210, 71, 60, 0.14);
+    }
+}
+
+@utility rule-pewter {
+    background: var(--rule-pewter);
 }
 
 /* Entrance for the round "show controls" button (passive-tree planner). */

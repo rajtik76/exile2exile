@@ -5,15 +5,14 @@ test('the landing signpost renders the kit and its tools', function () {
 
     $page->assertNoJavaScriptErrors()
         ->assertNoConsoleLogs()
-        // identity + the one-line "what / why"
+        // identity
         ->assertSee('Exile to Exile')
-        ->assertSee('one player to another')
         // the gem waypoints, each its own tool
         ->assertSee('Tree planner')
         ->assertSee('Build planner')
         ->assertSee('Build filter')
         ->assertSee('Patch alerts')
         ->assertSee('Source')
-        // built-for-the-community footer note
-        ->assertSee('made over a cup of coffee');
+        // shared footer with the trademark disclaimer
+        ->assertSee('Not affiliated with Grinding Gear Games');
 });

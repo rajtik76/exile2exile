@@ -3,9 +3,10 @@ import { Link, usePage } from '@inertiajs/react';
 /*
  * Shared brand primitives for the public pages - "Exile to Exile".
  * Identity: a free, fan-made set of Path of Exile 2 tools, one player to
- * another. Cold quicksilver + tarnished gold on a void-black field, with a
- * warm forged-ember call-to-action. Display face is Marcellus SC (inscriptional
- * Roman caps), UI is Archivo, body copy is Fraunces - all self-hosted.
+ * another. Cold blue-grey stone for surfaces, warm old pewter for lines, and a
+ * rare ember orange for actions and selection. Fontin carries headings, prose
+ * and labels, Archivo the small UI text - all self-hosted. The same values live
+ * as Tailwind tokens in app.css (`bg-stone-900`, `text-paper`, ...).
  */
 
 /**
@@ -23,43 +24,82 @@ export const CONTACT_EMAIL =
 
 /* ----------------------------------------------------------------- palette */
 
-export const VOID = '#08080b';
-export const INK = '#d6dae2'; // readable text - high contrast
-export const INK_SOFT = '#a7acb8'; // secondary, still legible
-export const INK_FAINT = '#787d8a'; // captions only
-export const HEAD = '#f1f3f8';
-export const GOLD = '#c9a24a';
-export const GOLD_LIT = '#ecd49a';
-export const SILVER = '#b6bdcb';
-export const SILVER_LIT = '#e6ecf6';
-export const EMBER = '#c2762f';
-export const EMBER_DEEP = '#85481c';
-export const EMBER_INK = '#fbe7c4';
-export const BLOOD = '#d2473c'; // PoE life/blood red - the second exile
+/** The design tokens, mirrored from the `@theme` block in app.css. */
+export const COLOR = {
+    void: '#05080c',
+    ink: '#080e14',
+    stone900: '#0c131b',
+    stone800: '#121b25',
+    stone700: '#1a2531',
+    line: '#263240',
+    lineStrong: '#364454',
+    pewter900: '#463e37',
+    pewter700: '#665e56',
+    pewter500: '#998371',
+    pewter300: '#b1a497',
+    paper: '#f3eadc',
+    bone: '#d2c8bc',
+    slate: '#b4c3d4',
+    mist: '#8494a6',
+    ember300: '#ffba86',
+    ember400: '#ff9a4d',
+    ember500: '#ff6a00',
+    ember700: '#b34a00',
+    ember900: '#491300',
+    copper: '#a8430a',
+    onEmber: '#fff4e3',
+    blood: '#d2473c',
+    bloodLit: '#ef7b6f',
+    verdigris: '#5fae8b',
+} as const;
 
-/** Alias kept for call sites that import `TEAL` as "the accent". Now tarnished gold. */
+/** The pewter rule drawn under the masthead and above panels. */
+export const RULE_PEWTER = 'var(--rule-pewter)';
+
+/*
+ * Older names, kept so existing call sites move to the new palette in one
+ * step. New code should read COLOR instead.
+ */
+export const VOID = COLOR.ink;
+export const INK = COLOR.paper;
+export const INK_SOFT = COLOR.slate;
+export const INK_FAINT = COLOR.mist;
+export const HEAD = COLOR.paper;
+export const GOLD = COLOR.pewter500;
+export const GOLD_LIT = COLOR.pewter300;
+export const SILVER = COLOR.slate;
+export const SILVER_LIT = COLOR.paper;
+export const EMBER = COLOR.ember500;
+export const EMBER_DEEP = COLOR.copper;
+export const EMBER_INK = COLOR.onEmber;
+export const BLOOD = COLOR.blood;
+
+/** Alias kept for call sites that import `TEAL` as "the accent". Now pewter. */
 export const TEAL = GOLD;
 
 /* ------------------------------------------------------------------- fonts */
 
-/** Inscriptional Roman display (single weight - never set 700 on it). */
-export const DISPLAY = { fontFamily: "'Marcellus SC', serif" } as const;
-/** Clean grotesk for all small UI: nav, labels, footer, stats, buttons. */
+/** Display face for headings (single regular weight carries every size). */
+export const DISPLAY = { fontFamily: "'Fontin', Georgia, serif" } as const;
+/** Section labels: the face's own small caps, never letter-spaced capitals. */
+export const LABEL = {
+    fontFamily: "'Fontin SmallCaps', 'Fontin', Georgia, serif",
+} as const;
+/** Clean grotesk for all small UI: nav, labels under 15px, stats, buttons. */
 export const UI = {
     fontFamily: "'Archivo', ui-sans-serif, sans-serif",
 } as const;
-/** Legible body / flavour serif. */
-export const BODY = { fontFamily: "'Fraunces', Georgia, serif" } as const;
+/** Body copy and prose. */
+export const BODY = { fontFamily: "'Fontin', Georgia, serif" } as const;
 
-/** Display face with a faint carved-gold glow, for hero headings. */
+/** Display face with a stone drop shadow, for hero headings. */
 export const ENGRAVED = {
     ...DISPLAY,
-    textShadow: '0 2px 1px rgba(0,0,0,0.85), 0 0 26px rgba(201,162,74,0.16)',
+    textShadow: '0 2px 1px rgba(0,0,0,0.85)',
 } as const;
 
-/** The base radial field shared by every public page. */
-export const PAGE_BG =
-    'radial-gradient(58% 44% at 50% 0%, rgba(201,162,74,0.05), transparent 70%), radial-gradient(120% 80% at 50% -8%, #15151e 0%, #0c0c12 46%, #08080b 100%)';
+/** The base field shared by every public page. */
+export const PAGE_BG = COLOR.ink;
 
 /* --------------------------------------------------------------- gem socket */
 
@@ -211,11 +251,25 @@ export function Emblem({ className = '' }: { className?: string }) {
 
 /* ------------------------------------------------------------------ wordmark */
 
-/**
- * The wordmark - the whole identity. Inscriptional caps, no logo needed. The two
- * exiles take the game's own colours: the first carved in tarnished gold, the
- * second in life-blood red, with the connector dimmed - one player to another.
- */
+/** The short mark: "E2E" set in Fontin. */
+export function Logo({
+    className = '',
+    style,
+}: {
+    className?: string;
+    style?: React.CSSProperties;
+}) {
+    return (
+        <span
+            className={className}
+            style={{ ...DISPLAY, letterSpacing: '0.01em', ...style }}
+        >
+            E2E
+        </span>
+    );
+}
+
+/** The full app name in Fontin, one colour. */
 export function Wordmark({
     className = '',
     style,
@@ -223,33 +277,19 @@ export function Wordmark({
     className?: string;
     style?: React.CSSProperties;
 }) {
-    const words = String(useAppName()).split(' ');
-    const last = words.length - 1;
-
     return (
         <span
             className={className}
-            style={{ ...DISPLAY, letterSpacing: '0.04em', ...style }}
+            style={{ ...DISPLAY, color: COLOR.paper, ...style }}
         >
-            {words.map((word, i) => (
-                <span
-                    key={i}
-                    style={{
-                        color:
-                            i === 0 ? GOLD_LIT : i === last ? BLOOD : INK_FAINT,
-                    }}
-                >
-                    {word}
-                    {i < last ? ' ' : ''}
-                </span>
-            ))}
+            {useAppName()}
         </span>
     );
 }
 
 /* ----------------------------------------------------------------- ornaments */
 
-/** Ruled divider ornament - kept for the legal pages; tarnished gold. */
+/** Ruled divider ornament - kept for the legal pages; pewter. */
 export function Flourish({ className = '' }: { className?: string }) {
     return (
         <svg
@@ -274,9 +314,9 @@ export function Flourish({ className = '' }: { className?: string }) {
     );
 }
 
-/** Gold corner brackets - the framing motif used across the panels. */
+/** Pewter corner brackets - the framing motif used across the panels. */
 export function Corners() {
-    const base = 'pointer-events-none absolute size-3 border-[#c9a24a]/45';
+    const base = 'pointer-events-none absolute size-3 border-pewter-500/45';
 
     return (
         <>
@@ -288,12 +328,12 @@ export function Corners() {
     );
 }
 
-/** Small uppercase eyebrow label. Archivo for legibility at this size. */
+/** Section label in the face's own small caps. */
 export function Eyebrow({ children }: { children: React.ReactNode }) {
     return (
         <p
-            className="text-xs font-semibold tracking-[0.1em] text-[#ecd49a] uppercase"
-            style={UI}
+            className="text-[15px] tracking-[0.06em] text-pewter-300"
+            style={LABEL}
         >
             {children}
         </p>
@@ -301,8 +341,8 @@ export function Eyebrow({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Primary call-to-action: warm forged ember against the cold field. Renders a
- * link when given `href`, or a button when given `onClick` (e.g. a POST action).
+ * Primary call-to-action: the copper button, one per screen. Renders a link
+ * when given `href`, or a button when given `onClick` (e.g. a POST action).
  */
 export function PrimaryCta({
     href,
@@ -313,24 +353,18 @@ export function PrimaryCta({
     onClick?: () => void;
     children: React.ReactNode;
 }) {
-    const className =
-        'inline-flex items-center gap-2 rounded-sm border border-[#c2762f]/65 bg-gradient-to-b from-[#c2762f] to-[#85481c] px-7 py-3 text-sm font-semibold tracking-[0.02em] text-[#fbe7c4] uppercase shadow-lg transition hover:brightness-115';
+    const className = 'btn btn-copper';
 
     if (onClick) {
         return (
-            <button
-                type="button"
-                onClick={onClick}
-                className={className}
-                style={UI}
-            >
+            <button type="button" onClick={onClick} className={className}>
                 {children}
             </button>
         );
     }
 
     return (
-        <Link href={href ?? '#'} className={className} style={UI}>
+        <Link href={href ?? '#'} className={className}>
             {children}
         </Link>
     );
